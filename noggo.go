@@ -2,6 +2,7 @@ package noggo
 
 import (
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 )
 
 var (
@@ -11,7 +12,8 @@ var (
 
 	Config configConfig
 
-
+	//路由器模块
+	Router *routerModule
 	//会话模块
 	Session *sessionModule
 
@@ -23,9 +25,14 @@ var (
 func init() {
 	Config = readJsonConfig()
 
+
+	//路由器模块
+	Router = &routerModule{
+		drivers: map[string]driver.RouterDriver{},
+	}
 	//会话模块
 	Session = &sessionModule{
-		drivers: map[string]*SessionDriver{},
+		drivers: map[string]driver.SessionDriver{},
 	}
 	//触发器模块
 	Trigger = &triggerModule{

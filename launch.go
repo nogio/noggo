@@ -9,13 +9,9 @@ import (
 
 
 
-func Run() {
+func Launch() {
 	Init()
 	Exit()
-}
-
-func End() {
-	fmt.Println("nogo exit...")
 }
 
 
@@ -24,6 +20,15 @@ func End() {
 //初始化
 func Init() {
 	fmt.Println("nogo init...")
+
+
+	//会话处理
+	Router.init()
+	Session.init()
+	Trigger.init()
+
+
+
 }
 
 
@@ -43,5 +48,6 @@ func exitWaiting() {
 
 func Exit() {
 	exitWaiting()
-	End()
+	fmt.Println("nogo exit...")
+	Session.exit()
 }

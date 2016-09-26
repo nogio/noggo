@@ -29,9 +29,9 @@ type (
 	//触发器配置
 	triggerConfig struct {
 		//会话配置
-		Session	sessionConfig	`json:"session"`
+		Session	*sessionConfig	`json:"session"`
 		//路由器配置
-		Router	routerConfig	`json:"router"`
+		Router	*routerConfig	`json:"router"`
 	}
 
 
@@ -43,11 +43,11 @@ type (
 	//配置
 	configConfig struct {
 		//默认路由配置
-		Router	routerConfig	`json:"router"`
+		Router	*routerConfig	`json:"router"`
 		//默认会话配置
-		Session	sessionConfig	`json:"session"`
+		Session	*sessionConfig	`json:"session"`
 		//触发器配置
-		Trigger triggerConfig	`json:"trigger"`
+		Trigger *triggerConfig	`json:"trigger"`
 	}
 
 )

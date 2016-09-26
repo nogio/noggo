@@ -1,7 +1,8 @@
 package noggo
 
 import (
-	. "github.com/nogio/noggo/base"
+	//. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 	"sync"
 )
 
@@ -13,27 +14,9 @@ import (
 type (
 	//路由器模块
 	routerModule struct {
-		drivers map[string]*SessionDriver
-		driversLock sync.RWMutex
-
-		driver *SessionDriver
+		drivers map[string]driver.RouterDriver
+		driversMutex sync.Mutex
 	}
-
-	//路由器结果
-	RouterResult struct {
-		Name	string
-		Uri		string
-		Params	Map
-	}
-
-	//路由器驱动
-	RouterDriver interface {
-		//注册路由
-		Route(name, uri string)
-		//解析路由
-		Parse(uri string) *RouterResult
-	}
-
 )
 
 
@@ -44,9 +27,9 @@ type (
 
 
 //注册路由器驱动
-func (router *routerModule) Register(name string, driver *SessionDriver) {
-	router.driversLock.Lock()
-	defer router.driversLock.Unlock()
+func (router *routerModule) Register(name string, driver driver.RouterDriver) {
+	router.driversMutex.Lock()
+	defer router.driversMutex.Unlock()
 
 	if driver == nil {
 		panic("router: Register driver is nil")
@@ -56,4 +39,15 @@ func (router *routerModule) Register(name string, driver *SessionDriver) {
 	}
 
 	router.drivers[name] = driver
+}
+
+
+
+//路由器初始货
+func (session *routerModule) init() {
+
+}
+//路由器退出
+func (session *routerModule) exit() {
+
 }

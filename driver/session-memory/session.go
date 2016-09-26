@@ -4,6 +4,7 @@ package session_memory
 
 import (
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 	"github.com/nogio/noggo"
 	"sync"
 	"time"
@@ -12,24 +13,37 @@ import (
 
 
 type (
-	//驱动
-	Session struct {
-		sessions map[string]SessionValue
-		sessionsMutex sync.RWMutex
+	//会话驱动
+	MemoryDriver struct {}
+	//会话连接
+	MemoryConnect struct {
+		config Map
+		sessions map[string]driver.SessionValue
+		sessionsMutex sync.Mutex
 	}
-
-	//值
-	SessionValue struct {
-		Value Map
-		Expiry time.Time
-	}
-
 )
 
 
-func NewSession() *Session {
-	return &Session{
-		map[string]SessionValue{},
+
+//返回驱动
+func Driver() *MemoryDriver {
+	return &MemoryDriver{}
+}
+
+
+
+
+
+
+
+
+
+
+
+//连接会话驱动
+func (session *MemoryDriver) Connect(config Map) (driver.SessionConnect) {
+	return  &MemoryConnect{
+		config: config, sessions: map[string]driver.SessionValue{},
 	}
 }
 
@@ -38,34 +52,43 @@ func NewSession() *Session {
 
 
 
-//打开会话连接
-func (session *Session) Open() {
-	session.sessions = map[string]SessionValue{}
+
+
+
+
+
+
+//打开连接
+func (session *MemoryConnect) Open() {
+
 }
 
-//关闭会话连接
-func (session *Session) Close() {
-	//关闭不用做什么处理
+//关闭连接
+func (session *MemoryConnect) Close() {
+
 }
 
 
-//生成会话编号
-func (session *Session) Id() string{
+
+
+
+
+//生成ID
+func (session *MemoryConnect) Id() string {
 	return noggo.NewMd5Id()
 }
 
 
-
 //创建会话
-func (session *Session) Create(id string, expiry int64) Map {
+func (session *MemoryConnect) Create(id string, expiry int64) Map {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
 	if v,ok := session.sessions[id]; ok {
 		return v.Value
 	} else {
-		v := SessionValue{
-			v, time.Now().Add(time.Second*expiry),
+		v := driver.SessionValue{
+			Value: Map{}, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 		}
 		session.sessions[id] = v
 		return v.Value
@@ -75,12 +98,12 @@ func (session *Session) Create(id string, expiry int64) Map {
 
 
 //更新会话
-func (session *Session) Update(id string, value Map, expiry int64) bool {
+func (session *MemoryConnect) Update(id string, value Map, expiry int64) bool {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
-	session.sessions[id] = SessionValue{
-		value, time.Now().Add(time.Second*expiry),
+	session.sessions[id] = driver.SessionValue{
+		Value: value, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 	}
 
 	return true
@@ -88,7 +111,7 @@ func (session *Session) Update(id string, value Map, expiry int64) bool {
 
 
 //删除会话
-func (session *Session) Remove(id string) bool {
+func (session *MemoryConnect) Remove(id string) bool {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
@@ -100,12 +123,12 @@ func (session *Session) Remove(id string) bool {
 
 
 //回收会话
-func (session *Session) Recycle(expiry int64) bool {
+func (session *MemoryConnect) Recycle(expiry int64) bool {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
 	for k,v := range session.sessions {
-		if v.Expiry < time.Now() {
+		if v.Expiry.Unix() < time.Now().Unix() {
 			delete(session.sessions, k)
 		}
 	}
