@@ -1,0 +1,5 @@
+package noggo
+
+func Exit() {
+
+}
