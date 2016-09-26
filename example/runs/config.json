@@ -1,0 +1,29 @@
+{
+
+  "router": {
+    "driver": "default",
+    "config": { }
+  },
+
+
+  "session": {
+    "driver": "memory", "expiry": 3600,
+    "config": { }
+  },
+
+
+  "trigger": {
+    "router": {
+      "driver": "default",
+      "config": {}
+    },
+    "session": {
+      "driver": "memory", "expiry": 3600,
+      "config": {}
+    }
+  },
+
+
+
+  "test": ""
+}

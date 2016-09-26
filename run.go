@@ -7,6 +7,33 @@ import (
 	"fmt"
 )
 
+
+
+func Run() {
+	Init()
+	Exit()
+}
+
+func End() {
+	fmt.Println("nogo exit...")
+}
+
+
+
+
+//初始化
+func Init() {
+	fmt.Println("nogo init...")
+}
+
+
+
+
+
+
+
+
+
 func exitWaiting() {
 	//使用管道监听退出信号
 	exitChan := make(chan os.Signal, 1)
@@ -16,7 +43,5 @@ func exitWaiting() {
 
 func Exit() {
 	exitWaiting()
-
-	//退出前处理
-	fmt.Println("noggo exit...")
+	End()
 }
