@@ -438,6 +438,21 @@ func (plan *planModule) Touch(path string, args ...Map) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /*
 	计划模块处理方法 begin
 */
@@ -500,21 +515,10 @@ func (plan *planModule) handlerExecute(ctx *PlanCtx) {
 
 	//解析路由，拿到actions
 	if ctx.Config == nil {
-
 		//找不到路由
-		//ctx.handler(plan.handlerFound)
+		ctx.handler(plan.handlerFound)
 	} else {
 
-
-
-
-
-		//先走，filter拦截器
-		/*
-		for _,n := range plan.Service.filterNames {
-			plan.handler(plan.Service.FilterActions(n)...)
-		}
-		*/
 
 		//验证，参数，数据处理
 		//验证处理，数据处理， 可以考虑走中间件
@@ -665,6 +669,159 @@ func (plan *planModule) handlerBranch(ctx *PlanCtx) {
 	ctx.Next()
 }
 
+
+
+
+
+
+
+//路由执行，found
+func (plan *planModule) handlerFound(ctx *PlanCtx) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapFound]; ok {
+		switch c := v.(type) {
+		case PlanCall: {
+			ctx.handler(c)
+		}
+		case []PlanCall: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanCtx): {
+			ctx.handler(c)
+		}
+		case []func(*PlanCtx): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//context中的found处理
+	for _,v := range plan.contexts {
+		ctx.handler(v.FoundHandler)
+	}
+
+	ctx.Next()
+}
+
+
+//路由执行，error
+func (plan *planModule) handlerError(ctx *PlanCtx) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapError]; ok {
+		switch c := v.(type) {
+		case PlanCall: {
+			ctx.handler(c)
+		}
+		case []PlanCall: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanCtx): {
+			ctx.handler(c)
+		}
+		case []func(*PlanCtx): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//context中的error处理
+	for _,v := range plan.contexts {
+		ctx.handler(v.ErrorHandler)
+	}
+
+	ctx.Next()
+}
+
+
+//路由执行，failed
+func (plan *planModule) handlerFailed(ctx *PlanCtx) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapFailed]; ok {
+		switch c := v.(type) {
+		case PlanCall: {
+			ctx.handler(c)
+		}
+		case []PlanCall: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanCtx): {
+			ctx.handler(c)
+		}
+		case []func(*PlanCtx): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//context中的failed处理
+	for _,v := range plan.contexts {
+		ctx.handler(v.FailedHandler)
+	}
+
+	ctx.Next()
+}
+
+
+
+//路由执行，denied
+func (plan *planModule) handlerDenied(ctx *PlanCtx) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapDenied]; ok {
+		switch c := v.(type) {
+		case PlanCall: {
+			ctx.handler(c)
+		}
+		case []PlanCall: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanCtx): {
+			ctx.handler(c)
+		}
+		case []func(*PlanCtx): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//context中的failed处理
+	for _,v := range plan.contexts {
+		ctx.handler(v.DeniedHandler)
+	}
+
+	ctx.Next()
+}
 
 
 

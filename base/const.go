@@ -13,6 +13,9 @@ const (
 	KeyMapText		= "text"
 	KeyMapType		= "type"
 	KeyMapMust		= "must"
+	KeyMapAuto		= "auto"
+	KeyMapJson		= "json"
+	KeyMapEnum		= "enum"
 	KeyMapArgs		= "args"
 	KeyMapItem		= "item"
 
@@ -20,4 +23,14 @@ const (
 	KeyMapBranch	= "branch"
 	KeyMapRoute		= "route"
 	KeyMapMatch		= "match"
+
+	KeyMapFound		= "found"
+	KeyMapError		= "error"
+	KeyMapFailed	= "failed"
+	KeyMapDenied	= "denied"
+
+	KeyMapEncode	= "encode"
+	KeyMapDecode	= "decode"
+	KeyMapValid		= "valid"
+	KeyMapValue		= "value"
 )
