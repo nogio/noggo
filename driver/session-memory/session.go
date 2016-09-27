@@ -4,7 +4,6 @@ package session_memory
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"github.com/nogio/noggo"
 	"sync"
 	"time"
@@ -18,7 +17,7 @@ type (
 	//会话连接
 	MemoryConnect struct {
 		config Map
-		sessions map[string]driver.SessionValue
+		sessions map[string]noggo.SessionValue
 		sessionsMutex sync.Mutex
 	}
 )
@@ -41,9 +40,9 @@ func Driver() *MemoryDriver {
 
 
 //连接会话驱动
-func (session *MemoryDriver) Connect(config Map) (driver.SessionConnect) {
+func (session *MemoryDriver) Connect(config Map) (noggo.SessionConnect) {
 	return  &MemoryConnect{
-		config: config, sessions: map[string]driver.SessionValue{},
+		config: config, sessions: map[string]noggo.SessionValue{},
 	}
 }
 
@@ -59,8 +58,8 @@ func (session *MemoryDriver) Connect(config Map) (driver.SessionConnect) {
 
 
 //打开连接
-func (session *MemoryConnect) Open() {
-
+func (session *MemoryConnect) Open() error {
+	return nil
 }
 
 //关闭连接
@@ -87,7 +86,7 @@ func (session *MemoryConnect) Create(id string, expiry int64) Map {
 	if v,ok := session.sessions[id]; ok {
 		return v.Value
 	} else {
-		v := driver.SessionValue{
+		v := noggo.SessionValue{
 			Value: Map{}, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 		}
 		session.sessions[id] = v
@@ -102,7 +101,7 @@ func (session *MemoryConnect) Update(id string, value Map, expiry int64) bool {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
-	session.sessions[id] = driver.SessionValue{
+	session.sessions[id] = noggo.SessionValue{
 		Value: value, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 	}
 

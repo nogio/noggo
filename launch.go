@@ -21,33 +21,26 @@ func Launch() {
 func Init() {
 	fmt.Println("nogo init...")
 
-
-	//会话处理
+	Logger.init()
 	Router.init()
 	Session.init()
 	Trigger.init()
-
+	Plan.init()
 
 
 }
 
+func Exit() {
 
-
-
-
-
-
-
-
-func exitWaiting() {
 	//使用管道监听退出信号
 	exitChan := make(chan os.Signal, 1)
 	signal.Notify(exitChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM)
 	<-exitChan
-}
 
-func Exit() {
-	exitWaiting()
-	fmt.Println("nogo exit...")
+	Logger.exit()
+	Router.exit()
 	Session.exit()
+	Trigger.exit()
+	Plan.exit()
+	fmt.Println("nogo exit...")
 }

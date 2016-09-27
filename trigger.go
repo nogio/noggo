@@ -3,22 +3,48 @@ package noggo
 
 import (
 	"time"
+	"sync"
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
-	"fmt"
 )
 
 
 type (
+
 	//触发器函数
 	TriggerCall func(*TriggerCtx)
 	TriggerMatch func(*TriggerCtx) bool
 
+	TriggerContext interface {
+		//请求拦截器，在请求一开始执行
+		RequestFilter(*TriggerCtx)
+		//响应拦截器，在响应开始前执行
+		ResponseFilter(*TriggerCtx)
+		//执行拦截器，在执行action前执行
+		ExecuteFilter(*TriggerCtx)
+
+		//404处理器，找不到请求时执行
+		FoundHandler(*TriggerCtx)
+		//错误处理器，发生错误时执行
+		ErrorHandler(*TriggerCtx)
+		//失败处理器，失败时执行，如参数解析失败
+		FailedHandler(*TriggerCtx)
+		//拒绝处理器，拒绝时执行，主要用于Sign签名认证
+		DeniedHandler(*TriggerCtx)
+	}
+
 	//触发器模块
 	triggerModule struct {
+		//上下文
+		contexts map[string]TriggerContext
+		contextsMutex sync.Mutex
+
+
+		//路由连接
+		routerConfig	*routerConfig
+		routerConnect	RouterConnect
 		//会话连接
-		session			driver.SessionConnect
 		sessionConfig	*sessionConfig
+		sessionConnect	SessionConnect
 
 		//路由
 		routes map[string]Map			//路由定义
@@ -56,12 +82,11 @@ type (
 		Auths	Map			//签名认证对象
 
 		//响应相关
-		Code	int			//返回的状态码
-		Type	Type		//响应类型
+		//Code	int			//返回的状态码
+		//Type	Type		//响应类型
 		Body	Any			//响应内容
 		Error	*Error		//响应错误
 	}
-
 )
 
 
@@ -71,29 +96,105 @@ type (
 */
 
 
-//触发器初始化
-func (trigger *triggerModule) init() {
-	trigger.initSession()
-}
-//初始化会话驱动
-func (trigger *triggerModule) initSession() {
-	//先拿到默认的会话配置
-	trigger.sessionConfig = Config.Session
-	//如果触发器有单独定义会话配置，则使用
-	if Config.Trigger.Session != nil {
-		trigger.sessionConfig = Config.Trigger.Session
+
+
+//注册上下文
+func (trigger *triggerModule) Context(name string, context TriggerContext) {
+	trigger.contextsMutex.Lock()
+	defer trigger.contextsMutex.Unlock()
+
+	if context == nil {
+		panic("trigger: register context is nil")
+	}
+	if _, ok := trigger.contexts[name]; ok {
+		panic("trigger: registered context " + name)
 	}
 
-	trigger.session = Session.connect(trigger.sessionConfig)
-	if trigger.session != nil {
-		trigger.session.Open()
+	trigger.contexts[name] = context
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//触发器初始化
+func (trigger *triggerModule) init() {
+	trigger.initRouter()
+	trigger.initSession()
+}
+//初始化路由驱动
+func (trigger *triggerModule) initRouter() {
+	if Config.Trigger.Router == nil {
+		//使用默认的由路连接
+		trigger.routerConfig = Router.routerConfig
+		trigger.routerConnect = Router.routerConnect
 	} else {
-		panic("触发器连接会话服务失败")
+		//使用自定义的由路连接
+		trigger.routerConfig = Config.Trigger.Router
+		trigger.routerConnect = Router.connect(trigger.routerConfig)
+
+		if trigger.routerConnect == nil {
+			panic("触发器连接路由服务失败")
+		} else {
+			err := trigger.routerConnect.Open()
+			if err != nil {
+				panic("触发器打开会话服务失败 " + err.Error())
+			}
+		}
+	}
+}
+
+//初始化会话驱动
+func (trigger *triggerModule) initSession() {
+	if Config.Trigger.Session == nil {
+		//使用默认的会话连接
+		trigger.sessionConfig = Session.sessionConfig
+		trigger.sessionConnect = Session.sessionConnect
+	} else {
+		//使用自定义的会话连接
+		trigger.sessionConfig = Config.Trigger.Session
+		trigger.sessionConnect = Session.connect(trigger.sessionConfig)
+
+		if trigger.sessionConnect == nil {
+			panic("触发器连接会话服务失败")
+		} else {
+			err := trigger.sessionConnect.Open()
+			if err != nil {
+				panic("触发器打开会话服务失败 " + err.Error())
+			}
+		}
 	}
 }
 
 //触发器退出
 func (trigger *triggerModule) exit() {
+	//关闭路由
+	if trigger.routerConnect != nil {
+		trigger.routerConnect.Close()
+		trigger.routerConnect = nil
+	}
+	//关闭会话
+	if trigger.sessionConnect != nil {
+		trigger.sessionConnect.Close()
+		trigger.sessionConnect = nil
+	}
 }
 
 
@@ -121,7 +222,7 @@ func (trigger *triggerModule) Route(name string, config Map) {
 
 	//处理uri
 	trigger.routeUris[name] = name
-	if v,ok := config[KeyConfigUri]; ok {
+	if v,ok := config[KeyMapUri]; ok {
 
 		switch uris := v.(type) {
 		case string:
@@ -133,10 +234,6 @@ func (trigger *triggerModule) Route(name string, config Map) {
 		}
 	}
 }
-
-
-
-
 
 
 
@@ -170,19 +267,20 @@ func (trigger *triggerModule) newTrigger(method, path string, value Map) (*Trigg
 func (trigger *triggerModule) serveTrigger(method, path string, value Map) {
 	ctx := trigger.newTrigger(method, path, value)
 
-	//前置处理
-	//ctx.handler(triggerRoute)
+	//请求处理
+	for _,v := range trigger.contexts {
+		ctx.handler(v.RequestFilter)
+	}
 	ctx.handler(trigger.handlerRequest)
-	//ctx.handler(triggerSession)
 
-	//这里做use的拦截器
-	//for _,n := range ctx.Service.useNames {
-	//	ctx.handler(ctx.Service.UseActions(n)...)
-	//}
-
+	//响应处理
 	ctx.handler(trigger.handlerResponse)
-	//ctx.handler(triggerExecute)
+	for _,v := range trigger.contexts {
+		ctx.handler(v.ResponseFilter)
+	}
 
+	//开始执行
+	ctx.handler(trigger.handlerExecute)
 	ctx.Next()
 }
 
@@ -226,11 +324,7 @@ func (trigger *triggerModule) Touch(path string, args ...Map) {
 //trigger 触发器处理器
 //请求处理
 //包含：route解析、request处理、session处理
-
 func (trigger *triggerModule) handlerRequest(ctx *TriggerCtx) {
-
-	fmt.Printf("handlerRequest, path=%v\n", ctx.Path)
-
 
 	//路由解析
 	//目前暂不支持driver
@@ -246,23 +340,206 @@ func (trigger *triggerModule) handlerRequest(ctx *TriggerCtx) {
 	ctx.Id = ctx.Name	//使用name做为id，以便在同一个触发器之下共享session
 
 	//会话处理
-	ctx.Session = trigger.session.Create(ctx.Id, trigger.sessionConfig.Expiry)
+	ctx.Session = trigger.sessionConnect.Create(ctx.Id, trigger.sessionConfig.Expiry)
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	trigger.session.Update(ctx.Id, ctx.Session, trigger.sessionConfig.Expiry)
+	trigger.sessionConnect.Update(ctx.Id, ctx.Session, trigger.sessionConfig.Expiry)
+}
+
+//处理响应
+func (trigger *triggerModule) handlerResponse(ctx *TriggerCtx) {
+	ctx.Next()
+
+	if ctx.Body == nil {
+		//没有响应，应该走到found流程
+	} else {
+
+		switch body := ctx.Body.(type) {
+		case BodyTriggerFinish:
+			//完成不做任何处理
+		case BodyTriggerRetrigger:
+			//目前直接调度，可调整，以后做到task中统一调整
+			//因为万一delay很久。中间正好程序重新或是其它，就丢了
+			//所以有必要使用task机制重新调度
+			time.AfterFunc(body.Delay, func() {
+				Trigger.Touch(ctx.Path, ctx.Value)
+			})
+		default:
+			//默认，也没有什么好处理的
+		}
+	}
 }
 
 
-func (trigger *triggerModule) handlerResponse(ctx *TriggerCtx) {
-	fmt.Printf("session=%v\n", ctx.Session)
 
-	ctx.Session["now1"] = time.Now()
+//路由执行，处理
+func (trigger *triggerModule) handlerExecute(ctx *TriggerCtx) {
 
-	fmt.Printf("session=%v\n", ctx.Session)
+	//解析路由，拿到actions
+	if ctx.Config == nil {
 
-	ctx.Session["now2"] = time.Now()
+		//找不到路由
+		//ctx.handler(trigger.handlerFound)
+	} else {
 
-	fmt.Printf("session=%v\n", ctx.Session)
+
+
+
+
+		//先走，filter拦截器
+		/*
+		for _,n := range trigger.Service.filterNames {
+			trigger.handler(trigger.Service.FilterActions(n)...)
+		}
+		*/
+
+		//验证，参数，数据处理
+		//验证处理，数据处理， 可以考虑走中间件
+		/*
+		if _,ok := trigger.Config["args"]; ok {
+			trigger.handler(triggerArgs)
+		}
+		if _,ok := trigger.Config["auth"]; ok {
+			trigger.handler(triggerAuth)
+		}
+		if _,ok := trigger.Config["item"]; ok {
+			trigger.handler(triggerItem)
+		}
+		*/
+
+
+
+
+		//最终都由分支处理
+		ctx.handler(trigger.handlerBranch)
+	}
+
+	ctx.Next()
+}
+
+
+//触发器处理：处理分支
+func (trigger *triggerModule) handlerBranch(ctx *TriggerCtx) {
+
+	//执行线重置
+	ctx.cleanup()
+	ctx.Branchs = []Map{}
+
+	//总体思路，考虑路由和分支
+	//把路由本身，做为一个匹配所有的分支，放到最后一个执行
+
+	//如果有分支，来
+	if branchConfig,ok := ctx.Config[KeyMapBranch]; ok {
+		//遍历分支
+		for _,v := range branchConfig.(Map) {
+			//保存了：branch.xxx { match, route }
+			ctx.Branchs = append(ctx.Branchs, v.(Map))
+		}
+	}
+	//如果有路由
+	if routeConfig,ok := ctx.Config[KeyMapRoute]; ok {
+		//保存{ match, route }
+		ctx.Branchs = append(ctx.Branchs, Map{
+			KeyMapMatch:	true,	//默认路由直接匹配
+			KeyMapRoute:	routeConfig,
+		})
+	}
+
+	var routing Map
+
+	forBranchs:
+	for _,b := range ctx.Branchs {
+		if match,ok := b[KeyMapMatch]; ok {
+
+			switch match:=match.(type) {
+			case bool:
+				if (match) {
+					routing = b
+					break forBranchs;
+				}
+			case func(*TriggerCtx)bool:
+				if (match(ctx)) {
+					routing = b
+					break forBranchs;
+				}
+			default:
+			}
+		}
+	}
+
+
+	/*
+	//先不复制了吧，因为顶级的，在已经处理过 params,args,auth等的东西，再复制会重复处理
+	//复制顶层的路由配置
+	//noggo更新， 应该复制一下， 这样可以省一个handler，execute直接不要了。就直接分支
+	//顶层的复制主要是 auth, item 的处理
+	for k,v := range ctx.Route {
+		if k != "uri" && k != "match" && k != "route" && k != "branch" {
+			routing[k] = v
+		}
+	}
+	*/
+
+
+	//这里 ctx.Route 和 routing 变换位置
+	ctx.Config = Map{}
+
+	//如果有路由
+	if routeConfig,ok := routing[KeyMapRoute]; ok {
+		//如果是method=*版
+		if _,ok := routeConfig.(Map)[KeyMapAction]; ok {
+			for k,v := range routeConfig.(Map) {
+				ctx.Config[k] = v
+			}
+		} else {	//否则为方法版：get,post
+			if methodConfig,ok := routeConfig.(Map)[ctx.Method]; ok {
+				for k,v := range methodConfig.(Map) {
+					ctx.Config[k] = v
+				}
+			}
+		}
+	}
+
+
+
+
+	//先处理参数，验证等的东西
+	/*
+	if _,ok := ctx.Config["args"]; ok {
+		ctx.handler(triggerArgs)
+	}
+	if _,ok := ctx.Config["auth"]; ok {
+		ctx.handler(triggerAuth)
+	}
+	if _,ok := ctx.Config["item"]; ok {
+		ctx.handler(triggerItem)
+	}
+	*/
+
+
+	//action之前Execute拦截器
+	for _,v := range trigger.contexts {
+		ctx.handler(v.ExecuteFilter)
+	}
+
+	//把action加入调用列表
+	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
+		switch actions:=actionConfig.(type) {
+		case func(*TriggerCtx):
+			ctx.handler(actions)
+		case []func(*TriggerCtx):
+			for _,action := range actions {
+				ctx.handler(action)
+			}
+		case TriggerCall:
+			ctx.handler(actions)
+		case []TriggerCall:
+			ctx.handler(actions...)
+		default:
+		}
+	}
+
+	ctx.Next()
 }
 
 
@@ -306,7 +583,7 @@ func (trigger *TriggerCtx) Next() {
 			trigger.Next()
 		}
 	} else {
-		//没有了，不再执行，Response会处理为404
+		//没有了，不再执行
 	}
 }
 
@@ -314,6 +591,7 @@ func (trigger *TriggerCtx) Next() {
 //触发器响应
 //完成操作
 func (ctx *TriggerCtx) Finish() {
+	ctx.Body = BodyTriggerFinish{}
 }
 
 //触发器响应
@@ -321,11 +599,10 @@ func (ctx *TriggerCtx) Finish() {
 func (ctx *TriggerCtx) Retrigger(delays ...time.Duration) {
 	if len(delays) > 0 {
 		//延时重新触发
-
-
+		ctx.Body = BodyTriggerRetrigger{ Delay: delays[0] }
 	} else {
 		//立即重新触发
-
+		ctx.Body = BodyTriggerRetrigger{ Delay: time.Second*0 }
 	}
 }
 

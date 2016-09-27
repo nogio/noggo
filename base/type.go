@@ -1,17 +1,17 @@
 package base
 
-type Type int
+type Type string
 
 
 const (
-	TypeTriggerNone = iota
-	TypeTriggerFinish
-	TypeTriggerRetrigger
+	TypeTriggerNone			= "none"
+	TypeTriggerFinish		= "finish"
+	TypeTriggerRetrigger	= "retrigger"
 )
 
 const (
-	TypeErrorNone = iota
-	TypeErrorFailed
-	TypeErrorDenied
-	TypeErrorState
+	TypeErrorNone = "none"
+	TypeErrorFailed = "failed"
+	TypeErrorDenied = "denied"
+	TypeErrorState = "state"
 )

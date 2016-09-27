@@ -1,5 +1,13 @@
 {
 
+  "debug": true,
+
+
+  "logger": {
+    "driver": "default",
+    "config": { }
+  },
+
   "router": {
     "driver": "default",
     "config": { }
@@ -23,6 +31,19 @@
     }
   },
 
+  "plan": {
+    "driver": "default",
+    "config": {},
+
+    "router": {
+      "driver": "default",
+      "config": {}
+    },
+    "session": {
+      "driver": "memory", "expiry": 3600,
+      "config": {}
+    }
+  },
 
 
   "test": ""

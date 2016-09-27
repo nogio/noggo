@@ -1,8 +1,7 @@
 package noggo
 
 import (
-	//. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	. "github.com/nogio/noggo/base"
 	"sync"
 )
 
@@ -12,10 +11,36 @@ import (
 
 
 type (
+	//路由器结果
+	RouterResult struct {
+		Name	string
+		Uri		string
+		Params	Map
+	}
+
+	//路由器驱动
+	RouterDriver interface {
+		Connect(config Map) (RouterConnect)
+	}
+	//路由器连接
+	RouterConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close()
+		//注册路由
+		Route(name, uri string)
+		//解析路由
+		Parse(uri string) *RouterResult
+	}
 	//路由器模块
 	routerModule struct {
-		drivers map[string]driver.RouterDriver
+		drivers map[string]RouterDriver
 		driversMutex sync.Mutex
+
+		//这个是默认的路由器
+		routerConfig *routerConfig
+		routerConnect RouterConnect
 	}
 )
 
@@ -24,10 +49,8 @@ type (
 
 
 
-
-
-//注册路由器驱动
-func (router *routerModule) Register(name string, driver driver.RouterDriver) {
+//注册日志器驱动
+func (router *routerModule) Register(name string, driver RouterDriver) {
 	router.driversMutex.Lock()
 	defer router.driversMutex.Unlock()
 
@@ -43,11 +66,32 @@ func (router *routerModule) Register(name string, driver driver.RouterDriver) {
 
 
 
-//路由器初始货
-func (session *routerModule) init() {
-
+//连接驱动
+func (router *routerModule) connect(config *routerConfig) (RouterConnect) {
+	if routerDriver,ok := router.drivers[config.Driver]; ok {
+		return routerDriver.Connect(config.Config)
+	}
+	return nil
 }
-//路由器退出
-func (session *routerModule) exit() {
 
+//日志器初始化
+func (router *routerModule) init() {
+
+	//默认配置
+	router.routerConfig = Config.Router
+	router.routerConnect = Router.connect(router.routerConfig)
+
+	err := router.routerConnect.Open()
+	if err != nil {
+		panic("打开路由器连接失败")
+	}
 }
+//日志器退出
+func (router *routerModule) exit() {
+	//关闭日志连接
+	if router.routerConnect != nil {
+		router.routerConnect.Close()
+	}
+}
+
+
