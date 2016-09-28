@@ -37,9 +37,7 @@ var (
 func init() {
 	Config = readJsonConfig()
 
-	Const = &constModule{
-		mimes: Map{}, regulars: Map{}, states: Map{},
-	}
+	Const = &constModule{}
 
 	Mapping = &mappingModule{
 		types: map[string]Map{}, cryptos: map[string]Map{},
@@ -72,7 +70,7 @@ func init() {
 
 	//计划模块
 	Plan = &planModule{
-		drivers: map[string]PlanDriver{}, contexts: map[string]PlanContext{},
+		drivers: map[string]PlanDriver{},
 		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{}, routeTimes:map[string][]string{},
 	}
 }

@@ -2,8 +2,8 @@ package main
 
 import (
 	"github.com/nogio/noggo"
-	_ "../contexts"
 	_ "../drivers"
+	_ "../middlers"
 	_ "../modules/triggers"
 	_ "../modules/plans"
 )

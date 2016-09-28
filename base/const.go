@@ -1,6 +1,12 @@
 package base
 
 const (
+
+	ConstLangDefault	= "default"
+
+
+
+
 	KeySign				= "noggo.sign."
 	KeySignId			= "id"
 	KeySignName			= "name"
@@ -18,6 +24,7 @@ const (
 	KeyMapEnum		= "enum"
 	KeyMapArgs		= "args"
 	KeyMapItem		= "item"
+	KeyMapAuth		= "auth"
 
 	KeyMapAction	= "action"
 	KeyMapBranch	= "branch"

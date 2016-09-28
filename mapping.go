@@ -275,18 +275,18 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 			//是否有自定义的状态
 			if c,ok := fieldConfig["empty"]; ok {
 				if fieldConfig["name"] != nil {
-					return NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
+					return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
 				} else {
-					return NewStateError(c.(string), strings.Join(trees, "."))
+					return Const.NewStateError(c.(string), strings.Join(trees, "."))
 				}
 
 			} else {
 				//return errors.New("参数不可为空")
-				//return NewStateError("args.empty", fieldName)
+				//return Const.NewStateError("args.empty", fieldName)
 				if fieldConfig["name"] != nil {
-					return NewStateError("map.empty", fmt.Sprintf("%v", fieldConfig["name"]))
+					return Const.NewStateError("map.empty", fmt.Sprintf("%v", fieldConfig["name"]))
 				} else {
-					return NewStateError("map.empty", strings.Join(trees, "."))
+					return Const.NewStateError("map.empty", strings.Join(trees, "."))
 				}
 			}
 
@@ -420,7 +420,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 					if sv,ok := fieldValue.(string); ok {
 
 						//得到解密方法
-						decode := CryptoDecode(ct.(string))
+						decode := Mapping.CryptoDecode(ct.(string))
 						fieldValue = decode(sv)
 					}
 				}
@@ -431,7 +431,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 
 				//验证方法和值方法
 				if fieldType, ok := fieldConfig["type"]; ok {
-					fieldValidCall, fieldValueCall := TypeFunc(fieldType.(string))
+					fieldValidCall, fieldValueCall := Mapping.TypeMethod(fieldType.(string))
 
 					//如果配置中有自己的验证函数
 					if f,ok := fieldConfig["valid"]; ok {
@@ -459,23 +459,23 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 
 							//是否有自定义的状态
 							if c,ok := fieldConfig["error"]; ok {
-								return NewStateError(c.(string), strings.Join(trees, "."))
+								return Const.NewStateError(c.(string), strings.Join(trees, "."))
 
 								if fieldConfig["name"] != nil {
-									return NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
+									return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
 								} else {
-									return NewStateError(c.(string), strings.Join(trees, "."))
+									return Const.NewStateError(c.(string), strings.Join(trees, "."))
 								}
 
 
 							} else {
 								//return errors.New("valid error")
 								//类型不匹配
-								//return NewStateError("args.error", fieldName)
+								//return Const.NewStateError("args.error", fieldName)
 								if fieldConfig["name"] != nil {
-									return NewStateError("map.error", fmt.Sprintf("%v", fieldConfig["name"]))
+									return Const.NewStateError("map.error", fmt.Sprintf("%v", fieldConfig["name"]))
 								} else {
-									return NewStateError("map.error", strings.Join(trees, "."))
+									return Const.NewStateError("map.error", strings.Join(trees, "."))
 								}
 							}
 						}
@@ -510,19 +510,21 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 			case Map:
 				jsonConfig = c
 			case map[string]interface{}:
-				jsonConfig = c
+				//jsonConfig = c
+				for k,v := range c {
+					jsonConfig[k] = v
+				}
 			}
 
 
 			//如果是数组
 			isArray := false
 			//fieldData到这里定义
-			var fieldData Any
+			fieldData := []Map{}
 
 			switch v := fieldValue.(type) {
 			case Map:
-				fieldData = v
-				fieldValue = Map{}
+				fieldData = append(fieldData, v)
 			case map[string]interface{}: {
 				//这里要处理, 因为当json字段有多级的时候, 解析出来是 map[string]interface{}  这样处理子级的时候转成了Map就出问题了
 				mm := Map{}
@@ -530,93 +532,51 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 					mm[kk] = vv
 				}
 
-				fieldData = mm
-				fieldValue = Map{}
+				fieldData = append(fieldData, mm)
 			}
 			case []Map:
 				isArray = true
 				fieldData = v
-				fieldValue = make([]Map,0)
 			case []map[string]interface{}:
 				isArray = true
-				fieldData = v
-				fieldValue = make([]map[string]interface{},0)
+
+				for _,vv := range v {
+					mm := Map{}
+					for kkk,vvv := range vv {
+						mm[kkk] = vvv
+					}
+					fieldData = append(fieldData, mm)
+				}
 			default:
-				fieldData = Map{}
-				fieldValue = Map{}
+				fieldData = []Map{}
 			}
 
-			//是数组，处理JSON数组
-			if isArray {
 
-				//如果是Map数组
-				if ds,ok := fieldData.([]Map); ok {
-					values := fieldValue.([]Map)
+			//直接都遍历
+			values := []Map{}
 
-					for _,d := range ds {
-						v := Map{}
+			for _,d := range fieldData {
+				v := Map{}
 
-						err := Mapping(trees, jsonConfig, d, v, args...);
-						if err != nil {
-							return err
-						} else {
-							//fieldValue = append(fieldValue, v)
-							values = append(values, v)
-						}
-					}
-					fieldValue = values
-
-				}
-				//如果是map[string]数组
-				if ds,ok := fieldData.([]map[string]interface{}); ok {
-					values := fieldValue.([]map[string]interface{})
-
-					for _,d := range ds {
-						v := make(map[string]interface{})
-
-						err := Mapping(trees, jsonConfig, d, v, args...);
-						if err != nil {
-							return err
-						} else {
-							//fieldValue = append(fieldValue, v)
-							values = append(values, v)
-						}
-					}
-
-					fieldValue = values
-
-				}
-
-
-
-			} else {
-				//不是数组，直接是JSON，处理下级
-
-				//data,value有点绕
-				//data是传过来的参数，  value是要返回来的值
-				//在这里 data 应该是处理好的fieldValue 这个字段
-				//而，要返回一个新的value做为， 这个字段的value
-
-				//当json有多层的时候, 这里就不是map了
-				fieldValueMap := Map{}
-				switch c := fieldValue.(type) {
-				case Map:
-					fieldValueMap = c
-				case map[string]interface{}:
-					fieldValueMap = c
-				default:
-				//类型不对
-				}
-
-
-
-
-				//当json有多层的时候, 这里就不是map了
-				err := Mapping(trees, jsonConfig, fieldData.(Map), fieldValueMap, args...);
+				err := Mapping.Parse(trees, jsonConfig, d, v, args...);
 				if err != nil {
 					return err
+				} else {
+					//fieldValue = append(fieldValue, v)
+					values = append(values, v)
 				}
 			}
+
+			if isArray {
+				fieldValue = values
+			} else {
+				if len(values) > 0 {
+					fieldValue = values[0]
+				} else {
+					fieldValue = Map{}
+				}
+			}
+
 		}
 
 
@@ -650,7 +610,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 
 
 			//得到解密方法
-			decode := CryptoEncode(ct.(string))
+			decode := Mapping.CryptoEncode(ct.(string))
 			fieldValue = decode(sv)
 		}
 
