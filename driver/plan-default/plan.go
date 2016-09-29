@@ -98,7 +98,6 @@ func (plan *DefaultConnect) Accept(job noggo.PlanJob) error {
 
 
 //移除监听
-//这个计划库好像不支持移除
 func (plan *DefaultConnect) Remove(id string) error {
 	if plan.cron == nil {
 		return errors.New("plan-default.accept: cron is nil")

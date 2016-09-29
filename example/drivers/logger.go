@@ -8,6 +8,6 @@ import (
 
 
 func init() {
-	//注册默认路由器驱动
+	//注册默认日志驱动
 	noggo.Logger.Register("default", logger_default.Driver())
 }

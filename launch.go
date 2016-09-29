@@ -10,15 +10,15 @@ import (
 
 
 func Launch() {
-	Init()
-	Exit()
+	nogInit()
+	nogExit()
 }
 
 
 
 
 //初始化
-func Init() {
+func nogInit() {
 	fmt.Println("nogo init...")
 
 	Logger.init()
@@ -30,7 +30,7 @@ func Init() {
 
 }
 
-func Exit() {
+func nogExit() {
 
 	//使用管道监听退出信号
 	exitChan := make(chan os.Signal, 1)
