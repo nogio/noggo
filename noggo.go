@@ -64,7 +64,6 @@ func init() {
 
 	//触发器模块
 	Trigger = &triggerModule{
-		contexts: map[string]TriggerContext{},
 		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{},
 	}
 

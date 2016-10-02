@@ -85,11 +85,11 @@ func (plan *DefaultConnect) Stop() error {
 
 
 //添加监听
-func (plan *DefaultConnect) Accept(job noggo.PlanJob) error {
+func (plan *DefaultConnect) Accept(id, name, time string, call func()) error {
 	if plan.cron == nil {
 		return errors.New("plan-default.accept: cron is nil")
 	}
-	plan.cron.AddFunc(job.Time, job.Call, job.Id)
+	plan.cron.AddFunc(time, call, id)
 	return nil
 }
 

@@ -11,8 +11,9 @@ import (
 
 type (
 	//计划函数
-	PlanCall func(*PlanCtx)
-	PlanMatch func(*PlanCtx) bool
+	PlanFunc func(*PlanContext)
+	PlanMatch func(*PlanContext) bool
+	PlanAcceptFunc func()
 
 
 	//计划驱动
@@ -23,19 +24,11 @@ type (
 	PlanConnect interface {
 		Open() error
 		Close() error
-		Accept(job PlanJob) error
+		Accept(id,name,time string, call func()) error
 		Remove(id string) error
 		Start() error
 		Stop() error
 	}
-	//计划工作实体
-	PlanJob struct {
-		Id		string
-		Name	string
-		Time	string
-		Call	func()
-	}
-
 
 
 
@@ -62,13 +55,21 @@ type (
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
 		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
 		routeTimes	map[string][]string		//记录所有times定义，不同的计划可能会有相同的time定义,  map[name][times]
+
+		//拦截器们
+		requestFilters, executeFilters, responseFilters map[string]PlanFunc
+		requestFilterNames, executeFilterNames, responseFilterNames []string
+
+		//处理器们
+		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]PlanFunc
+		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
 	}
 
 	//计划上下文
-	PlanCtx struct {
+	PlanContext struct {
 		Module	*planModule
 		//执行线
-		nexts []PlanCall		//方法列表
+		nexts []PlanFunc		//方法列表
 		next int				//下一个索引
 
 		//基础
@@ -114,26 +115,26 @@ type (
 
 
 //计划初始化
-func (plan *planModule) init() {
-	plan.initRouter()
-	plan.initSession()
-	plan.initPlan()
+func (module *planModule) init() {
+	module.initRouter()
+	module.initSession()
+	module.initPlan()
 }
 //初始化路由驱动
-func (plan *planModule) initRouter() {
+func (module *planModule) initRouter() {
 	if Config.Plan.Router == nil {
 		//使用默认的由路连接
-		plan.routerConfig = Plan.routerConfig
-		plan.routerConnect = Plan.routerConnect
+		module.routerConfig = Plan.routerConfig
+		module.routerConnect = Plan.routerConnect
 	} else {
 		//使用自定义的由路连接
-		plan.routerConfig = Config.Plan.Router
-		plan.routerConnect = Router.connect(plan.routerConfig)
+		module.routerConfig = Config.Plan.Router
+		module.routerConnect = Router.connect(module.routerConfig)
 
-		if plan.routerConnect == nil {
+		if module.routerConnect == nil {
 			panic("计划连接路由服务失败")
 		} else {
-			err := plan.routerConnect.Open()
+			err := module.routerConnect.Open()
 			if err != nil {
 				panic("计划打开路由服务失败 " + err.Error())
 			}
@@ -142,22 +143,22 @@ func (plan *planModule) initRouter() {
 }
 
 //初始化会话驱动
-func (plan *planModule) initSession() {
+func (module *planModule) initSession() {
 	if Config.Plan.Session == nil {
 		//使用默认的会话连接
-		plan.sessionConfig = Session.sessionConfig
-		plan.sessionConnect = Session.sessionConnect
+		module.sessionConfig = Session.sessionConfig
+		module.sessionConnect = Session.sessionConnect
 	} else {
 		//使用自定义的会话连接
-		plan.sessionConfig = Config.Plan.Session
-		plan.sessionConnect = Session.connect(plan.sessionConfig)
+		module.sessionConfig = Config.Plan.Session
+		module.sessionConnect = Session.connect(module.sessionConfig)
 
 
-		if plan.sessionConnect == nil {
+		if module.sessionConnect == nil {
 			panic("计划连接会话服务失败")
 		} else {
 			//打开会话连接
-			err := plan.sessionConnect.Open()
+			err := module.sessionConnect.Open()
 			if err != nil {
 				panic("计划打开会话服务失败 " + err.Error())
 			}
@@ -167,65 +168,62 @@ func (plan *planModule) initSession() {
 
 
 //初始化计划驱动
-func (plan *planModule) initPlan() {
+func (module *planModule) initPlan() {
 
-	plan.planConfig = Config.Plan
-	plan.planConnect = plan.connect(plan.planConfig)
+	module.planConfig = Config.Plan
+	module.planConnect = module.connect(module.planConfig)
 
 	//打开计划连接
-	err := plan.planConnect.Open()
+	err := module.planConnect.Open()
 	if err != nil {
 		panic("打开计划服务失败 " + err.Error())
 	}
 
 	//处理计划
-	for name,times := range plan.routeTimes {
+	for name,times := range module.routeTimes {
 		for index,time := range times {
+			id := fmt.Sprintf("%v.%v", name, index)
 			//监听计划
-			plan.planConnect.Accept(PlanJob{
-				Id: fmt.Sprintf("%v.%v", name, index),
-				Name: name, Time: time,
-				Call: func() {
-					plan.Touch(name)
-				},
+			module.planConnect.Accept(id, name, time, func() {
+				module.Touch(name)
 			})
 		}
 	}
 
 	//开始计划
-	plan.planConnect.Start()
+	module.planConnect.Start()
 }
 
 
 
 //计划退出
-func (plan *planModule) exit() {
-	plan.exitRouter()
-	plan.exitSession()
-	plan.exitPlan()
+func (module *planModule) exit() {
+	module.exitRouter()
+	module.exitSession()
+	module.exitPlan()
 }
 //计划退出，路由器
-func (plan *planModule) exitRouter() {
+func (module *planModule) exitRouter() {
 	//关闭路由
-	if plan.routerConnect != nil {
-		plan.routerConnect.Close()
-		plan.routerConnect = nil
+	if module.routerConnect != nil {
+		module.routerConnect.Close()
+		module.routerConnect = nil
 	}
 }
 //计划退出，会话
-func (plan *planModule) exitSession() {
+func (module *planModule) exitSession() {
 	//关闭会话
-	if plan.sessionConnect != nil {
-		plan.sessionConnect.Close()
-		plan.sessionConnect = nil
+	if module.sessionConnect != nil {
+		module.sessionConnect.Close()
+		module.sessionConnect = nil
 	}
 }
 //计划退出，计划
-func (plan *planModule) exitPlan() {
+func (module *planModule) exitPlan() {
 	//关闭计划
-	if plan.planConnect != nil {
-		plan.planConnect.Close()
-		plan.planConnect = nil
+	if module.planConnect != nil {
+		module.planConnect.Close()
+		module.planConnect = nil
 	}
 }
 
@@ -238,34 +236,14 @@ func (plan *planModule) exitPlan() {
 
 
 
-
-
-
-
-
-
-
-
-//Run是大多cron库支持的
-func (job PlanJob) Run() {
-	if job.Call != nil {
-		job.Call()
-	}
-}
-//Launch是大多cron库支持的
-func (job PlanJob) Launch() {
-	if job.Call != nil {
-		job.Call()
-	}
-}
 
 
 
 
 
 //连接驱动
-func (plan *planModule) connect(config *planConfig) (PlanConnect) {
-	if planDriver,ok := plan.drivers[config.Driver]; ok {
+func (module *planModule) connect(config *planConfig) (PlanConnect) {
+	if planDriver,ok := module.drivers[config.Driver]; ok {
 		return planDriver.Connect(config.Config)
 	} else {
 		panic("不支持的计划驱动： " + config.Driver)
@@ -276,35 +254,35 @@ func (plan *planModule) connect(config *planConfig) (PlanConnect) {
 
 
 //注册驱动
-func (plan *planModule) Driver(name string, driver PlanDriver) {
-	plan.driversMutex.Lock()
-	defer plan.driversMutex.Unlock()
+func (module *planModule) Driver(name string, driver PlanDriver) {
+	module.driversMutex.Lock()
+	defer module.driversMutex.Unlock()
 
 	if driver == nil {
 		panic("plan: Register driver is nil")
 	}
-	if _, ok := plan.drivers[name]; ok {
+	if _, ok := module.drivers[name]; ok {
 		panic("plan: Registered driver " + name)
 	}
 
-	plan.drivers[name] = driver
+	module.drivers[name] = driver
 }
 //注册路由
-func (plan *planModule) Route(name string, config Map) {
+func (module *planModule) Route(name string, config Map) {
 	//保存配置
-	plan.routes[name] = config
-	plan.routeNames = append(plan.routeNames, name)
+	module.routes[name] = config
+	module.routeNames = append(module.routeNames, name)
 
 	//处理uri
-	plan.routeUris[name] = name
+	module.routeUris[name] = name
 	if v,ok := config[KeyMapUri]; ok {
 
 		switch uris := v.(type) {
 		case string:
-			plan.routeUris[uris] = name
+			module.routeUris[uris] = name
 		case []string:
 			for _,uri := range uris {
-				plan.routeUris[uri] = name
+				module.routeUris[uri] = name
 			}
 		}
 	}
@@ -313,9 +291,9 @@ func (plan *planModule) Route(name string, config Map) {
 	if v,ok := config[KeyMapTime]; ok {
 		switch times := v.(type) {
 		case string:
-			plan.routeTimes[name] = []string { times }
+			module.routeTimes[name] = []string { times }
 		case []string:
-			plan.routeTimes[name] = times
+			module.routeTimes[name] = times
 		}
 	}
 }
@@ -327,6 +305,124 @@ func (plan *planModule) Route(name string, config Map) {
 
 
 
+/* 注册拦截器 begin */
+func (module *planModule) RequestFilter(name string, call PlanFunc) {
+
+	if module.requestFilters == nil {
+		module.requestFilters = make(map[string]PlanFunc)
+	}
+	if module.requestFilterNames == nil {
+		module.requestFilterNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.requestFilters[name]; ok == false {
+		module.requestFilterNames = append(module.requestFilterNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.requestFilters[name] = call
+}
+func (module *planModule) ExecuteFilter(name string, call PlanFunc) {
+
+	if module.executeFilters == nil {
+		module.executeFilters = make(map[string]PlanFunc)
+	}
+	if module.executeFilterNames == nil {
+		module.executeFilterNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.executeFilters[name]; ok == false {
+		module.executeFilterNames = append(module.executeFilterNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.executeFilters[name] = call
+}
+func (module *planModule) ResponseFilter(name string, call PlanFunc) {
+
+	if module.responseFilters == nil {
+		module.responseFilters = make(map[string]PlanFunc)
+	}
+	if module.responseFilterNames == nil {
+		module.responseFilterNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.responseFilters[name]; ok == false {
+		module.responseFilterNames = append(module.responseFilterNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.responseFilters[name] = call
+}
+/* 注册拦截器 end */
+
+
+/* 注册处理器 begin */
+func (module *planModule) FoundHandler(name string, call PlanFunc) {
+
+	if module.foundHandlers == nil {
+		module.foundHandlers = make(map[string]PlanFunc)
+	}
+	if module.foundHandlerNames == nil {
+		module.foundHandlerNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.foundHandlers[name]; ok == false {
+		module.foundHandlerNames = append(module.foundHandlerNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.foundHandlers[name] = call
+}
+func (module *planModule) ErrorHandler(name string, call PlanFunc) {
+
+	if module.errorHandlers == nil {
+		module.errorHandlers = make(map[string]PlanFunc)
+	}
+	if module.errorHandlerNames == nil {
+		module.errorHandlerNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.errorHandlers[name]; ok == false {
+		module.errorHandlerNames = append(module.errorHandlerNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.errorHandlers[name] = call
+}
+func (module *planModule) FailedHandler(name string, call PlanFunc) {
+
+	if module.failedHandlers == nil {
+		module.failedHandlers = make(map[string]PlanFunc)
+	}
+	if module.failedHandlerNames == nil {
+		module.failedHandlerNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.failedHandlers[name]; ok == false {
+		module.failedHandlerNames = append(module.failedHandlerNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.failedHandlers[name] = call
+}
+func (module *planModule) DeniedHandler(name string, call PlanFunc) {
+
+	if module.deniedHandlers == nil {
+		module.deniedHandlers = make(map[string]PlanFunc)
+	}
+	if module.deniedHandlerNames == nil {
+		module.deniedHandlerNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.deniedHandlers[name]; ok == false {
+		module.deniedHandlerNames = append(module.deniedHandlerNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.deniedHandlers[name] = call
+}
+/* 注册处理器 end */
 
 
 
@@ -338,11 +434,11 @@ func (plan *planModule) Route(name string, config Map) {
 
 
 //创建Plan上下文
-func (plan *planModule) newPlanCtx(method, path string, value Map) (*PlanCtx) {
-	return &PlanCtx{
-		Module: plan,
+func (module *planModule) newPlanContext(method, path string, value Map) (*PlanContext) {
+	return &PlanContext{
+		Module: module,
 
-		next: -1, nexts: []PlanCall{},
+		next: -1, nexts: []PlanFunc{},
 
 		Method: method, Path: path,
 		Name: "", Config: Map{}, Branchs:[]Map{},
@@ -355,27 +451,27 @@ func (plan *planModule) newPlanCtx(method, path string, value Map) (*PlanCtx) {
 
 
 //计划Plan  请求开始
-func (plan *planModule) servePlan(method, path string, value Map) {
-	ctx := plan.newPlanCtx(method, path, value)
+func (module *planModule) servePlan(method, path string, value Map) {
+	ctx := module.newPlanContext(method, path, value)
 
 	//请求处理
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.RequestFilter)
+	//filter中的request
+	//用数组保证原始注册顺序
+	for _,name := range module.requestFilterNames {
+		ctx.handler(module.requestFilters[name])
 	}
-	*/
-	ctx.handler(plan.filterRequest)
+	ctx.handler(module.contextRequest)
 
 	//响应处理
-	ctx.handler(plan.filterResponse)
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.ResponseFilter)
+	ctx.handler(module.contextResponse)
+	//filter中的response
+	//用数组保证原始注册顺序
+	for _,name := range module.responseFilterNames {
+		ctx.handler(module.responseFilters[name])
 	}
-	*/
 
 	//开始执行
-	ctx.handler(plan.filterExecute)
+	ctx.handler(module.contextExecute)
 	ctx.Next()
 }
 
@@ -393,14 +489,14 @@ func (plan *planModule) servePlan(method, path string, value Map) {
 
 
 //发起触发
-func (plan *planModule) Touch(path string, args ...Map) {
+func (module *planModule) Touch(path string, args ...Map) {
 
 	value := Map{}
 	if len(args) > 0 {
 		value = args[0]
 	}
 
-	go plan.servePlan("", path, value)
+	go module.servePlan("", path, value)
 }
 
 /*
@@ -434,14 +530,14 @@ func (plan *planModule) Touch(path string, args ...Map) {
 //plan 计划处理器
 //请求处理
 //包含：route解析、request处理、session处理
-func (plan *planModule) filterRequest(ctx *PlanCtx) {
+func (module *planModule) contextRequest(ctx *PlanContext) {
 
 	//路由解析
 	//目前暂不支持driver
 	//直接使用name相等就匹配
-	if name,ok := plan.routeUris[ctx.Path]; ok {
+	if name,ok := module.routeUris[ctx.Path]; ok {
 		ctx.Name = name
-		ctx.Config = plan.routes[name]
+		ctx.Config = module.routes[name]
 	}
 
 
@@ -450,14 +546,14 @@ func (plan *planModule) filterRequest(ctx *PlanCtx) {
 	ctx.Id = ctx.Name	//使用name做为id，以便在同一个计划之下共享session
 
 	//会话处理
-	ctx.Session = plan.sessionConnect.Create(ctx.Id, plan.sessionConfig.Expiry)
+	ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	plan.sessionConnect.Update(ctx.Id, ctx.Session, plan.sessionConfig.Expiry)
+	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
 }
 
 //处理响应
-func (plan *planModule) filterResponse(ctx *PlanCtx) {
+func (module *planModule) contextResponse(ctx *PlanContext) {
 	ctx.Next()
 
 	if ctx.Body == nil {
@@ -483,29 +579,29 @@ func (plan *planModule) filterResponse(ctx *PlanCtx) {
 
 
 //路由执行，处理
-func (plan *planModule) filterExecute(ctx *PlanCtx) {
+func (module *planModule) contextExecute(ctx *PlanContext) {
 
 	//解析路由，拿到actions
 	if ctx.Config == nil {
 		//找不到路由
-		ctx.handler(plan.handlerFound)
+		ctx.handler(module.contextFound)
 	} else {
 
 
 		//验证，参数，数据处理
 		//验证处理，数据处理， 可以考虑走外部中间件
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
-			ctx.handler(plan.middlerArgs)
+			ctx.handler(module.contextArgs)
 		}
 		if _,ok := ctx.Config[KeyMapAuth]; ok {
-			ctx.handler(plan.middlerAuth)
+			ctx.handler(module.contextAuth)
 		}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
-			ctx.handler(plan.middlerItem)
+			ctx.handler(module.contextItem)
 		}
 
 		//最终都由分支处理
-		ctx.handler(plan.handlerBranch)
+		ctx.handler(module.contextBranch)
 	}
 
 	ctx.Next()
@@ -513,7 +609,7 @@ func (plan *planModule) filterExecute(ctx *PlanCtx) {
 
 
 //计划处理：处理分支
-func (plan *planModule) handlerBranch(ctx *PlanCtx) {
+func (module *planModule) contextBranch(ctx *PlanContext) {
 
 	//执行线重置
 	ctx.cleanup()
@@ -551,7 +647,7 @@ func (plan *planModule) handlerBranch(ctx *PlanCtx) {
 					routing = b
 					break forBranchs;
 				}
-			case func(*PlanCtx)bool:
+			case func(*PlanContext)bool:
 				if (match(ctx)) {
 					routing = b
 					break forBranchs;
@@ -597,35 +693,35 @@ func (plan *planModule) handlerBranch(ctx *PlanCtx) {
 
 	//先处理参数，验证等的东西
 	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(plan.middlerArgs)
+		ctx.handler(module.contextArgs)
 	}
 	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(plan.middlerAuth)
+		ctx.handler(module.contextAuth)
 	}
 	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(plan.middlerItem)
+		ctx.handler(module.contextItem)
 	}
 
 
-	//action之前Execute拦截器
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.ExecuteFilter)
+	//action之前的拦截器
+	//filter中的execute
+	//用数组保证原始注册顺序
+	for _,name := range module.executeFilterNames {
+		ctx.handler(module.executeFilters[name])
 	}
-	*/
 
 	//把action加入调用列表
 	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
 		switch actions:=actionConfig.(type) {
-		case func(*PlanCtx):
+		case func(*PlanContext):
 			ctx.handler(actions)
-		case []func(*PlanCtx):
+		case []func(*PlanContext):
 			for _,action := range actions {
 				ctx.handler(action)
 			}
-		case PlanCall:
+		case PlanFunc:
 			ctx.handler(actions)
-		case []PlanCall:
+		case []PlanFunc:
 			ctx.handler(actions...)
 		default:
 		}
@@ -647,223 +743,11 @@ func (plan *planModule) handlerBranch(ctx *PlanCtx) {
 
 
 
-//路由执行，found
-func (plan *planModule) handlerFound(ctx *PlanCtx) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapFound]; ok {
-		switch c := v.(type) {
-		case PlanCall: {
-			ctx.handler(c)
-		}
-		case []PlanCall: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*PlanCtx): {
-			ctx.handler(c)
-		}
-		case []func(*PlanCtx): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//context中的found处理
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.FoundHandler)
-	}
-	*/
-
-	//最后是默认found中间件
-	ctx.handler(plan.middlerError)
-
-	ctx.Next()
-}
-
-
-//路由执行，error
-func (plan *planModule) handlerError(ctx *PlanCtx) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapError]; ok {
-		switch c := v.(type) {
-		case PlanCall: {
-			ctx.handler(c)
-		}
-		case []PlanCall: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*PlanCtx): {
-			ctx.handler(c)
-		}
-		case []func(*PlanCtx): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//context中的error处理
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.ErrorHandler)
-	}
-	*/
-
-	//最后是默认error中间件
-	ctx.handler(plan.middlerError)
-
-	ctx.Next()
-}
-
-
-//路由执行，failed
-func (plan *planModule) handlerFailed(ctx *PlanCtx) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapFailed]; ok {
-		switch c := v.(type) {
-		case PlanCall: {
-			ctx.handler(c)
-		}
-		case []PlanCall: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*PlanCtx): {
-			ctx.handler(c)
-		}
-		case []func(*PlanCtx): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//context中的failed处理
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.FailedHandler)
-	}
-	*/
-
-	//最后是默认failed中间件
-	ctx.handler(plan.middlerFailed)
-
-	ctx.Next()
-}
-
-
-
-//路由执行，denied
-func (plan *planModule) handlerDenied(ctx *PlanCtx) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapDenied]; ok {
-		switch c := v.(type) {
-		case PlanCall: {
-			ctx.handler(c)
-		}
-		case []PlanCall: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*PlanCtx): {
-			ctx.handler(c)
-		}
-		case []func(*PlanCtx): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//context中的denied处理
-	/*
-	for _,v := range plan.contexts {
-		ctx.handler(v.DeniedHandler)
-	}
-	*/
-
-	//最后是默认denied中间件
-	ctx.handler(plan.middlerDenied)
-
-	ctx.Next()
-}
-
-
-
-/*
-	计划模块方法 end
-*/
-
-
-
-
-
-
-
-
-
-//默认中间件，不存在
-func (plan *planModule) middlerFound(ctx *PlanCtx) {
-	//计划中，这些好像不需要处理
-}
-//默认中间件，错误
-func (plan *planModule) middlerError(ctx *PlanCtx) {
-	//计划中，这些好像不需要处理
-}
-//默认中间件，失败
-func (plan *planModule) middlerFailed(ctx *PlanCtx) {
-	//计划中，这些好像不需要处理
-}
-//默认中间件，拒绝
-func (plan *planModule) middlerDenied(ctx *PlanCtx) {
-	//计划中，这些好像不需要处理
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
 //自带中间件，参数处理
-func (plan *planModule) middlerArgs(ctx *PlanCtx) {
+func (module *planModule) contextArgs(ctx *PlanContext) {
 
 	//argn表示参数都可为空
 	argn := false
@@ -871,7 +755,7 @@ func (plan *planModule) middlerArgs(ctx *PlanCtx) {
 		argn = v
 	}
 
-	//所有值都会放在 plan.Value 中
+	//所有值都会放在 module.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
 		ctx.Failed(err)
@@ -883,7 +767,7 @@ func (plan *planModule) middlerArgs(ctx *PlanCtx) {
 
 
 //Auth验证处理
-func (plan *planModule) middlerAuth(ctx *PlanCtx) {
+func (module *planModule) contextAuth(ctx *PlanContext) {
 
 	if auths,ok := ctx.Config["auth"]; ok {
 		saveMap := Map{}
@@ -975,7 +859,7 @@ func (plan *planModule) middlerAuth(ctx *PlanCtx) {
 	ctx.Next()
 }
 //Entity实体处理
-func (plan *planModule) middlerItem(ctx *PlanCtx) {
+func (module *planModule) contextItem(ctx *PlanContext) {
 	if ctx.Config["item"] != nil {
 		cfg := ctx.Config["item"].(Map)
 
@@ -1076,6 +960,247 @@ func (plan *planModule) middlerItem(ctx *PlanCtx) {
 
 
 
+//路由执行，found
+func (module *planModule) contextFound(ctx *PlanContext) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapFound]; ok {
+		switch c := v.(type) {
+		case PlanFunc: {
+			ctx.handler(c)
+		}
+		case []PlanFunc: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanContext): {
+			ctx.handler(c)
+		}
+		case []func(*PlanContext): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//handler中的found
+	//用数组保证原始注册顺序
+	for _,name := range module.foundHandlerNames {
+		ctx.handler(module.foundHandlers[name])
+	}
+
+	//最后是默认found中间件
+	ctx.handler(module.foundDefaultHandler)
+
+	ctx.Next()
+}
+
+
+//路由执行，error
+func (module *planModule) contextError(ctx *PlanContext) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapError]; ok {
+		switch c := v.(type) {
+		case PlanFunc: {
+			ctx.handler(c)
+		}
+		case []PlanFunc: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanContext): {
+			ctx.handler(c)
+		}
+		case []func(*PlanContext): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+
+	//handler中的error
+	//用数组保证原始注册顺序
+	for _,name := range module.errorHandlerNames {
+		ctx.handler(module.errorHandlers[name])
+	}
+
+	//最后是默认error中间件
+	ctx.handler(module.errorDefaultHandler)
+
+	ctx.Next()
+}
+
+
+//路由执行，failed
+func (module *planModule) contextFailed(ctx *PlanContext) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapFailed]; ok {
+		switch c := v.(type) {
+		case PlanFunc: {
+			ctx.handler(c)
+		}
+		case []PlanFunc: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanContext): {
+			ctx.handler(c)
+		}
+		case []func(*PlanContext): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+
+	//handler中的failed
+	//用数组保证原始注册顺序
+	for _,name := range module.failedHandlerNames {
+		ctx.handler(module.failedHandlers[name])
+	}
+
+	//最后是默认failed中间件
+	ctx.handler(module.failedDefaultHandler)
+
+	ctx.Next()
+}
+
+
+
+//路由执行，denied
+func (module *planModule) contextDenied(ctx *PlanContext) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有found，就自定义处理
+	if v,ok := ctx.Config[KeyMapDenied]; ok {
+		switch c := v.(type) {
+		case PlanFunc: {
+			ctx.handler(c)
+		}
+		case []PlanFunc: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*PlanContext): {
+			ctx.handler(c)
+		}
+		case []func(*PlanContext): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+	//handler中的denied
+	//用数组保证原始注册顺序
+	for _,name := range module.deniedHandlerNames {
+		ctx.handler(module.deniedHandlers[name])
+	}
+
+	//最后是默认denied中间件
+	ctx.handler(module.deniedDefaultHandler)
+
+	ctx.Next()
+}
+
+
+
+/*
+	计划模块方法 end
+*/
+
+
+
+
+
+
+/* 默认响应器 begin */
+func (module *planModule) finishDefaultResponder(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+func (module *planModule) retryDefaultResponder(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+/* 默认响应器 end */
+
+
+
+
+/* 默认处理器 begin */
+func (module *planModule) foundDefaultHandler(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+func (module *planModule) errorDefaultHandler(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+func (module *planModule) failedDefaultHandler(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+func (module *planModule) deniedDefaultHandler(ctx *PlanContext) {
+	//计划中，这些好像不需要处理
+}
+/* 默认处理器 end */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1086,19 +1211,19 @@ func (plan *planModule) middlerItem(ctx *PlanCtx) {
 
 
 //添加执行线
-func (ctx *PlanCtx) handler(handlers ...PlanCall) {
+func (ctx *PlanContext) handler(handlers ...PlanFunc) {
 	for _,handler := range handlers {
 		ctx.nexts = append(ctx.nexts, handler)
 	}
 }
 //清空执行线
-func (ctx *PlanCtx) cleanup() {
+func (ctx *PlanContext) cleanup() {
 	ctx.next = -1
-	ctx.nexts = make([]PlanCall, 0)
+	ctx.nexts = make([]PlanFunc, 0)
 }
 
 /* 执行下一个 */
-func (ctx *PlanCtx) Next() {
+func (ctx *PlanContext) Next() {
 	ctx.next++
 	if len(ctx.nexts) > ctx.next {
 		next := ctx.nexts[ctx.next]
@@ -1116,29 +1241,28 @@ func (ctx *PlanCtx) Next() {
 
 
 
+/* 上下文处理器 begin */
 //不存在
-func (ctx *PlanCtx) Found() {
-	ctx.Module.handlerFound(ctx)
+func (ctx *PlanContext) Found() {
+	ctx.Module.contextFound(ctx)
 }
 //返回错误
-func (ctx *PlanCtx) Error(err *Error) {
+func (ctx *PlanContext) Error(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.handlerError(ctx)
+	ctx.Module.contextError(ctx)
 }
 
 //失败, 就是参数处理失败为主
-func (ctx *PlanCtx) Failed(err *Error) {
+func (ctx *PlanContext) Failed(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.handlerFailed(ctx)
+	ctx.Module.contextFailed(ctx)
 }
-
-
-
 //拒绝,主要是 auth
-func (ctx *PlanCtx) Denied(err *Error) {
+func (ctx *PlanContext) Denied(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.handlerFailed(ctx)
+	ctx.Module.contextFailed(ctx)
 }
+/* 上下文处理器 end */
 
 
 
@@ -1146,28 +1270,13 @@ func (ctx *PlanCtx) Denied(err *Error) {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-//计划响应
+/* 上下文响应器 begin */
 //完成操作
-func (ctx *PlanCtx) Finish() {
+func (ctx *PlanContext) Finish() {
 	ctx.Body = BodyPlanFinish{}
 }
-
-//计划响应
 //重新触发
-func (ctx *PlanCtx) Replan(delays ...time.Duration) {
+func (ctx *PlanContext) Replan(delays ...time.Duration) {
 	if len(delays) > 0 {
 		//延时重新触发
 		ctx.Body = BodyPlanReplan{ Delay: delays[0] }
@@ -1176,6 +1285,17 @@ func (ctx *PlanCtx) Replan(delays ...time.Duration) {
 		ctx.Body = BodyPlanReplan{ Delay: time.Second*0 }
 	}
 }
+/* 上下文响应器 end */
+
+
+
+
+
+
+
+
+
+
 
 /*
 	计划上下文方法 end
