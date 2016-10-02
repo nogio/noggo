@@ -14,23 +14,24 @@ var (
 	//Map模块
 	Mapping	*mappingModule
 
-
 	//全局配置
 	Config configConfig
 
-	//日志模块
-	Logger *loggerModule
 
 	//路由器模块
 	Router *routerModule
 	//会话模块
 	Session *sessionModule
 
+	//日志模块
+	Logger *loggerModule
 	//触发器模块
 	Trigger *triggerModule
 
 	//计划模块
 	Plan *planModule
+	//计划模块
+	Task *taskModule
 )
 
 
@@ -43,11 +44,6 @@ func init() {
 		types: map[string]Map{}, cryptos: map[string]Map{},
 	}
 
-
-	//日志模块
-	Logger = &loggerModule{
-		drivers: map[string]LoggerDriver{},
-	}
 
 	//路由器模块
 	Router = &routerModule{
@@ -62,6 +58,10 @@ func init() {
 
 
 
+	//日志模块
+	Logger = &loggerModule{
+		drivers: map[string]LoggerDriver{},
+	}
 	//触发器模块
 	Trigger = &triggerModule{
 		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{},
@@ -70,6 +70,11 @@ func init() {
 	//计划模块
 	Plan = &planModule{
 		drivers: map[string]PlanDriver{},
+		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{}, routeTimes:map[string][]string{},
+	}
+	//任务模块
+	Task = &taskModule{
+		drivers: map[string]TaskDriver{},
 		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{}, routeTimes:map[string][]string{},
 	}
 }

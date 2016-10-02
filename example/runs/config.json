@@ -2,23 +2,21 @@
 
   "debug": true,
 
-
-  "logger": {
-    "driver": "default",
-    "config": { }
-  },
-
   "router": {
     "driver": "default",
     "config": { }
   },
-
-
   "session": {
     "driver": "memory", "expiry": 3600,
     "config": { }
   },
 
+
+
+  "logger": {
+    "driver": "default",
+    "config": { }
+  },
 
   "trigger": {
     "router": {
@@ -30,6 +28,7 @@
       "config": {}
     }
   },
+
 
   "plan": {
     "driver": "default",

@@ -124,8 +124,8 @@ func (module *planModule) init() {
 func (module *planModule) initRouter() {
 	if Config.Plan.Router == nil {
 		//使用默认的由路连接
-		module.routerConfig = Plan.routerConfig
-		module.routerConnect = Plan.routerConnect
+		module.routerConfig = Router.routerConfig
+		module.routerConnect = Router.routerConnect
 	} else {
 		//使用自定义的由路连接
 		module.routerConfig = Config.Plan.Router
@@ -538,6 +538,8 @@ func (module *planModule) contextRequest(ctx *PlanContext) {
 	if name,ok := module.routeUris[ctx.Path]; ok {
 		ctx.Name = name
 		ctx.Config = module.routes[name]
+	} else {
+		ctx.Config = nil
 	}
 
 

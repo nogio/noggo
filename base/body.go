@@ -26,6 +26,18 @@ type (
 
 
 
+type (
+	//任务响应完成
+	BodyTaskFinish struct {}
+	//任务响应重来
+	BodyTaskRetask struct {
+		Delay	time.Duration
+	}
+)
+
+
+
+
 
 
 

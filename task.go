@@ -2,67 +2,92 @@ package noggo
 
 
 import (
+	"sync"
 	"time"
 	. "github.com/nogio/noggo/base"
 )
 
 
 type (
-	//触发器函数
-	TriggerFunc func(*TriggerContext)
-	TriggerMatch func(*TriggerContext) bool
-	TriggerAcceptFunc func()
+	//任务函数
+	TaskFunc func(*TaskContext)
+	TaskMatch func(*TaskContext) bool
+	TaskAcceptFunc func()
+
+
+	//任务驱动
+	TaskDriver interface {
+		Connect(config Map) (TaskConnect)
+	}
+	//任务连接
+	TaskConnect interface {
+		Open() error
+		Close() error
+		Accept(name string, delay time.Duration, call func(id string)) error
+	}
 
 
 
-	//触发器模块
-	triggerModule struct {
-												 //路由器连接
+	//任务模块
+	taskModule struct {
+		//驱动
+		drivers map[string]TaskDriver
+		driversMutex sync.Mutex
+
+
+		//路由器连接
 		routerConfig	*routerConfig
 		routerConnect	RouterConnect
-												 //会话连接
+		//会话连接
 		sessionConfig	*sessionConfig
 		sessionConnect	SessionConnect
 
+		//任务本身的连接
+		taskConfig		*taskConfig
+		taskConnect		TaskConnect
 
-												 //路由
+		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
 		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
+		routeTimes	map[string][]string		//记录所有times定义，不同的任务可能会有相同的time定义,  map[name][times]
 
-												 //拦截器们
-		requestFilters, executeFilters, responseFilters map[string]TriggerFunc
+		//拦截器们
+		requestFilters, executeFilters, responseFilters map[string]TaskFunc
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
-												 //处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TriggerFunc
+		//处理器们
+		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TaskFunc
 		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
 	}
 
-	//触发器上下文
-	TriggerContext struct {
-		Module	*triggerModule
-								 //执行线
-		nexts []TriggerFunc		//方法列表
+	//任务上下文
+	TaskContext struct {
+		Module	*taskModule
+		//执行线
+		nexts []TaskFunc		//方法列表
 		next int				//下一个索引
 
-								 //基础
+		//基础
 		Id	string			//Session Id  会话时使用
 		Session Map			//存储Session值
 		Sign	*Sign		//签名功能，基于session
 
-								 //请求相关
+		//请求相关
 		Method	string		//请求的method， 继承之web请求， 暂时无用
-		Path	string		//请求的路径，演变自web， 暂时等于trigger的名称
+		Path	string		//请求的路径，演变自web， 暂时等于task的名称
 		Lang	string		//当前上下文的语言，默认应为default
 
+		Delay	time.Duration
+		Target	time.Time
 
-								 //路由相关
+
+		//路由相关
 		Name string			//解析路由后得到的name
 		Config Map			//解析后得到的路由配置
 		Branchs []Map		//解析后得到的路由分支配置
 
-								 //数据相关
+		//数据相关
 		Params	Map			//路由解析后uri中的参数
 		Value	Map			//所有请求过来的原始参数
 		Locals	Map			//在ctx中传递数据用的
@@ -70,7 +95,7 @@ type (
 		Items	Map			//单条记录查询对象
 		Auths	Map			//签名认证对象
 
-								 //响应相关
+		//响应相关
 		Code	int			//返回的状态码
 		Type	string		//响应类型
 		Body	Any			//响应内容
@@ -82,85 +107,113 @@ type (
 
 
 /*
-	触发器模块方法 begin
+	任务模块方法 begin
 */
 
 
 
 
-//触发器初始化
-func (module *triggerModule) init() {
+//任务初始化
+func (module *taskModule) init() {
 	module.initRouter()
 	module.initSession()
+	module.initTask()
 }
 //初始化路由驱动
-func (module *triggerModule) initRouter() {
-	if Config.Trigger.Router == nil {
-		//使用默认的由路连接
+func (module *taskModule) initRouter() {
+	if Config.Task.Router == nil {
+		//使用默认的路由连接
 		module.routerConfig = Router.routerConfig
 		module.routerConnect = Router.routerConnect
 	} else {
 		//使用自定义的由路连接
-		module.routerConfig = Config.Trigger.Router
+		module.routerConfig = Config.Task.Router
 		module.routerConnect = Router.connect(module.routerConfig)
 
 		if module.routerConnect == nil {
-			panic("触发器连接路由服务失败")
+			panic("任务连接路由服务失败")
 		} else {
 			err := module.routerConnect.Open()
 			if err != nil {
-				panic("触发器打开路由服务失败 " + err.Error())
+				panic("任务打开路由服务失败 " + err.Error())
 			}
 		}
 	}
 }
 
 //初始化会话驱动
-func (module *triggerModule) initSession() {
-	if Config.Trigger.Session == nil {
+func (module *taskModule) initSession() {
+	if Config.Task.Session == nil {
 		//使用默认的会话连接
 		module.sessionConfig = Session.sessionConfig
 		module.sessionConnect = Session.sessionConnect
 	} else {
 		//使用自定义的会话连接
-		module.sessionConfig = Config.Trigger.Session
+		module.sessionConfig = Config.Task.Session
 		module.sessionConnect = Session.connect(module.sessionConfig)
 
 
 		if module.sessionConnect == nil {
-			panic("触发器连接会话服务失败")
+			panic("任务连接会话服务失败")
 		} else {
 			//打开会话连接
 			err := module.sessionConnect.Open()
 			if err != nil {
-				panic("触发器打开会话服务失败 " + err.Error())
+				panic("任务打开会话服务失败 " + err.Error())
 			}
 		}
 	}
 }
 
 
+//初始化任务驱动
+func (module *taskModule) initTask() {
+
+	module.taskConfig = Config.Task
+	module.taskConnect = module.connect(module.taskConfig)
+
+	//
+	if module.taskConnect == nil {
+		panic("任务连接任务失败")
+	} else {
+		//打开会话连接
+		err := module.taskConnect.Open()
+		if err != nil {
+			panic("打开任务服务失败 " + err.Error())
+		}
+	}
+}
 
 
-//触发器退出
-func (module *triggerModule) exit() {
+
+//任务退出
+func (module *taskModule) exit() {
 	module.exitRouter()
 	module.exitSession()
+	module.exitTask()
 }
-//触发器退出，路由器
-func (module *triggerModule) exitRouter() {
+//任务退出，路由器
+func (module *taskModule) exitRouter() {
 	//关闭路由
 	if module.routerConnect != nil {
 		module.routerConnect.Close()
 		module.routerConnect = nil
 	}
 }
-//触发器退出，会话
-func (module *triggerModule) exitSession() {
+//任务退出，会话
+func (module *taskModule) exitSession() {
 	//关闭会话
 	if module.sessionConnect != nil {
 		module.sessionConnect.Close()
 		module.sessionConnect = nil
+	}
+}
+//任务退出，任务
+func (module *taskModule) exitTask() {
+	//关闭任务
+	if module.taskConnect != nil {
+		module.taskConnect.Close()
+		module.taskConnect = nil
 	}
 }
 
@@ -176,8 +229,36 @@ func (module *triggerModule) exitSession() {
 
 
 
+
+
+//连接驱动
+func (module *taskModule) connect(config *taskConfig) (TaskConnect) {
+	if taskDriver,ok := module.drivers[config.Driver]; ok {
+		return taskDriver.Connect(config.Config)
+	} else {
+		panic("不支持的任务驱动： " + config.Driver)
+	}
+}
+
+
+
+
+//注册驱动
+func (module *taskModule) Driver(name string, driver TaskDriver) {
+	module.driversMutex.Lock()
+	defer module.driversMutex.Unlock()
+
+	if driver == nil {
+		panic("task: Register driver is nil")
+	}
+	if _, ok := module.drivers[name]; ok {
+		panic("task: Registered driver " + name)
+	}
+
+	module.drivers[name] = driver
+}
 //注册路由
-func (module *triggerModule) Route(name string, config Map) {
+func (module *taskModule) Route(name string, config Map) {
 	//保存配置
 	module.routes[name] = config
 	module.routeNames = append(module.routeNames, name)
@@ -195,6 +276,16 @@ func (module *triggerModule) Route(name string, config Map) {
 			}
 		}
 	}
+
+	//处理time
+	if v,ok := config[KeyMapTime]; ok {
+		switch times := v.(type) {
+		case string:
+			module.routeTimes[name] = []string { times }
+		case []string:
+			module.routeTimes[name] = times
+		}
+	}
 }
 
 
@@ -205,10 +296,10 @@ func (module *triggerModule) Route(name string, config Map) {
 
 
 /* 注册拦截器 begin */
-func (module *triggerModule) RequestFilter(name string, call TriggerFunc) {
+func (module *taskModule) RequestFilter(name string, call TaskFunc) {
 
 	if module.requestFilters == nil {
-		module.requestFilters = make(map[string]TriggerFunc)
+		module.requestFilters = make(map[string]TaskFunc)
 	}
 	if module.requestFilterNames == nil {
 		module.requestFilterNames = make([]string, 0)
@@ -221,10 +312,10 @@ func (module *triggerModule) RequestFilter(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.requestFilters[name] = call
 }
-func (module *triggerModule) ExecuteFilter(name string, call TriggerFunc) {
+func (module *taskModule) ExecuteFilter(name string, call TaskFunc) {
 
 	if module.executeFilters == nil {
-		module.executeFilters = make(map[string]TriggerFunc)
+		module.executeFilters = make(map[string]TaskFunc)
 	}
 	if module.executeFilterNames == nil {
 		module.executeFilterNames = make([]string, 0)
@@ -237,10 +328,10 @@ func (module *triggerModule) ExecuteFilter(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.executeFilters[name] = call
 }
-func (module *triggerModule) ResponseFilter(name string, call TriggerFunc) {
+func (module *taskModule) ResponseFilter(name string, call TaskFunc) {
 
 	if module.responseFilters == nil {
-		module.responseFilters = make(map[string]TriggerFunc)
+		module.responseFilters = make(map[string]TaskFunc)
 	}
 	if module.responseFilterNames == nil {
 		module.responseFilterNames = make([]string, 0)
@@ -257,10 +348,10 @@ func (module *triggerModule) ResponseFilter(name string, call TriggerFunc) {
 
 
 /* 注册处理器 begin */
-func (module *triggerModule) FoundHandler(name string, call TriggerFunc) {
+func (module *taskModule) FoundHandler(name string, call TaskFunc) {
 
 	if module.foundHandlers == nil {
-		module.foundHandlers = make(map[string]TriggerFunc)
+		module.foundHandlers = make(map[string]TaskFunc)
 	}
 	if module.foundHandlerNames == nil {
 		module.foundHandlerNames = make([]string, 0)
@@ -273,10 +364,10 @@ func (module *triggerModule) FoundHandler(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.foundHandlers[name] = call
 }
-func (module *triggerModule) ErrorHandler(name string, call TriggerFunc) {
+func (module *taskModule) ErrorHandler(name string, call TaskFunc) {
 
 	if module.errorHandlers == nil {
-		module.errorHandlers = make(map[string]TriggerFunc)
+		module.errorHandlers = make(map[string]TaskFunc)
 	}
 	if module.errorHandlerNames == nil {
 		module.errorHandlerNames = make([]string, 0)
@@ -289,10 +380,10 @@ func (module *triggerModule) ErrorHandler(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.errorHandlers[name] = call
 }
-func (module *triggerModule) FailedHandler(name string, call TriggerFunc) {
+func (module *taskModule) FailedHandler(name string, call TaskFunc) {
 
 	if module.failedHandlers == nil {
-		module.failedHandlers = make(map[string]TriggerFunc)
+		module.failedHandlers = make(map[string]TaskFunc)
 	}
 	if module.failedHandlerNames == nil {
 		module.failedHandlerNames = make([]string, 0)
@@ -305,10 +396,10 @@ func (module *triggerModule) FailedHandler(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.failedHandlers[name] = call
 }
-func (module *triggerModule) DeniedHandler(name string, call TriggerFunc) {
+func (module *taskModule) DeniedHandler(name string, call TaskFunc) {
 
 	if module.deniedHandlers == nil {
-		module.deniedHandlers = make(map[string]TriggerFunc)
+		module.deniedHandlers = make(map[string]TaskFunc)
 	}
 	if module.deniedHandlerNames == nil {
 		module.deniedHandlerNames = make([]string, 0)
@@ -332,15 +423,20 @@ func (module *triggerModule) DeniedHandler(name string, call TriggerFunc) {
 
 
 
-//创建Trigger上下文
-func (module *triggerModule) newTriggerContext(method, path string, value Map) (*TriggerContext) {
-	return &TriggerContext{
+//创建Task上下文
+func (module *taskModule) newTaskContext(method, path string, delay time.Duration, value Map) (*TaskContext) {
+
+
+
+	return &TaskContext{
 		Module: module,
 
-		next: -1, nexts: []TriggerFunc{},
+		next: -1, nexts: []TaskFunc{},
 
 		Method: method, Path: path,
-		Name: "", Config: Map{}, Branchs:[]Map{},
+		Delay: delay, Target:time.Now().Add(delay),
+
+		Name: "", Config: nil, Branchs:[]Map{},
 
 		Params: Map{}, Value: value, Locals: Map{},
 		Args: Map{}, Items: Map{}, Auths: Map{},
@@ -349,9 +445,9 @@ func (module *triggerModule) newTriggerContext(method, path string, value Map) (
 
 
 
-//触发器Trigger  请求开始
-func (module *triggerModule) serveTrigger(method, path string, value Map) {
-	ctx := module.newTriggerContext(method, path, value)
+//任务Task  请求开始
+func (module *taskModule) serveTask(method, path string, delay time.Duration, value Map) {
+	ctx := module.newTaskContext(method, path, delay, value)
 
 	//请求处理
 	//filter中的request
@@ -388,18 +484,18 @@ func (module *triggerModule) serveTrigger(method, path string, value Map) {
 
 
 //发起触发
-func (module *triggerModule) Touch(path string, args ...Map) {
+func (module *taskModule) Touch(path string, delay time.Duration, args ...Map) {
 
 	value := Map{}
 	if len(args) > 0 {
 		value = args[0]
 	}
 
-	go module.serveTrigger("", path, value)
+	go module.serveTask("", path, delay, value)
 }
 
 /*
-	触发器模块方法  end
+	任务模块方法  end
 */
 
 
@@ -421,15 +517,15 @@ func (module *triggerModule) Touch(path string, args ...Map) {
 
 
 /*
-	触发器模块处理方法 begin
+	任务模块处理方法 begin
 */
 
 
 
-//trigger 触发器处理器
+//task 任务处理器
 //请求处理
 //包含：route解析、request处理、session处理
-func (module *triggerModule) contextRequest(ctx *TriggerContext) {
+func (module *taskModule) contextRequest(ctx *TaskContext) {
 
 	//路由解析
 	//目前暂不支持driver
@@ -444,7 +540,7 @@ func (module *triggerModule) contextRequest(ctx *TriggerContext) {
 
 	//请求处理
 	//主要是SessionId处理、处理传过来的值或表单
-	ctx.Id = ctx.Name	//使用name做为id，以便在同一个触发器之下共享session
+	ctx.Id = ctx.Name	//使用name做为id，以便在同一个任务之下共享session
 
 	//会话处理
 	ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
@@ -454,7 +550,7 @@ func (module *triggerModule) contextRequest(ctx *TriggerContext) {
 }
 
 //处理响应
-func (module *triggerModule) contextResponse(ctx *TriggerContext) {
+func (module *taskModule) contextResponse(ctx *TaskContext) {
 	ctx.Next()
 
 	if ctx.Body == nil {
@@ -462,17 +558,17 @@ func (module *triggerModule) contextResponse(ctx *TriggerContext) {
 	} else {
 
 		switch body := ctx.Body.(type) {
-		case BodyTriggerFinish:
-		//完成不做任何处理
-		case BodyTriggerRetrigger:
+		case BodyTaskFinish:
+			//完成不做任何处理
+		case BodyTaskRetask:
 			//目前直接调度，可调整，以后做到task中统一调整
 			//因为万一delay很久。中间正好程序重新或是其它，就丢了
 			//所以有必要使用task机制重新调度
 			time.AfterFunc(body.Delay, func() {
-				Trigger.Touch(ctx.Path, ctx.Value)
+				Task.Touch(ctx.Path, body.Delay, ctx.Value)
 			})
 		default:
-		//默认，也没有什么好处理的
+			//默认，也没有什么好处理的
 		}
 	}
 }
@@ -480,7 +576,7 @@ func (module *triggerModule) contextResponse(ctx *TriggerContext) {
 
 
 //路由执行，处理
-func (module *triggerModule) contextExecute(ctx *TriggerContext) {
+func (module *taskModule) contextExecute(ctx *TaskContext) {
 
 	//解析路由，拿到actions
 	if ctx.Config == nil {
@@ -509,8 +605,8 @@ func (module *triggerModule) contextExecute(ctx *TriggerContext) {
 }
 
 
-//触发器处理：处理分支
-func (module *triggerModule) contextBranch(ctx *TriggerContext) {
+//任务处理：处理分支
+func (module *taskModule) contextBranch(ctx *TaskContext) {
 
 	//执行线重置
 	ctx.cleanup()
@@ -548,7 +644,7 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 					routing = b
 					break forBranchs;
 				}
-			case func(*TriggerContext)bool:
+			case func(*TaskContext)bool:
 				if (match(ctx)) {
 					routing = b
 					break forBranchs;
@@ -614,15 +710,15 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 	//把action加入调用列表
 	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
 		switch actions:=actionConfig.(type) {
-		case func(*TriggerContext):
+		case func(*TaskContext):
 			ctx.handler(actions)
-		case []func(*TriggerContext):
+		case []func(*TaskContext):
 			for _,action := range actions {
 				ctx.handler(action)
 			}
-		case TriggerFunc:
+		case TaskFunc:
 			ctx.handler(actions)
-		case []TriggerFunc:
+		case []TaskFunc:
 			ctx.handler(actions...)
 		default:
 		}
@@ -648,7 +744,7 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 
 
 //自带中间件，参数处理
-func (module *triggerModule) contextArgs(ctx *TriggerContext) {
+func (module *taskModule) contextArgs(ctx *TaskContext) {
 
 	//argn表示参数都可为空
 	argn := false
@@ -668,7 +764,7 @@ func (module *triggerModule) contextArgs(ctx *TriggerContext) {
 
 
 //Auth验证处理
-func (module *triggerModule) contextAuth(ctx *TriggerContext) {
+func (module *taskModule) contextAuth(ctx *TaskContext) {
 
 	if auths,ok := ctx.Config["auth"]; ok {
 		saveMap := Map{}
@@ -760,7 +856,7 @@ func (module *triggerModule) contextAuth(ctx *TriggerContext) {
 	ctx.Next()
 }
 //Entity实体处理
-func (module *triggerModule) contextItem(ctx *TriggerContext) {
+func (module *taskModule) contextItem(ctx *TaskContext) {
 	if ctx.Config["item"] != nil {
 		cfg := ctx.Config["item"].(Map)
 
@@ -862,25 +958,25 @@ func (module *triggerModule) contextItem(ctx *TriggerContext) {
 
 
 //路由执行，found
-func (module *triggerModule) contextFound(ctx *TriggerContext) {
+func (module *taskModule) contextFound(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
 	//如果路由配置中有found，就自定义处理
 	if v,ok := ctx.Config[KeyMapFound]; ok {
 		switch c := v.(type) {
-		case TriggerFunc: {
+		case TaskFunc: {
 			ctx.handler(c)
 		}
-		case []TriggerFunc: {
+		case []TaskFunc: {
 			for _,v := range c {
 				ctx.handler(v)
 			}
 		}
-		case func(*TriggerContext): {
+		case func(*TaskContext): {
 			ctx.handler(c)
 		}
-		case []func(*TriggerContext): {
+		case []func(*TaskContext): {
 			for _,v := range c {
 				ctx.handler(v)
 			}
@@ -903,25 +999,25 @@ func (module *triggerModule) contextFound(ctx *TriggerContext) {
 
 
 //路由执行，error
-func (module *triggerModule) contextError(ctx *TriggerContext) {
+func (module *taskModule) contextError(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
 	//如果路由配置中有found，就自定义处理
 	if v,ok := ctx.Config[KeyMapError]; ok {
 		switch c := v.(type) {
-		case TriggerFunc: {
+		case TaskFunc: {
 			ctx.handler(c)
 		}
-		case []TriggerFunc: {
+		case []TaskFunc: {
 			for _,v := range c {
 				ctx.handler(v)
 			}
 		}
-		case func(*TriggerContext): {
+		case func(*TaskContext): {
 			ctx.handler(c)
 		}
-		case []func(*TriggerContext): {
+		case []func(*TaskContext): {
 			for _,v := range c {
 				ctx.handler(v)
 			}
@@ -945,25 +1041,25 @@ func (module *triggerModule) contextError(ctx *TriggerContext) {
 
 
 //路由执行，failed
-func (module *triggerModule) contextFailed(ctx *TriggerContext) {
+func (module *taskModule) contextFailed(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
 	//如果路由配置中有found，就自定义处理
 	if v,ok := ctx.Config[KeyMapFailed]; ok {
 		switch c := v.(type) {
-		case TriggerFunc: {
+		case TaskFunc: {
 			ctx.handler(c)
 		}
-		case []TriggerFunc: {
+		case []TaskFunc: {
 			for _,v := range c {
 				ctx.handler(v)
 			}
 		}
-		case func(*TriggerContext): {
+		case func(*TaskContext): {
 			ctx.handler(c)
 		}
-		case []func(*TriggerContext): {
+		case []func(*TaskContext): {
 			for _,v := range c {
 				ctx.handler(v)
 			}
@@ -988,25 +1084,25 @@ func (module *triggerModule) contextFailed(ctx *TriggerContext) {
 
 
 //路由执行，denied
-func (module *triggerModule) contextDenied(ctx *TriggerContext) {
+func (module *taskModule) contextDenied(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
 	//如果路由配置中有found，就自定义处理
 	if v,ok := ctx.Config[KeyMapDenied]; ok {
 		switch c := v.(type) {
-		case TriggerFunc: {
+		case TaskFunc: {
 			ctx.handler(c)
 		}
-		case []TriggerFunc: {
+		case []TaskFunc: {
 			for _,v := range c {
 				ctx.handler(v)
 			}
 		}
-		case func(*TriggerContext): {
+		case func(*TaskContext): {
 			ctx.handler(c)
 		}
-		case []func(*TriggerContext): {
+		case []func(*TaskContext): {
 			for _,v := range c {
 				ctx.handler(v)
 			}
@@ -1030,7 +1126,7 @@ func (module *triggerModule) contextDenied(ctx *TriggerContext) {
 
 
 /*
-	触发器模块方法 end
+	任务模块方法 end
 */
 
 
@@ -1039,11 +1135,11 @@ func (module *triggerModule) contextDenied(ctx *TriggerContext) {
 
 
 /* 默认响应器 begin */
-func (module *triggerModule) finishDefaultResponder(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) finishDefaultResponder(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
-func (module *triggerModule) retryDefaultResponder(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) retryDefaultResponder(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
 /* 默认响应器 end */
 
@@ -1051,17 +1147,17 @@ func (module *triggerModule) retryDefaultResponder(ctx *TriggerContext) {
 
 
 /* 默认处理器 begin */
-func (module *triggerModule) foundDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) foundDefaultHandler(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
-func (module *triggerModule) errorDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) errorDefaultHandler(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
-func (module *triggerModule) failedDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) failedDefaultHandler(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
-func (module *triggerModule) deniedDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (module *taskModule) deniedDefaultHandler(ctx *TaskContext) {
+	//任务中，这些好像不需要处理
 }
 /* 默认处理器 end */
 
@@ -1106,25 +1202,25 @@ func (module *triggerModule) deniedDefaultHandler(ctx *TriggerContext) {
 
 
 /*
-	触发器上下文处理方法 begin
+	任务上下文处理方法 begin
 */
 
 
 
 //添加执行线
-func (ctx *TriggerContext) handler(handlers ...TriggerFunc) {
+func (ctx *TaskContext) handler(handlers ...TaskFunc) {
 	for _,handler := range handlers {
 		ctx.nexts = append(ctx.nexts, handler)
 	}
 }
 //清空执行线
-func (ctx *TriggerContext) cleanup() {
+func (ctx *TaskContext) cleanup() {
 	ctx.next = -1
-	ctx.nexts = make([]TriggerFunc, 0)
+	ctx.nexts = make([]TaskFunc, 0)
 }
 
 /* 执行下一个 */
-func (ctx *TriggerContext) Next() {
+func (ctx *TaskContext) Next() {
 	ctx.next++
 	if len(ctx.nexts) > ctx.next {
 		next := ctx.nexts[ctx.next]
@@ -1144,22 +1240,22 @@ func (ctx *TriggerContext) Next() {
 
 /* 上下文处理器 begin */
 //不存在
-func (ctx *TriggerContext) Found() {
+func (ctx *TaskContext) Found() {
 	ctx.Module.contextFound(ctx)
 }
 //返回错误
-func (ctx *TriggerContext) Error(err *Error) {
+func (ctx *TaskContext) Error(err *Error) {
 	ctx.Wrong = err
 	ctx.Module.contextError(ctx)
 }
 
 //失败, 就是参数处理失败为主
-func (ctx *TriggerContext) Failed(err *Error) {
+func (ctx *TaskContext) Failed(err *Error) {
 	ctx.Wrong = err
 	ctx.Module.contextFailed(ctx)
 }
 //拒绝,主要是 auth
-func (ctx *TriggerContext) Denied(err *Error) {
+func (ctx *TaskContext) Denied(err *Error) {
 	ctx.Wrong = err
 	ctx.Module.contextFailed(ctx)
 }
@@ -1173,17 +1269,17 @@ func (ctx *TriggerContext) Denied(err *Error) {
 
 /* 上下文响应器 begin */
 //完成操作
-func (ctx *TriggerContext) Finish() {
-	ctx.Body = BodyTriggerFinish{}
+func (ctx *TaskContext) Finish() {
+	ctx.Body = BodyTaskFinish{}
 }
 //重新触发
-func (ctx *TriggerContext) Retrigger(delays ...time.Duration) {
+func (ctx *TaskContext) Retask(delays ...time.Duration) {
 	if len(delays) > 0 {
 		//延时重新触发
-		ctx.Body = BodyTriggerRetrigger{ Delay: delays[0] }
+		ctx.Body = BodyTaskRetask{ Delay: delays[0] }
 	} else {
 		//立即重新触发
-		ctx.Body = BodyTriggerRetrigger{ Delay: time.Second*0 }
+		ctx.Body = BodyTaskRetask{ Delay: time.Second*0 }
 	}
 }
 /* 上下文响应器 end */
@@ -1199,6 +1295,6 @@ func (ctx *TriggerContext) Retrigger(delays ...time.Duration) {
 
 
 /*
-	触发器上下文方法 end
+	任务上下文方法 end
 */
 
