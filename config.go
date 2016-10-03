@@ -84,12 +84,30 @@ type (
 		//任务驱动配置
 		Config	Map		`json:"config"`
 
-		//计划会话配置
+		//任务会话配置
 		Session	*sessionConfig	`json:"session"`
-		//计划路由器配置
+		//任务路由器配置
 		Router	*routerConfig	`json:"router"`
 	}
 
+
+	//http配置
+	httpConfig struct {
+		//http驱动
+		Driver	string	`json:"driver"`
+		//http驱动配置
+		Config	Map		`json:"config"`
+
+		//http会话配置
+		Session	*sessionConfig	`json:"session"`
+		//http路由器配置
+		Router	*routerConfig	`json:"router"`
+
+		Port	string	`json:"port"`
+
+		//字符集
+		Charset	string	`json:"charset"`
+	}
 
 
 
@@ -112,6 +130,8 @@ type (
 		Plan *planConfig		`json:"plan"`
 		//任务配置
 		Task *taskConfig		`json:"task"`
+		//http配置
+		Http *httpConfig		`json:"http"`
 	}
 
 )

@@ -26,6 +26,7 @@ func nogInit() {
 	Session.init()
 	Trigger.init()
 	Plan.init()
+	Http.init()
 
 
 }
@@ -42,5 +43,6 @@ func nogExit() {
 	Session.exit()
 	Trigger.exit()
 	Plan.exit()
+	Http.exit()
 	fmt.Println("nogo exit...")
 }

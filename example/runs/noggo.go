@@ -6,6 +6,8 @@ import (
 	_ "../middlers"
 	_ "../modules/triggers"
 	_ "../modules/plans"
+	_ "../modules/tasks"
+	_ "../modules/https"
 )
 
 func main() {

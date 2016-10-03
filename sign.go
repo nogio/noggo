@@ -2,6 +2,7 @@ package noggo
 
 import (
 	. "github.com/nogio/noggo/base"
+	"fmt"
 )
 
 
@@ -12,15 +13,11 @@ type (
 )
 
 
-//设置登录信息
-func (sign *Sign) In(key string, id,name Any, args ...Map) (bool) {
+//签入
+func (sign *Sign) In(key string, id,name Any) (bool) {
 	if sign.Value != nil {
-		data := Map{}
-		if len(args) > 0 {
-			data = args[0]
-		}
 		m := Map{
-			KeySignId: id, KeySignName: name, KeySignData: data,
+			KeySignId: fmt.Sprintf("%v", id), KeySignName: fmt.Sprintf("%v", name),
 		}
 		sign.Value[KeySign+key] = m
 
@@ -30,7 +27,7 @@ func (sign *Sign) In(key string, id,name Any, args ...Map) (bool) {
 	return false
 }
 
-//设置为登出
+//签出
 func (sign *Sign) Out(key string) (bool) {
 	if sign.Value != nil {
 		delete(sign.Value, KeySign + key)
@@ -41,7 +38,7 @@ func (sign *Sign) Out(key string) (bool) {
 
 
 
-//判断是否已经登入了
+//判断是否已经签入了
 func (sign *Sign) Yes(key string) bool {
 	if sign.Value != nil{
 		if sign.Value[KeySign+key] != nil {
@@ -54,7 +51,7 @@ func (sign *Sign) Yes(key string) bool {
 
 
 
-//判断是否已经登出了
+//判断是否已经签出了
 func (sign *Sign) No(key string) (bool) {
 	return sign.Yes(key) == false
 }
@@ -88,10 +85,10 @@ func (sign *Sign) Info(key string) (Map) {
 
 
 //返回ID
-func (sign *Sign) Id(key string) Any {
+func (sign *Sign) Id(key string) string {
 	if sign.Value != nil {
 		if m := sign.Info(key); m != nil {
-			if v, ok := m[KeySignId]; ok {
+			if v, ok := m[KeySignId].(string); ok {
 				return v
 			}
 		}
@@ -101,31 +98,14 @@ func (sign *Sign) Id(key string) Any {
 
 
 //返回名称
-func (sign *Sign) Name(key string) Any {
+func (sign *Sign) Name(key string) string {
 	if sign.Value != nil {
 		if m := sign.Info(key); m != nil {
-			if v, ok := m[KeySignName]; ok {
+			if v, ok := m[KeySignName].(string); ok {
 				return v
 			}
 		}
 	}
 	return ""
 }
-
-
-
-//返回数据
-func (sign *Sign) Data(key string) Map {
-	if sign.Value != nil {
-		if m := sign.Info(key); m != nil {
-			if v, ok := m[KeySignData].(Map); ok {
-				return v
-			}
-		}
-	}
-	return nil
-}
-
-
-
 

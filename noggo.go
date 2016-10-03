@@ -30,8 +30,10 @@ var (
 
 	//计划模块
 	Plan *planModule
-	//计划模块
+	//任务模块
 	Task *taskModule
+	//http模块
+	Http *httpModule
 )
 
 
@@ -76,5 +78,11 @@ func init() {
 	Task = &taskModule{
 		drivers: map[string]TaskDriver{},
 		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{}, routeTimes:map[string][]string{},
+	}
+
+	//HTTP模块
+	Http = &httpModule{
+		drivers: map[string]HttpDriver{},
+		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{},
 	}
 }
