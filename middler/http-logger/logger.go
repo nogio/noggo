@@ -10,6 +10,6 @@ func Logger() (noggo.HttpFunc) {
 		begin := time.Now()
 		ctx.Next()
 		end := time.Now()
-		noggo.Logger.Info(ctx.Id, ctx.Method, ctx.Path, ctx.Code, end.Sub(begin))
+		noggo.Logger.Info(ctx.Ip(), ctx.Id, ctx.Method, ctx.Path, ctx.Code, end.Sub(begin))
 	}
 }

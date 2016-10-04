@@ -15,7 +15,7 @@ type (
 	RouterResult struct {
 		Name	string
 		Uri		string
-		Params	Map
+		Param	Map
 	}
 
 	//路由器驱动
@@ -31,7 +31,7 @@ type (
 		//注册路由
 		Route(name, uri string)
 		//解析路由
-		Parse(uri string) *RouterResult
+		Parse(host, path string) *RouterResult
 	}
 	//路由器模块
 	routerModule struct {
@@ -49,8 +49,8 @@ type (
 
 
 
-//注册日志器驱动
-func (router *routerModule) Register(name string, driver RouterDriver) {
+//注册路由器驱动
+func (router *routerModule) Driver(name string, driver RouterDriver) {
 	router.driversMutex.Lock()
 	defer router.driversMutex.Unlock()
 
@@ -74,7 +74,7 @@ func (router *routerModule) connect(config *routerConfig) (RouterConnect) {
 	return nil
 }
 
-//日志器初始化
+//路由器初始化
 func (router *routerModule) init() {
 
 	//默认配置
@@ -86,9 +86,9 @@ func (router *routerModule) init() {
 		panic("打开路由器连接失败")
 	}
 }
-//日志器退出
+//路由器退出
 func (router *routerModule) exit() {
-	//关闭日志连接
+	//关闭路由器连接
 	if router.routerConnect != nil {
 		router.routerConnect.Close()
 	}

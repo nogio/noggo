@@ -107,6 +107,10 @@ type (
 
 		//字符集
 		Charset	string	`json:"charset"`
+		//Session使用的cookie name
+		Cookie	string	`json:"cookie"`
+		//Session使用的domain
+		Domain	string	`json:"domain"`
 	}
 
 

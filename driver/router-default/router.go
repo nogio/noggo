@@ -74,6 +74,6 @@ func (router *DefaultConnect) Route(name, uri string) {
 
 
 //解析路由
-func (router *DefaultConnect) Parse(uri string) (*noggo.RouterResult){
+func (router *DefaultConnect) Parse(host,path string) (*noggo.RouterResult){
 	return nil
 }

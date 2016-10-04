@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"strings"
+	"net/url"
 )
 
 
@@ -84,28 +85,37 @@ type (
 
 		//请求相关
 		Method	string		//请求的method， 继承之http请求， 暂时无用
+		Host	string		//请求的域名
 		Path	string		//请求的路径，演变自http， 暂时等于http的名称
 		Lang	string		//当前上下文的语言，默认应为default
-
+		Ajax	bool		//标记当前请求是否ajax
 
 		//路由相关
 		Name string			//解析路由后得到的name
 		Config Map			//解析后得到的路由配置
 		Branchs []Map		//解析后得到的路由分支配置
 
+
+		//表单相关
+		Param	Map			//路由解析后uri中的参数
+		Query	Map			//请求中的GET参数
+		Form	Map			//请求的表单数据
+		Upload	Map			//从表单中提取的文件信息
+		Client	Map			//从请求中解析得到客户端信息保存于此，比如，包名，版本，或是浏览器信息等等，可自行在拦截器中处理
+
 		//数据相关
-		Params	Map			//路由解析后uri中的参数
-		Value	Map			//所有请求过来的原始参数
-		Locals	Map			//在ctx中传递数据用的
+		Value	Map			//所有请求过来的原始参数汇总
+		Local	Map			//在ctx中传递数据用的
+		Item	Map			//单条记录查询对象
+		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
-		Items	Map			//单条记录查询对象
-		Auths	Map			//签名认证对象
 
 		//响应相关
 		Charset	string
 		Code	int			//返回的状态码
 		Type	string		//响应类型
 		Body	Any			//响应内容
+		Data	Map			//返回给view层的数据
 
 		Wrong	*Error		//错误信息
 	}
@@ -345,7 +355,7 @@ func (module *httpModule) RequestFilter(name string, call HttpFunc) {
 		module.requestFilterNames = make([]string, 0)
 	}
 
-	//如果没有注册个此name，才加入数组
+	//如果没有注册过此name，才加入数组
 	if _,ok := module.requestFilters[name]; ok == false {
 		module.requestFilterNames = append(module.requestFilterNames, name)
 	}
@@ -467,6 +477,7 @@ func (module *httpModule) DeniedHandler(name string, call HttpFunc) {
 func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Request) (*HttpContext) {
 
 	method := strings.ToLower(req.Method)
+	host := req.URL.Host
 	path := req.URL.Path
 	value := Map{}
 
@@ -476,29 +487,15 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 
 		Res: res, Req: req,
 
-		Method: method, Path: path,
+		Method: method, Host: host, Path: path,
+		Ajax: false, Lang: "default",
+
 		Name: "", Config: Map{}, Branchs:[]Map{},
 
-		Params: Map{}, Value: value, Locals: Map{},
-		Args: Map{}, Items: Map{}, Auths: Map{},
+		Param: Map{}, Query: Map{}, Form: Map{}, Upload: Map{}, Client: Map{},
+		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
 }
-//创建Http上下文
-func (module *httpModule) newHttpTouchContext(method, path string, value Map) (*HttpContext) {
-
-	return &HttpContext{
-		Module: module,
-
-		next: -1, nexts: []HttpFunc{},
-
-		Method: method, Path: path,
-		Name: "", Config: Map{}, Branchs:[]Map{},
-
-		Params: Map{}, Value: value, Locals: Map{},
-		Args: Map{}, Items: Map{}, Auths: Map{},
-	}
-}
-
 
 
 
@@ -507,12 +504,12 @@ func (module *httpModule) serveHttp(res http.ResponseWriter, req *http.Request) 
 	ctx := module.newHttpContext(res, req)
 
 	//请求处理
+	ctx.handler(module.contextRequest)
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range module.requestFilterNames {
 		ctx.handler(module.requestFilters[name])
 	}
-	ctx.handler(module.contextRequest)
 
 	//响应处理
 	ctx.handler(module.contextResponse)
@@ -526,64 +523,6 @@ func (module *httpModule) serveHttp(res http.ResponseWriter, req *http.Request) 
 	ctx.handler(module.contextExecute)
 	ctx.Next()
 }
-
-
-//HTTPHttp  请求开始
-func (module *httpModule) touchHttp(method, path string, value Map) {
-	ctx := module.newHttpTouchContext(method, path, value)
-
-	//请求处理
-	//filter中的request
-	//用数组保证原始注册顺序
-	for _,name := range module.requestFilterNames {
-		ctx.handler(module.requestFilters[name])
-	}
-	ctx.handler(module.contextRequest)
-
-	//响应处理
-	ctx.handler(module.contextResponse)
-	//filter中的response
-	//用数组保证原始注册顺序
-	for _,name := range module.responseFilterNames {
-		ctx.handler(module.responseFilters[name])
-	}
-
-	//开始执行
-	ctx.handler(module.contextExecute)
-	ctx.Next()
-}
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-//发起
-func (module *httpModule) Touch(method, path string, args ...Map) {
-
-	value := Map{}
-	if len(args) > 0 {
-		value = args[0]
-	}
-
-	go module.touchHttp(method, path, value)
-}
-
-/*
-	HTTP模块方法  end
-*/
-
-
-
-
 
 
 
@@ -621,12 +560,26 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	}
 
 
-	//请求处理
-	//主要是SessionId处理、处理传过来的值或表单
-	ctx.Id = ctx.Name	//使用name做为id，以便在同一个HTTP之下共享session
+	//会话处理相关
+	cookie, err := ctx.Req.Cookie(Config.Http.Cookie)
+	if err != nil || cookie.Value == "" {
+		ctx.Id = module.sessionConnect.Id()
+		ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
+		//注意域设置
+		cookie := http.Cookie{ Name: Config.Http.Cookie, Value: url.QueryEscape(ctx.Id), Path: "/", HttpOnly: true }
+		if Config.Session.Expiry > 0 {
+			cookie.MaxAge = int(Config.Session.Expiry)
+		}
+		if Config.Http.Domain != "" {
+			cookie.Domain = Config.Http.Domain
+		}
+		http.SetCookie(ctx.Res, &cookie)
+	} else {
+		//可以考虑
+		ctx.Id, _ = url.QueryUnescape(cookie.Value)
+		ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
+	}
 
-	//会话处理
-	ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
 	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
@@ -954,7 +907,9 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 		}
 
 		//存入
-		ctx.Auths = saveMap
+		for k,v := range saveMap {
+			ctx.Auth[k] = v
+		}
 	}
 
 	ctx.Next()
@@ -1024,7 +979,9 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 			}
 		}
 
-		ctx.Items = saveMap
+		for k,v := range saveMap {
+			ctx.Item[k] = v
+		}
 	}
 	ctx.Next()
 }
@@ -1241,16 +1198,16 @@ func (module *httpModule) contextDenied(ctx *HttpContext) {
 
 /* 默认处理器 begin */
 func (module *httpModule) foundDefaultHandler(ctx *HttpContext) {
-	//HTTP中，这些好像不需要处理
+	ctx.Text("http found")
 }
 func (module *httpModule) errorDefaultHandler(ctx *HttpContext) {
-	//HTTP中，这些好像不需要处理
+	ctx.Text(fmt.Sprintf("http error %v", ctx.Wrong))
 }
 func (module *httpModule) failedDefaultHandler(ctx *HttpContext) {
-	//HTTP中，这些好像不需要处理
+	ctx.Text(fmt.Sprintf("http failed %v", ctx.Wrong))
 }
 func (module *httpModule) deniedDefaultHandler(ctx *HttpContext) {
-	//HTTP中，这些好像不需要处理
+	ctx.Text(fmt.Sprintf("http denied %v", ctx.Wrong))
 }
 /* 默认处理器 end */
 
@@ -1297,10 +1254,14 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 		if ctx.Type == "" {
 			ctx.Type = "json"
 		}
-		ctx.Res.WriteHeader(ctx.Code)
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", Const.MimeType(ctx.Type), ctx.Charset))
 
-		fmt.Fprint(ctx.Res, bytes)
+		//调试信息
+		Logger.Debug("json.type", Const.MimeType(ctx.Type), ctx.Charset)
+
+		ctx.Res.WriteHeader(ctx.Code)
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+
+		fmt.Fprint(ctx.Res, string(bytes))
 	}
 }
 func (module *httpModule) xmlResponder(ctx *HttpContext) {
@@ -1316,7 +1277,7 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 			ctx.Type = "xml"
 		}
 		ctx.Res.WriteHeader(ctx.Code)
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
 		fmt.Fprint(ctx.Res, bytes)
 	}
@@ -1338,7 +1299,7 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyDown)
 
 	ctx.Res.WriteHeader(ctx.Code)
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	//加入自定义文件名
 	if body.Name != "" {
 		ctx.Res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
@@ -1355,7 +1316,7 @@ func (module *httpModule) defaultResponder(ctx *HttpContext) {
 		ctx.Type = "text"
 	}
 	ctx.Res.WriteHeader(ctx.Code)
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=utf-8", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
 	fmt.Fprint(ctx.Res, ctx.Body)
 }
@@ -1487,7 +1448,7 @@ func (ctx *HttpContext) Json(json Any) {
 }
 func (ctx *HttpContext) Xml(xml Any) {
 	ctx.Code = 200
-	ctx.Type = "json"
+	ctx.Type = "xml"
 	ctx.Body = httpBodyXml{xml}
 }
 func (ctx *HttpContext) File(file string, names ...string) {
@@ -1535,3 +1496,27 @@ func (ctx *HttpContext) View(view string, models ...Map) {
 	HTTP上下文方法 end
 */
 
+
+
+
+
+//通用方法
+func (ctx *HttpContext) Ip() string {
+	ip := "127.0.0.1"
+
+	if realIp := ctx.Req.Header.Get("X-Real-IP"); realIp != "" {
+		ip = realIp
+	} else if forwarded := ctx.Req.Header.Get("x-forwarded-for"); forwarded != "" {
+		ip = forwarded
+	} else {
+		//GO默认带端口,要去掉端口
+		//如果是IPV6,应该不要去,这个以后要判断处理
+		ip := ctx.Req.RemoteAddr
+		pos := strings.Index(ip, ":")
+		if (pos >= 0) {
+			ip = ip[0:pos]
+		}
+
+	}
+	return ip
+}
