@@ -11,10 +11,11 @@ func init() {
 		"text": "text/explain",
 		"html": "text/html",
 		"xml": "text/xml",
-		"json": "application/json",
+		"json": "text/json",
 		"file": "text/explain",
 		"down": "text/explain",
 		"script": "application/x-javascript",
+		"view": "text/html",
 
 		"jpg": "image/jpeg",
 		"gif": "image/gif",

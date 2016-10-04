@@ -88,12 +88,7 @@ func (module *constModule) RegularExp(name string) []string {
 
 
 //注册String
-func (module *constModule) Lang(strings Map, langs ...string) {
-	lang := ConstLangDefault
-	if len(langs) > 0 {
-		lang = langs[0]
-	}
-
+func (module *constModule) Lang(lang string, strings Map) {
 	if module.langs == nil {
 		module.langs = map[string]map[string]string{}
 	}

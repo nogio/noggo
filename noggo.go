@@ -83,6 +83,6 @@ func init() {
 	//HTTP模块
 	Http = &httpModule{
 		drivers: map[string]HttpDriver{},
-		routes: map[string]Map{}, routeNames:[]string{}, routeUris: map[string]string{},
+		routes: map[string]Map{}, routeNames:[]string{}, routeUris: []httpUri{},
 	}
 }

@@ -52,7 +52,7 @@ type (
 
 		//路由
 		routes 		map[string]Map			//路由定义
-		routeNames	[]string				//路由名称原始顺序，因为map是无序的
+		routeNames	[]string				//记录原始顺序，因为map是无序的
 		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
 		routeTimes	map[string][]string		//记录所有times定义，不同的计划可能会有相同的time定义,  map[name][times]
 

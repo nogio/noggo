@@ -29,7 +29,7 @@ type (
 		//关闭连接
 		Close()
 		//注册路由
-		Route(name, uri string)
+		Accept(name, uri string)
 		//解析路由
 		Parse(host, path string) *RouterResult
 	}

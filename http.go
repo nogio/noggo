@@ -34,7 +34,11 @@ type (
 		StartTLS(addr string, certFile, keyFile string) error
 	}
 
-
+	//记录路由顺序用
+	httpUri struct {
+		name	string
+		uri		string
+	}
 
 	//HTTP模块
 	httpModule struct {
@@ -57,7 +61,8 @@ type (
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
-		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
+
+		routeUris 	[]httpUri		//记录所有uris指定	map[uri]name
 
 		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]HttpFunc
@@ -134,6 +139,10 @@ type (
 	httpBodyHtml struct {
 		Html	string
 	}
+	//响应脚本
+	httpBodyScript struct {
+		Script	string
+	}
 	httpBodyJson struct {
 		//响应的Json对象
 		Json Any
@@ -188,15 +197,20 @@ func (module *httpModule) initRouter() {
 		//使用自定义的由路连接
 		module.routerConfig = Config.Http.Router
 		module.routerConnect = Router.connect(module.routerConfig)
+	}
 
-		if module.routerConnect == nil {
-			panic("HTTP连接路由服务失败")
-		} else {
-			err := module.routerConnect.Open()
-			if err != nil {
-				panic("HTTP打开路由服务失败 " + err.Error())
-			}
+	if module.routerConnect == nil {
+		panic("HTTP连接路由服务失败")
+	} else {
+		err := module.routerConnect.Open()
+		if err != nil {
+			panic("HTTP打开路由服务失败 " + err.Error())
 		}
+	}
+
+	//注册路由
+	for _,uri := range module.routeUris {
+		module.routerConnect.Accept(uri.name, uri.uri)
 	}
 }
 
@@ -210,16 +224,15 @@ func (module *httpModule) initSession() {
 		//使用自定义的会话连接
 		module.sessionConfig = Config.Http.Session
 		module.sessionConnect = Session.connect(module.sessionConfig)
+	}
 
-
-		if module.sessionConnect == nil {
-			panic("HTTP连接会话服务失败")
-		} else {
-			//打开会话连接
-			err := module.sessionConnect.Open()
-			if err != nil {
-				panic("HTTP打开会话服务失败 " + err.Error())
-			}
+	if module.sessionConnect == nil {
+		panic("HTTP连接会话服务失败")
+	} else {
+		//打开会话连接
+		err := module.sessionConnect.Open()
+		if err != nil {
+			panic("HTTP打开会话服务失败 " + err.Error())
 		}
 	}
 }
@@ -319,20 +332,35 @@ func (module *httpModule) Driver(name string, driver HttpDriver) {
 }
 //注册路由
 func (module *httpModule) Route(name string, config Map) {
+	if module.routes == nil {
+		module.routes = map[string]Map{}
+	}
+	if module.routeNames == nil {
+		module.routeNames = []string{}
+	}
+	if module.routeUris == nil {
+		module.routeUris = []httpUri{}
+	}
+
+
 	//保存配置
+	if _,ok := module.routes[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		module.routeNames = append(module.routeNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
 	module.routes[name] = config
-	module.routeNames = append(module.routeNames, name)
+
 
 	//处理uri
-	module.routeUris[name] = name
 	if v,ok := config[KeyMapUri]; ok {
 
 		switch uris := v.(type) {
 		case string:
-			module.routeUris[uris] = name
+			module.routeUris = append(module.routeUris, httpUri{ name, uris })
 		case []string:
 			for _,uri := range uris {
-				module.routeUris[uri] = name
+				module.routeUris = append(module.routeUris, httpUri{ name, uri })
 			}
 		}
 	}
@@ -550,14 +578,15 @@ func (module *httpModule) serveHttp(res http.ResponseWriter, req *http.Request) 
 func (module *httpModule) contextRequest(ctx *HttpContext) {
 
 	//路由解析
-	//目前暂不支持driver
-	//直接使用name相等就匹配
-	if name,ok := module.routeUris[ctx.Path]; ok {
-		ctx.Name = name
-		ctx.Config = module.routes[name]
+	routerResult := module.routerConnect.Parse(ctx.Host, ctx.Path)
+	if routerResult != nil {
+		ctx.Name = routerResult.Name
+		ctx.Config = module.routes[ctx.Name]
+		ctx.Param = routerResult.Param
 	} else {
 		ctx.Config = nil
 	}
+
 
 
 	//会话处理相关
@@ -575,10 +604,31 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 		}
 		http.SetCookie(ctx.Res, &cookie)
 	} else {
-		//可以考虑
 		ctx.Id, _ = url.QueryUnescape(cookie.Value)
 		ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
 	}
+
+
+
+	//基本的表单处理
+	//如 query form
+
+	//处理Query，不管任何method都要处理
+	if querys, err := url.ParseQuery(ctx.Req.URL.RawQuery); err == nil {
+		for k,v := range querys {
+			if len(v) > 1 {
+				ctx.Query[k] = v
+				ctx.Value[k] = v
+			} else {
+				ctx.Query[k] = v[0]
+				ctx.Value[k] = v[0]
+			}
+		}
+	}
+
+	//表单和上传文件，都使用中间件去处理
+	//静态文件也使用中间件处理
+
 
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
@@ -605,29 +655,33 @@ func (module *httpModule) contextResponse(ctx *HttpContext) {
 	if ctx.Body == nil {
 		//没有响应，应该走到found流程
 		module.contextFound(ctx)
-	} else {
-
-		switch ctx.Body.(type) {
-		case httpBodyGoto:
-			module.gotoResponder(ctx)
-		case httpBodyText:
-			module.textResponder(ctx)
-		case httpBodyHtml:
-			module.htmlResponder(ctx)
-		case httpBodyJson:
-			module.jsonResponder(ctx)
-		case httpBodyXml:
-			module.xmlResponder(ctx)
-		case httpBodyFile:
-			module.fileResponder(ctx)
-		case httpBodyDown:
-			module.downResponder(ctx)
-		case httpBodyView:
-			module.viewResponder(ctx)
-		default:
-			module.defaultResponder(ctx)
-		}
 	}
+
+
+	switch ctx.Body.(type) {
+	case httpBodyGoto:
+		module.gotoResponder(ctx)
+	case httpBodyText:
+		module.textResponder(ctx)
+	case httpBodyHtml:
+		module.htmlResponder(ctx)
+	case httpBodyScript:
+		module.scriptResponder(ctx)
+	case httpBodyJson:
+		module.jsonResponder(ctx)
+	case httpBodyXml:
+		module.xmlResponder(ctx)
+	case httpBodyFile:
+		module.fileResponder(ctx)
+	case httpBodyDown:
+		module.downResponder(ctx)
+	case httpBodyView:
+		module.viewResponder(ctx)
+	default:
+		module.defaultResponder(ctx)
+	}
+
+
 }
 
 
@@ -1055,6 +1109,12 @@ func (module *httpModule) contextFound(ctx *HttpContext) {
 	//最后是默认found中间件
 	ctx.handler(module.foundDefaultHandler)
 
+
+	if ctx.Code == 0 {
+		ctx.Code = 404
+	}
+
+
 	ctx.Next()
 }
 
@@ -1096,6 +1156,11 @@ func (module *httpModule) contextError(ctx *HttpContext) {
 
 	//最后是默认error中间件
 	ctx.handler(module.errorDefaultHandler)
+
+
+	if ctx.Code == 0 {
+		ctx.Code = 500
+	}
 
 	ctx.Next()
 }
@@ -1139,6 +1204,11 @@ func (module *httpModule) contextFailed(ctx *HttpContext) {
 	//最后是默认failed中间件
 	ctx.handler(module.failedDefaultHandler)
 
+
+	if ctx.Code == 0 {
+		ctx.Code = 500
+	}
+
 	ctx.Next()
 }
 
@@ -1180,6 +1250,11 @@ func (module *httpModule) contextDenied(ctx *HttpContext) {
 
 	//最后是默认denied中间件
 	ctx.handler(module.deniedDefaultHandler)
+
+
+	if ctx.Code == 0 {
+		ctx.Code = 500
+	}
 
 	ctx.Next()
 }
@@ -1226,10 +1301,10 @@ func (module *httpModule) textResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
 		ctx.Type = "text"
 	}
-	ctx.Res.WriteHeader(ctx.Code)
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
+	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	fmt.Fprint(ctx.Res, body.Text)
+	ctx.Res.WriteHeader(ctx.Code)
 }
 func (module *httpModule) htmlResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyHtml)
@@ -1237,10 +1312,21 @@ func (module *httpModule) htmlResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
 		ctx.Type = "html"
 	}
-	ctx.Res.WriteHeader(ctx.Code)
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
+	ctx.Res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	fmt.Fprint(ctx.Res, body.Html)
+	ctx.Res.WriteHeader(ctx.Code)
+}
+func (module *httpModule) scriptResponder(ctx *HttpContext) {
+	body := ctx.Body.(httpBodyScript)
+
+	if ctx.Type == "" {
+		ctx.Type = "script"
+	}
+
+	ctx.Res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	fmt.Fprint(ctx.Res, body.Script)
+	ctx.Res.WriteHeader(ctx.Code)
 }
 func (module *httpModule) jsonResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyJson)
@@ -1248,6 +1334,7 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 	bytes, err := json.Marshal(body.Json)
 	if err != nil {
 		//出错啊
+		//但是这里已经走完response了。再ctx.Error好像没用了
 		ctx.Error(NewError(err.Error()))
 	} else {
 
@@ -1255,13 +1342,9 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 			ctx.Type = "json"
 		}
 
-		//调试信息
-		Logger.Debug("json.type", Const.MimeType(ctx.Type), ctx.Charset)
-
-		ctx.Res.WriteHeader(ctx.Code)
 		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-
 		fmt.Fprint(ctx.Res, string(bytes))
+		ctx.Res.WriteHeader(ctx.Code)
 	}
 }
 func (module *httpModule) xmlResponder(ctx *HttpContext) {
@@ -1276,10 +1359,10 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 		if ctx.Type == "" {
 			ctx.Type = "xml"
 		}
-		ctx.Res.WriteHeader(ctx.Code)
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 		fmt.Fprint(ctx.Res, bytes)
+		ctx.Res.WriteHeader(ctx.Code)
 	}
 }
 func (module *httpModule) fileResponder(ctx *HttpContext) {
@@ -1298,7 +1381,6 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 
 	body := ctx.Body.(httpBodyDown)
 
-	ctx.Res.WriteHeader(ctx.Code)
 	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	//加入自定义文件名
 	if body.Name != "" {
@@ -1306,6 +1388,7 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 	}
 
 	fmt.Fprint(ctx.Res, body.Body)
+	ctx.Res.WriteHeader(ctx.Code)
 }
 func (module *httpModule) viewResponder(ctx *HttpContext) {
 	//HTTP中，这些好像不需要处理
@@ -1315,10 +1398,10 @@ func (module *httpModule) defaultResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
 		ctx.Type = "text"
 	}
-	ctx.Res.WriteHeader(ctx.Code)
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 
+	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	fmt.Fprint(ctx.Res, ctx.Body)
+	ctx.Res.WriteHeader(ctx.Code)
 }
 /* 响应器 end */
 
@@ -1432,22 +1515,22 @@ func (ctx *HttpContext) Goto(url string) {
 	ctx.Body = httpBodyGoto{url}
 }
 func (ctx *HttpContext) Text(text string) {
-	ctx.Code = 200
 	ctx.Type = "text"
 	ctx.Body = httpBodyText{text}
 }
 func (ctx *HttpContext) Html(html string) {
-	ctx.Code = 200
 	ctx.Type = "html"
 	ctx.Body = httpBodyHtml{html}
 }
+func (ctx *HttpContext) Script(script string) {
+	ctx.Type = "script"
+	ctx.Body = httpBodyScript{script}
+}
 func (ctx *HttpContext) Json(json Any) {
-	ctx.Code = 200
 	ctx.Type = "json"
 	ctx.Body = httpBodyJson{json}
 }
 func (ctx *HttpContext) Xml(xml Any) {
-	ctx.Code = 200
 	ctx.Type = "xml"
 	ctx.Body = httpBodyXml{xml}
 }
@@ -1457,7 +1540,6 @@ func (ctx *HttpContext) File(file string, names ...string) {
 		name = names[0]
 	}
 
-	ctx.Code = 200
 	ctx.Type = "file"
 	ctx.Body = httpBodyFile{file,name}
 }
