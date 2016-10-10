@@ -10,14 +10,14 @@ import (
 type (
 	//语言配置
 	langConfig struct {
-		//驱动
-		Driver	string	`json:"driver"`
-		//自定义配置
-		Config	Map		`json:"config"`
+		Name		string		`json:"name"`
+		Text		string		`json:"Text"`
+		Accepts		[]string	`json:"accepts"`
 	}
 
 	//节点配置
 	nodeConfig struct {
+		Id	string	`json:"id"`
 		Port string	`json:"port"`
 		Url string	`json:"url"`
 		Name string	`json:"name"`
@@ -123,7 +123,8 @@ type (
 	configConfig struct {
 		Debug	bool			`json:"debug"`
 
-
+		Lang	map[string]langConfig	`json:"lang"`
+		Node	map[string]nodeConfig	`json:"lang"`
 
 
 		//日志配置
