@@ -1391,7 +1391,6 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 	ctx.Res.WriteHeader(ctx.Code)
 }
 func (module *httpModule) viewResponder(ctx *HttpContext) {
-	//HTTP中，这些好像不需要处理
 	//先不支持VIEW的样子？
 }
 func (module *httpModule) defaultResponder(ctx *HttpContext) {
