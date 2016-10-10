@@ -9,7 +9,7 @@ import (
 )
 
 type (
-	mappingModule struct {
+	mappingGlobal struct {
 		types	map[string]Map
 		cryptos	map[string]Map
 	}
@@ -19,19 +19,19 @@ type (
 
 
 //注册类型
-func (module *mappingModule) Type(name string, config Map) {
-	if module.types == nil {
-		module.types = map[string]Map{}
+func (global *mappingGlobal) Type(name string, config Map) {
+	if global.types == nil {
+		global.types = map[string]Map{}
 	}
-	module.types[name] = config
+	global.types[name] = config
 }
 
 //注册加解密
-func (module *mappingModule) Crypto(name string, config Map) {
-	if module.cryptos == nil {
-		module.cryptos = map[string]Map{}
+func (global *mappingGlobal) Crypto(name string, config Map) {
+	if global.cryptos == nil {
+		global.cryptos = map[string]Map{}
 	}
-	module.cryptos[name] = config
+	global.cryptos[name] = config
 }
 
 
@@ -45,16 +45,15 @@ func (module *mappingModule) Crypto(name string, config Map) {
 
 //类型默认验证
 //默认使用string做正则表达式验证
-func (module *mappingModule) typeDefaultValid(value Any, config Map) bool {
-	if _,ok := config[KeyMapType]; ok {
-		//待修改
-		//return Check(t.(string), fmt.Sprintf("%s", value))
+func (global *mappingGlobal) typeDefaultValid(value Any, config Map) bool {
+	if t,ok := config[KeyMapType]; ok {
+		return Const.Valid(fmt.Sprintf("%s", value), fmt.Sprintf("%v", t))
 	}
-	return true
+	return false
 }
 //类型默认值包
 //默认值包装都是返回string类型
-func (module *mappingModule) typeDefaultValue(value Any, config Map) Any {
+func (global *mappingGlobal) typeDefaultValue(value Any, config Map) Any {
 	return fmt.Sprintf("%s", value)
 }
 
@@ -65,9 +64,9 @@ func (module *mappingModule) typeDefaultValue(value Any, config Map) Any {
 
 
 //获取类型的验证方法
-func (module *mappingModule) TypeValid(name string) (valid func(Any, Map) bool) {
+func (global *mappingGlobal) TypeValid(name string) (valid func(Any, Map) bool) {
 	//配置中的验证方法
-	if config, ok := module.types[name]; ok {
+	if config, ok := global.types[name]; ok {
 		switch method := config[KeyMapValid].(type) {
 		case func(Any, Map) bool:
 			valid = method
@@ -76,15 +75,15 @@ func (module *mappingModule) TypeValid(name string) (valid func(Any, Map) bool) 
 
 	//没有配置，使用默认验证方法
 	if valid == nil {
-		valid = module.typeDefaultValid
+		valid = global.typeDefaultValid
 	}
 
 	return
 }
 //获取类型的值包方法
-func (module *mappingModule) TypeValue(name string) (value func(Any,Map) Any) {
+func (global *mappingGlobal) TypeValue(name string) (value func(Any,Map) Any) {
 	//配置中的值包方法
-	if config, ok := module.types[name]; ok {
+	if config, ok := global.types[name]; ok {
 		switch method := config[KeyMapValue].(type) {
 		case func(Any,Map) Any:
 			value = method
@@ -92,7 +91,7 @@ func (module *mappingModule) TypeValue(name string) (value func(Any,Map) Any) {
 	}
 	//没有配置，使用默认值包方法
 	if value == nil {
-		value = module.typeDefaultValue
+		value = global.typeDefaultValue
 	}
 
 	return
@@ -100,8 +99,8 @@ func (module *mappingModule) TypeValue(name string) (value func(Any,Map) Any) {
 
 
 //获取类型方法
-func (module *mappingModule) TypeMethod(name string) (func(Any, Map) bool, func(Any,Map) Any) {
-	return module.TypeValid(name), module.TypeValue(name)
+func (global *mappingGlobal) TypeMethod(name string) (func(Any, Map) bool, func(Any,Map) Any) {
+	return global.TypeValid(name), global.TypeValue(name)
 }
 
 
@@ -136,20 +135,20 @@ func (module *mappingModule) TypeMethod(name string) (func(Any, Map) bool, func(
 
 
 //默认加密方法
-func (module *mappingModule) cryptoDefaultEncode(value Any) Any {
+func (global *mappingGlobal) cryptoDefaultEncode(value Any) Any {
 	return value
 }
 //默认解密方法
-func (module *mappingModule) cryptoDefaultDecode(value Any) Any {
+func (global *mappingGlobal) cryptoDefaultDecode(value Any) Any {
 	return value
 }
 
 
 
 //获取加密方法
-func (module *mappingModule) CryptoEncode(name string) (encode func(Any) Any) {
+func (global *mappingGlobal) CryptoEncode(name string) (encode func(Any) Any) {
 	//配置中的加密方法
-	if config, ok := module.cryptos[name]; ok {
+	if config, ok := global.cryptos[name]; ok {
 		switch method := config[KeyMapEncode].(type) {
 		case func(Any) Any:
 			encode = method
@@ -157,16 +156,16 @@ func (module *mappingModule) CryptoEncode(name string) (encode func(Any) Any) {
 	}
 	//没有使用默认加密方法
 	if encode == nil {
-		encode = module.cryptoDefaultEncode
+		encode = global.cryptoDefaultEncode
 	}
 
 	return
 }
 
 //获取解密方法
-func (module *mappingModule) CryptoDecode(name string) (decode func(Any) Any) {
+func (global *mappingGlobal) CryptoDecode(name string) (decode func(Any) Any) {
 	//默认中的解密方法
-	if config, ok := module.cryptos[name]; ok {
+	if config, ok := global.cryptos[name]; ok {
 		switch method := config[KeyMapDecode].(type) {
 		case func(Any) Any:
 			decode = method
@@ -174,15 +173,15 @@ func (module *mappingModule) CryptoDecode(name string) (decode func(Any) Any) {
 	}
 	//没有使用默认解密方法
 	if decode == nil {
-		decode = module.cryptoDefaultDecode
+		decode = global.cryptoDefaultDecode
 	}
 
 	return
 }
 
 //获了方法
-func (module *mappingModule) CryptoMethod(name string)(func(Any) Any, func(Any) Any) {
-	return module.CryptoEncode(name), module.CryptoDecode(name)
+func (global *mappingGlobal) CryptoMethod(name string)(func(Any) Any, func(Any) Any) {
+	return global.CryptoEncode(name), global.CryptoDecode(name)
 }
 
 
@@ -197,7 +196,7 @@ func (module *mappingModule) CryptoMethod(name string)(func(Any) Any, func(Any) 
 
 
 //解析
-func (module *mappingModule) Parse(tree []string, config Map, data Map, value Map, args ...bool) *Error {
+func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Map, args ...bool) *Error {
 
 	argn := false
 	if len(args) > 0 {
@@ -420,7 +419,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 					if sv,ok := fieldValue.(string); ok {
 
 						//得到解密方法
-						decode := Mapping.CryptoDecode(ct.(string))
+						decode := global.CryptoDecode(ct.(string))
 						fieldValue = decode(sv)
 					}
 				}
@@ -431,7 +430,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 
 				//验证方法和值方法
 				if fieldType, ok := fieldConfig["type"]; ok {
-					fieldValidCall, fieldValueCall := Mapping.TypeMethod(fieldType.(string))
+					fieldValidCall, fieldValueCall := global.TypeMethod(fieldType.(string))
 
 					//如果配置中有自己的验证函数
 					if f,ok := fieldConfig["valid"]; ok {
@@ -558,7 +557,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 			for _,d := range fieldData {
 				v := Map{}
 
-				err := Mapping.Parse(trees, jsonConfig, d, v, args...);
+				err := global.Parse(trees, jsonConfig, d, v, args...);
 				if err != nil {
 					return err
 				} else {
@@ -610,7 +609,7 @@ func (module *mappingModule) Parse(tree []string, config Map, data Map, value Ma
 
 
 			//得到解密方法
-			decode := Mapping.CryptoEncode(ct.(string))
+			decode := global.CryptoEncode(ct.(string))
 			fieldValue = decode(sv)
 		}
 

@@ -1,56 +1,69 @@
+/*
+	task 任务模块
+	任务模块，是一个全局模块
+	用于进程内的一些触发，比如数据被创建，修改，删除等等
+	并且任务不需要三方驱动
+*/
+
 package noggo
 
 
 import (
-	"sync"
 	"time"
+	"sync"
 	. "github.com/nogio/noggo/base"
 )
 
 
 type (
-	//任务函数
-	TaskFunc func(*TaskContext)
-	TaskMatch func(*TaskContext) bool
-	TaskAcceptFunc func()
-
-
 	//任务驱动
 	TaskDriver interface {
 		Connect(config Map) (TaskConnect)
 	}
+	TaskCall func(string,string,time.Duration,Map)
 	//任务连接
 	TaskConnect interface {
+		//打开连接
 		Open() error
+		//关闭连接
 		Close() error
-		Accept(name string, delay time.Duration, call func(id string)) error
+
+		//注册任务
+		Accept(id string, name string, delay time.Duration, value Map, call TaskCall) error
+		//完成任务
+		Finish(id string) error
 	}
 
+	//任务函数
+	TaskFunc func(*TaskContext)
 
+	//响应完成
+	taskBodyFinish struct {
+	}
+	//响应重新触发
+	taskBodyRetask struct {
+		Delay time.Duration
+	}
 
 	//任务模块
-	taskModule struct {
-		//驱动
+	taskGlobal struct {
+		mutex sync.Mutex
+
+		//任务驱动容器
 		drivers map[string]TaskDriver
-		driversMutex sync.Mutex
 
+		//日志配置，日志连接
+		taskConfig *taskConfig
+		taskConnect TaskConnect
 
-		//路由器连接
-		routerConfig	*routerConfig
-		routerConnect	RouterConnect
-		//会话连接
+		//会话配置与连接
 		sessionConfig	*sessionConfig
 		sessionConnect	SessionConnect
 
-		//任务本身的连接
-		taskConfig		*taskConfig
-		taskConnect		TaskConnect
 
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
-		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
-		routeTimes	map[string][]string		//记录所有times定义，不同的任务可能会有相同的time定义,  map[name][times]
 
 		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]TaskFunc
@@ -63,7 +76,8 @@ type (
 
 	//任务上下文
 	TaskContext struct {
-		Module	*taskModule
+		Global	*taskGlobal
+
 		//执行线
 		nexts []TaskFunc		//方法列表
 		next int				//下一个索引
@@ -73,31 +87,20 @@ type (
 		Session Map			//存储Session值
 		Sign	*Sign		//签名功能，基于session
 
-		//请求相关
-		Method	string		//请求的method， 继承之web请求， 暂时无用
-		Path	string		//请求的路径，演变自web， 暂时等于task的名称
-		Lang	string		//当前上下文的语言，默认应为default
-
-		Delay	time.Duration
-		Target	time.Time
-
-
-		//路由相关
+		//配置相关
 		Name string			//解析路由后得到的name
 		Config Map			//解析后得到的路由配置
 		Branchs []Map		//解析后得到的路由分支配置
 
 		//数据相关
-		Params	Map			//路由解析后uri中的参数
-		Value	Map			//所有请求过来的原始参数
-		Locals	Map			//在ctx中传递数据用的
+		Delay	time.Duration	//延时
+		Value	Map			//所有请求过来的原始参数汇总
+		Local	Map			//在ctx中传递数据用的
+		Item	Map			//单条记录查询对象
+		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
-		Items	Map			//单条记录查询对象
-		Auths	Map			//签名认证对象
 
 		//响应相关
-		Code	int			//返回的状态码
-		Type	string		//响应类型
 		Body	Any			//响应内容
 
 		Wrong	*Error		//错误信息
@@ -110,110 +113,98 @@ type (
 	任务模块方法 begin
 */
 
+//注册任务驱动
+func (global *taskGlobal) Driver(name string, driver TaskDriver) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.drivers == nil {
+		global.drivers = map[string]TaskDriver{}
+	}
+
+	if driver == nil {
+		panic("任务: 驱动不可为空")
+	}
+	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
+	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
+	global.drivers[name] = driver
+}
+
+
+//连接驱动
+func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
+	if taskDriver,ok := global.drivers[config.Driver]; ok {
+		return taskDriver.Connect(config.Config)
+	} else {
+		panic("日志：不支持的驱动 " + config.Driver)
+	}
+}
+
 
 
 
 //任务初始化
-func (module *taskModule) init() {
-	module.initRouter()
-	module.initSession()
-	module.initTask()
-}
-//初始化路由驱动
-func (module *taskModule) initRouter() {
-	if Config.Task.Router == nil {
-		//使用默认的路由连接
-		module.routerConfig = Router.routerConfig
-		module.routerConnect = Router.routerConnect
-	} else {
-		//使用自定义的由路连接
-		module.routerConfig = Config.Task.Router
-		module.routerConnect = Router.connect(module.routerConfig)
+func (global *taskGlobal) init() {
+	global.initSession()
 
-		if module.routerConnect == nil {
-			panic("任务连接路由服务失败")
-		} else {
-			err := module.routerConnect.Open()
-			if err != nil {
-				panic("任务打开路由服务失败 " + err.Error())
-			}
+	//先拿到默认的配置
+	global.taskConfig = Config.Task
+	global.taskConnect = global.connect(global.taskConfig)
+
+	if global.taskConnect == nil {
+		panic("任务：连接失败")
+	} else {
+		err := global.taskConnect.Open()
+		if err != nil {
+			panic("任务：打开失败 " + err.Error())
 		}
 	}
+
 }
 
 //初始化会话驱动
-func (module *taskModule) initSession() {
-	if Config.Task.Session == nil {
-		//使用默认的会话连接
-		module.sessionConfig = Session.sessionConfig
-		module.sessionConnect = Session.sessionConnect
+func (global *taskGlobal) initSession() {
+	if Config.Task.Session != nil {
+		//使用自定的
+		global.sessionConfig = Config.Task.Session
 	} else {
-		//使用自定义的会话连接
-		module.sessionConfig = Config.Task.Session
-		module.sessionConnect = Session.connect(module.sessionConfig)
-
-
-		if module.sessionConnect == nil {
-			panic("任务连接会话服务失败")
-		} else {
-			//打开会话连接
-			err := module.sessionConnect.Open()
-			if err != nil {
-				panic("任务打开会话服务失败 " + err.Error())
-			}
-		}
+		//如果任务中会话配置为空，使用默认的会话配置
+		global.sessionConfig = Config.Session
 	}
-}
 
+	//连接会话
+	global.sessionConnect = Session.connect(global.sessionConfig)
 
-//初始化任务驱动
-func (module *taskModule) initTask() {
-
-	module.taskConfig = Config.Task
-	module.taskConnect = module.connect(module.taskConfig)
-
-	//
-	if module.taskConnect == nil {
-		panic("任务连接任务失败")
+	if global.sessionConnect == nil {
+		panic("任务：连接会话失败")
 	} else {
 		//打开会话连接
-		err := module.taskConnect.Open()
+		err := global.sessionConnect.Open()
 		if err != nil {
-			panic("打开任务服务失败 " + err.Error())
+			panic("任务：打开会话失败 " + err.Error())
 		}
 	}
 }
+
 
 
 
 //任务退出
-func (module *taskModule) exit() {
-	module.exitRouter()
-	module.exitSession()
-	module.exitTask()
-}
-//任务退出，路由器
-func (module *taskModule) exitRouter() {
-	//关闭路由
-	if module.routerConnect != nil {
-		module.routerConnect.Close()
-		module.routerConnect = nil
+func (global *taskGlobal) exit() {
+	global.exitSession()
+
+	//关闭连接
+	if global.taskConnect != nil {
+		global.taskConnect.Close()
+		global.taskConnect = nil
 	}
 }
 //任务退出，会话
-func (module *taskModule) exitSession() {
+func (global *taskGlobal) exitSession() {
 	//关闭会话
-	if module.sessionConnect != nil {
-		module.sessionConnect.Close()
-		module.sessionConnect = nil
-	}
-}
-//任务退出，任务
-func (module *taskModule) exitTask() {
-	//关闭任务
-	if module.taskConnect != nil {
-		module.taskConnect.Close()
-		module.taskConnect = nil
+	if global.sessionConnect != nil {
+		global.sessionConnect.Close()
+		global.sessionConnect = nil
 	}
 }
 
@@ -229,63 +220,26 @@ func (module *taskModule) exitTask() {
 
 
 
+//任务：注册路由
+func (global *taskGlobal) Route(name string, config Map) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
 
-//连接驱动
-func (module *taskModule) connect(config *taskConfig) (TaskConnect) {
-	if taskDriver,ok := module.drivers[config.Driver]; ok {
-		return taskDriver.Connect(config.Config)
-	} else {
-		panic("不支持的任务驱动： " + config.Driver)
+	if global.routes == nil {
+		global.routes = map[string]Map{}
 	}
-}
-
-
-
-
-//注册驱动
-func (module *taskModule) Driver(name string, driver TaskDriver) {
-	module.driversMutex.Lock()
-	defer module.driversMutex.Unlock()
-
-	if driver == nil {
-		panic("task: Register driver is nil")
-	}
-	if _, ok := module.drivers[name]; ok {
-		panic("task: Registered driver " + name)
+	if global.routeNames == nil {
+		global.routeNames = []string{}
 	}
 
-	module.drivers[name] = driver
-}
-//注册路由
-func (module *taskModule) Route(name string, config Map) {
 	//保存配置
-	module.routes[name] = config
-	module.routeNames = append(module.routeNames, name)
-
-	//处理uri
-	module.routeUris[name] = name
-	if v,ok := config[KeyMapUri]; ok {
-
-		switch uris := v.(type) {
-		case string:
-			module.routeUris[uris] = name
-		case []string:
-			for _,uri := range uris {
-				module.routeUris[uri] = name
-			}
-		}
+	if _,ok := global.routes[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.routeNames = append(global.routeNames, name)
 	}
-
-	//处理time
-	if v,ok := config[KeyMapTime]; ok {
-		switch times := v.(type) {
-		case string:
-			module.routeTimes[name] = []string { times }
-		case []string:
-			module.routeTimes[name] = times
-		}
-	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.routes[name] = config
 }
 
 
@@ -296,121 +250,135 @@ func (module *taskModule) Route(name string, config Map) {
 
 
 /* 注册拦截器 begin */
-func (module *taskModule) RequestFilter(name string, call TaskFunc) {
+func (global *taskGlobal) RequestFilter(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.requestFilters == nil {
-		module.requestFilters = make(map[string]TaskFunc)
+	if global.requestFilters == nil {
+		global.requestFilters = make(map[string]TaskFunc)
 	}
-	if module.requestFilterNames == nil {
-		module.requestFilterNames = make([]string, 0)
+	if global.requestFilterNames == nil {
+		global.requestFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.requestFilters[name]; ok == false {
-		module.requestFilterNames = append(module.requestFilterNames, name)
+	if _,ok := global.requestFilters[name]; ok == false {
+		global.requestFilterNames = append(global.requestFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.requestFilters[name] = call
+	global.requestFilters[name] = call
 }
-func (module *taskModule) ExecuteFilter(name string, call TaskFunc) {
+func (global *taskGlobal) ExecuteFilter(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.executeFilters == nil {
-		module.executeFilters = make(map[string]TaskFunc)
+	if global.executeFilters == nil {
+		global.executeFilters = make(map[string]TaskFunc)
 	}
-	if module.executeFilterNames == nil {
-		module.executeFilterNames = make([]string, 0)
+	if global.executeFilterNames == nil {
+		global.executeFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.executeFilters[name]; ok == false {
-		module.executeFilterNames = append(module.executeFilterNames, name)
+	if _,ok := global.executeFilters[name]; ok == false {
+		global.executeFilterNames = append(global.executeFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.executeFilters[name] = call
+	global.executeFilters[name] = call
 }
-func (module *taskModule) ResponseFilter(name string, call TaskFunc) {
+func (global *taskGlobal) ResponseFilter(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.responseFilters == nil {
-		module.responseFilters = make(map[string]TaskFunc)
+	if global.responseFilters == nil {
+		global.responseFilters = make(map[string]TaskFunc)
 	}
-	if module.responseFilterNames == nil {
-		module.responseFilterNames = make([]string, 0)
+	if global.responseFilterNames == nil {
+		global.responseFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.responseFilters[name]; ok == false {
-		module.responseFilterNames = append(module.responseFilterNames, name)
+	if _,ok := global.responseFilters[name]; ok == false {
+		global.responseFilterNames = append(global.responseFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.responseFilters[name] = call
+	global.responseFilters[name] = call
 }
 /* 注册拦截器 end */
 
 
 /* 注册处理器 begin */
-func (module *taskModule) FoundHandler(name string, call TaskFunc) {
+func (global *taskGlobal) FoundHandler(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.foundHandlers == nil {
-		module.foundHandlers = make(map[string]TaskFunc)
+	if global.foundHandlers == nil {
+		global.foundHandlers = make(map[string]TaskFunc)
 	}
-	if module.foundHandlerNames == nil {
-		module.foundHandlerNames = make([]string, 0)
+	if global.foundHandlerNames == nil {
+		global.foundHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.foundHandlers[name]; ok == false {
-		module.foundHandlerNames = append(module.foundHandlerNames, name)
+	if _,ok := global.foundHandlers[name]; ok == false {
+		global.foundHandlerNames = append(global.foundHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.foundHandlers[name] = call
+	global.foundHandlers[name] = call
 }
-func (module *taskModule) ErrorHandler(name string, call TaskFunc) {
+func (global *taskGlobal) ErrorHandler(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.errorHandlers == nil {
-		module.errorHandlers = make(map[string]TaskFunc)
+	if global.errorHandlers == nil {
+		global.errorHandlers = make(map[string]TaskFunc)
 	}
-	if module.errorHandlerNames == nil {
-		module.errorHandlerNames = make([]string, 0)
+	if global.errorHandlerNames == nil {
+		global.errorHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.errorHandlers[name]; ok == false {
-		module.errorHandlerNames = append(module.errorHandlerNames, name)
+	if _,ok := global.errorHandlers[name]; ok == false {
+		global.errorHandlerNames = append(global.errorHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.errorHandlers[name] = call
+	global.errorHandlers[name] = call
 }
-func (module *taskModule) FailedHandler(name string, call TaskFunc) {
+func (global *taskGlobal) FailedHandler(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.failedHandlers == nil {
-		module.failedHandlers = make(map[string]TaskFunc)
+	if global.failedHandlers == nil {
+		global.failedHandlers = make(map[string]TaskFunc)
 	}
-	if module.failedHandlerNames == nil {
-		module.failedHandlerNames = make([]string, 0)
+	if global.failedHandlerNames == nil {
+		global.failedHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.failedHandlers[name]; ok == false {
-		module.failedHandlerNames = append(module.failedHandlerNames, name)
+	if _,ok := global.failedHandlers[name]; ok == false {
+		global.failedHandlerNames = append(global.failedHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.failedHandlers[name] = call
+	global.failedHandlers[name] = call
 }
-func (module *taskModule) DeniedHandler(name string, call TaskFunc) {
+func (global *taskGlobal) DeniedHandler(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.deniedHandlers == nil {
-		module.deniedHandlers = make(map[string]TaskFunc)
+	if global.deniedHandlers == nil {
+		global.deniedHandlers = make(map[string]TaskFunc)
 	}
-	if module.deniedHandlerNames == nil {
-		module.deniedHandlerNames = make([]string, 0)
+	if global.deniedHandlerNames == nil {
+		global.deniedHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.deniedHandlers[name]; ok == false {
-		module.deniedHandlerNames = append(module.deniedHandlerNames, name)
+	if _,ok := global.deniedHandlers[name]; ok == false {
+		global.deniedHandlerNames = append(global.deniedHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.deniedHandlers[name] = call
+	global.deniedHandlers[name] = call
 }
 /* 注册处理器 end */
 
@@ -424,49 +392,42 @@ func (module *taskModule) DeniedHandler(name string, call TaskFunc) {
 
 
 //创建Task上下文
-func (module *taskModule) newTaskContext(method, path string, delay time.Duration, value Map) (*TaskContext) {
-
-
-
+func (global *taskGlobal) newTaskContext(id string, name string, delay time.Duration, value Map) (*TaskContext) {
 	return &TaskContext{
-		Module: module,
-
+		Global: global,
 		next: -1, nexts: []TaskFunc{},
 
-		Method: method, Path: path,
-		Delay: delay, Target:time.Now().Add(delay),
+		Id: id,
+		Name: name, Config: nil, Branchs:nil,
 
-		Name: "", Config: nil, Branchs:[]Map{},
-
-		Params: Map{}, Value: value, Locals: Map{},
-		Args: Map{}, Items: Map{}, Auths: Map{},
+		Delay: delay, Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
 }
 
 
 
 //任务Task  请求开始
-func (module *taskModule) serveTask(method, path string, delay time.Duration, value Map) {
-	ctx := module.newTaskContext(method, path, delay, value)
+func (global *taskGlobal) serveTask(id string, name string, delay time.Duration, value Map) {
+	ctx := global.newTaskContext(id, name, delay, value)
 
 	//请求处理
+	ctx.handler(global.contextRequest)
 	//filter中的request
 	//用数组保证原始注册顺序
-	for _,name := range module.requestFilterNames {
-		ctx.handler(module.requestFilters[name])
+	for _,name := range global.requestFilterNames {
+		ctx.handler(global.requestFilters[name])
 	}
-	ctx.handler(module.contextRequest)
 
 	//响应处理
-	ctx.handler(module.contextResponse)
+	ctx.handler(global.contextResponse)
 	//filter中的response
 	//用数组保证原始注册顺序
-	for _,name := range module.responseFilterNames {
-		ctx.handler(module.responseFilters[name])
+	for _,name := range global.responseFilterNames {
+		ctx.handler(global.responseFilters[name])
 	}
 
 	//开始执行
-	ctx.handler(module.contextExecute)
+	ctx.handler(global.contextExecute)
 	ctx.Next()
 }
 
@@ -483,15 +444,19 @@ func (module *taskModule) serveTask(method, path string, delay time.Duration, va
 
 
 
-//发起触发
-func (module *taskModule) Touch(path string, delay time.Duration, args ...Map) {
+//任务：触发
+func (global *taskGlobal) Touch(name string, delay time.Duration, args ...Map) {
 
-	value := Map{}
-	if len(args) > 0 {
-		value = args[0]
+	if global.taskConnect != nil {
+		value := Map{}
+		if len(args) > 0 {
+			value = args[0]
+		}
+
+		//直接一个新的ID
+		id := NewMd5Id()
+		global.taskConnect.Accept(id, name, delay, value, global.serveTask)
 	}
-
-	go module.serveTask("", path, delay, value)
 }
 
 /*
@@ -525,80 +490,78 @@ func (module *taskModule) Touch(path string, delay time.Duration, args ...Map) {
 //task 任务处理器
 //请求处理
 //包含：route解析、request处理、session处理
-func (module *taskModule) contextRequest(ctx *TaskContext) {
+func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 
-	//路由解析
-	//目前暂不支持driver
-	//直接使用name相等就匹配
-	if name,ok := module.routeUris[ctx.Path]; ok {
-		ctx.Name = name
-		ctx.Config = module.routes[name]
+	//任务不需要路由解析，直接new的时候就有name了
+	if config,ok := global.routes[ctx.Name]; ok {
+		ctx.Config = config
 	} else {
 		ctx.Config = nil
 	}
 
-
 	//请求处理
-	//主要是SessionId处理、处理传过来的值或表单
-	ctx.Id = ctx.Name	//使用name做为id，以便在同一个任务之下共享session
+	//Id已经有了
+
 
 	//会话处理
-	ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
+	err,m := global.sessionConnect.Query(ctx.Id, global.sessionConfig.Expiry)
+	if err == nil {
+		ctx.Session = m
+	} else {
+		ctx.Session = Map{}
+	}
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
 }
 
 //处理响应
-func (module *taskModule) contextResponse(ctx *TaskContext) {
+func (global *taskGlobal) contextResponse(ctx *TaskContext) {
 	ctx.Next()
+
 
 	if ctx.Body == nil {
 		//没有响应，应该走到found流程
-	} else {
+		global.contextFound(ctx)
+	}
 
-		switch body := ctx.Body.(type) {
-		case BodyTaskFinish:
-			//完成不做任何处理
-		case BodyTaskRetask:
-			//目前直接调度，可调整，以后做到task中统一调整
-			//因为万一delay很久。中间正好程序重新或是其它，就丢了
-			//所以有必要使用task机制重新调度
-			time.AfterFunc(body.Delay, func() {
-				Task.Touch(ctx.Path, body.Delay, ctx.Value)
-			})
-		default:
-			//默认，也没有什么好处理的
-		}
+
+	switch ctx.Body.(type) {
+	case taskBodyFinish:
+		global.finishResponder(ctx)
+	case taskBodyRetask:
+		global.retaskResponder(ctx)
+	default:
+		global.defaultResponder(ctx)
 	}
 }
 
 
 
 //路由执行，处理
-func (module *taskModule) contextExecute(ctx *TaskContext) {
+func (global *taskGlobal) contextExecute(ctx *TaskContext) {
 
 	//解析路由，拿到actions
 	if ctx.Config == nil {
 		//找不到路由
-		ctx.handler(module.contextFound)
+		ctx.handler(global.contextFound)
 	} else {
 
 
 		//验证，参数，数据处理
 		//验证处理，数据处理， 可以考虑走外部中间件
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
-			ctx.handler(module.contextArgs)
+			ctx.handler(global.contextArgs)
 		}
 		if _,ok := ctx.Config[KeyMapAuth]; ok {
-			ctx.handler(module.contextAuth)
+			ctx.handler(global.contextAuth)
 		}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
-			ctx.handler(module.contextItem)
+			ctx.handler(global.contextItem)
 		}
 
 		//最终都由分支处理
-		ctx.handler(module.contextBranch)
+		ctx.handler(global.contextBranch)
 	}
 
 	ctx.Next()
@@ -606,7 +569,7 @@ func (module *taskModule) contextExecute(ctx *TaskContext) {
 
 
 //任务处理：处理分支
-func (module *taskModule) contextBranch(ctx *TaskContext) {
+func (global *taskGlobal) contextBranch(ctx *TaskContext) {
 
 	//执行线重置
 	ctx.cleanup()
@@ -670,7 +633,14 @@ func (module *taskModule) contextBranch(ctx *TaskContext) {
 	ctx.Config = Map{}
 
 	//如果有路由
+	//任务路由不支持多method，非http
 	if routeConfig,ok := routing[KeyMapRoute]; ok {
+
+		for k,v := range routeConfig.(Map) {
+			ctx.Config[k] = v
+		}
+
+		/*
 		//如果是method=*版
 		if _,ok := routeConfig.(Map)[KeyMapAction]; ok {
 			for k,v := range routeConfig.(Map) {
@@ -683,6 +653,7 @@ func (module *taskModule) contextBranch(ctx *TaskContext) {
 				}
 			}
 		}
+		*/
 	}
 
 
@@ -690,21 +661,21 @@ func (module *taskModule) contextBranch(ctx *TaskContext) {
 
 	//先处理参数，验证等的东西
 	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(module.contextArgs)
+		ctx.handler(global.contextArgs)
 	}
 	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(module.contextAuth)
+		ctx.handler(global.contextAuth)
 	}
 	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(module.contextItem)
+		ctx.handler(global.contextItem)
 	}
 
 
 	//action之前的拦截器
 	//filter中的execute
 	//用数组保证原始注册顺序
-	for _,name := range module.executeFilterNames {
-		ctx.handler(module.executeFilters[name])
+	for _,name := range global.executeFilterNames {
+		ctx.handler(global.executeFilters[name])
 	}
 
 	//把action加入调用列表
@@ -744,7 +715,7 @@ func (module *taskModule) contextBranch(ctx *TaskContext) {
 
 
 //自带中间件，参数处理
-func (module *taskModule) contextArgs(ctx *TaskContext) {
+func (global *taskGlobal) contextArgs(ctx *TaskContext) {
 
 	//argn表示参数都可为空
 	argn := false
@@ -752,7 +723,7 @@ func (module *taskModule) contextArgs(ctx *TaskContext) {
 		argn = v
 	}
 
-	//所有值都会放在 module.Value 中
+	//所有值都会放在 global.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
 		ctx.Failed(err)
@@ -764,7 +735,7 @@ func (module *taskModule) contextArgs(ctx *TaskContext) {
 
 
 //Auth验证处理
-func (module *taskModule) contextAuth(ctx *TaskContext) {
+func (global *taskGlobal) contextAuth(ctx *TaskContext) {
 
 	if auths,ok := ctx.Config["auth"]; ok {
 		saveMap := Map{}
@@ -850,13 +821,15 @@ func (module *taskModule) contextAuth(ctx *TaskContext) {
 		}
 
 		//存入
-		ctx.Auths = saveMap
+		for k,v := range saveMap {
+			ctx.Auth[k] = v
+		}
 	}
 
 	ctx.Next()
 }
 //Entity实体处理
-func (module *taskModule) contextItem(ctx *TaskContext) {
+func (global *taskGlobal) contextItem(ctx *TaskContext) {
 	if ctx.Config["item"] != nil {
 		cfg := ctx.Config["item"].(Map)
 
@@ -920,7 +893,10 @@ func (module *taskModule) contextItem(ctx *TaskContext) {
 			}
 		}
 
-		ctx.Items = saveMap
+		//存入
+		for k,v := range saveMap {
+			ctx.Item[k] = v
+		}
 	}
 	ctx.Next()
 }
@@ -958,7 +934,7 @@ func (module *taskModule) contextItem(ctx *TaskContext) {
 
 
 //路由执行，found
-func (module *taskModule) contextFound(ctx *TaskContext) {
+func (global *taskGlobal) contextFound(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -987,19 +963,19 @@ func (module *taskModule) contextFound(ctx *TaskContext) {
 
 	//handler中的found
 	//用数组保证原始注册顺序
-	for _,name := range module.foundHandlerNames {
-		ctx.handler(module.foundHandlers[name])
+	for _,name := range global.foundHandlerNames {
+		ctx.handler(global.foundHandlers[name])
 	}
 
 	//最后是默认found中间件
-	ctx.handler(module.foundDefaultHandler)
+	ctx.handler(global.foundDefaultHandler)
 
 	ctx.Next()
 }
 
 
 //路由执行，error
-func (module *taskModule) contextError(ctx *TaskContext) {
+func (global *taskGlobal) contextError(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -1029,19 +1005,19 @@ func (module *taskModule) contextError(ctx *TaskContext) {
 
 	//handler中的error
 	//用数组保证原始注册顺序
-	for _,name := range module.errorHandlerNames {
-		ctx.handler(module.errorHandlers[name])
+	for _,name := range global.errorHandlerNames {
+		ctx.handler(global.errorHandlers[name])
 	}
 
 	//最后是默认error中间件
-	ctx.handler(module.errorDefaultHandler)
+	ctx.handler(global.errorDefaultHandler)
 
 	ctx.Next()
 }
 
 
 //路由执行，failed
-func (module *taskModule) contextFailed(ctx *TaskContext) {
+func (global *taskGlobal) contextFailed(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -1071,12 +1047,12 @@ func (module *taskModule) contextFailed(ctx *TaskContext) {
 
 	//handler中的failed
 	//用数组保证原始注册顺序
-	for _,name := range module.failedHandlerNames {
-		ctx.handler(module.failedHandlers[name])
+	for _,name := range global.failedHandlerNames {
+		ctx.handler(global.failedHandlers[name])
 	}
 
 	//最后是默认failed中间件
-	ctx.handler(module.failedDefaultHandler)
+	ctx.handler(global.failedDefaultHandler)
 
 	ctx.Next()
 }
@@ -1084,7 +1060,7 @@ func (module *taskModule) contextFailed(ctx *TaskContext) {
 
 
 //路由执行，denied
-func (module *taskModule) contextDenied(ctx *TaskContext) {
+func (global *taskGlobal) contextDenied(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -1113,12 +1089,12 @@ func (module *taskModule) contextDenied(ctx *TaskContext) {
 
 	//handler中的denied
 	//用数组保证原始注册顺序
-	for _,name := range module.deniedHandlerNames {
-		ctx.handler(module.deniedHandlers[name])
+	for _,name := range global.deniedHandlerNames {
+		ctx.handler(global.deniedHandlers[name])
 	}
 
 	//最后是默认denied中间件
-	ctx.handler(module.deniedDefaultHandler)
+	ctx.handler(global.deniedDefaultHandler)
 
 	ctx.Next()
 }
@@ -1135,11 +1111,23 @@ func (module *taskModule) contextDenied(ctx *TaskContext) {
 
 
 /* 默认响应器 begin */
-func (module *taskModule) finishDefaultResponder(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+func (global *taskGlobal) finishResponder(ctx *TaskContext) {
+	//通知驱动，任务完成
+	global.taskConnect.Finish(ctx.Id)
 }
-func (module *taskModule) retryDefaultResponder(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+
+//目前直接调度，可调整，以后做到task中统一调整
+//因为万一delay很久。中间正好程序重新或是其它，就丢了
+//所以有必要使用task机制重新调度
+func (global *taskGlobal) retaskResponder(ctx *TaskContext) {
+	body := ctx.Body.(taskBodyRetask)
+
+	//重新处理任务
+	go global.serveTask(ctx.Id, ctx.Name, body.Delay, ctx.Value)
+}
+func (global *taskGlobal) defaultResponder(ctx *TaskContext) {
+	//默认处理器， 一般执行不到。 默认完成吧
+	global.taskConnect.Finish(ctx.Id)
 }
 /* 默认响应器 end */
 
@@ -1147,17 +1135,22 @@ func (module *taskModule) retryDefaultResponder(ctx *TaskContext) {
 
 
 /* 默认处理器 begin */
-func (module *taskModule) foundDefaultHandler(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+//代码中没有指定相关的处理器，才会执行到默认处理器
+func (global *taskGlobal) foundDefaultHandler(ctx *TaskContext) {
+	//当找不到任务时，应当通知驱动，完成此任务，以免重复调用
+	global.taskConnect.Finish(ctx.Id)
 }
-func (module *taskModule) errorDefaultHandler(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+func (global *taskGlobal) errorDefaultHandler(ctx *TaskContext) {
+	//出错，此任务就完成了
+	global.taskConnect.Finish(ctx.Id)
 }
-func (module *taskModule) failedDefaultHandler(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+func (global *taskGlobal) failedDefaultHandler(ctx *TaskContext) {
+	//出错，此任务就完成了
+	global.taskConnect.Finish(ctx.Id)
 }
-func (module *taskModule) deniedDefaultHandler(ctx *TaskContext) {
-	//任务中，这些好像不需要处理
+func (global *taskGlobal) deniedDefaultHandler(ctx *TaskContext) {
+	//出错，此任务就完成了
+	global.taskConnect.Finish(ctx.Id)
 }
 /* 默认处理器 end */
 
@@ -1241,23 +1234,23 @@ func (ctx *TaskContext) Next() {
 /* 上下文处理器 begin */
 //不存在
 func (ctx *TaskContext) Found() {
-	ctx.Module.contextFound(ctx)
+	ctx.Global.contextFound(ctx)
 }
 //返回错误
 func (ctx *TaskContext) Error(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextError(ctx)
+	ctx.Global.contextError(ctx)
 }
 
 //失败, 就是参数处理失败为主
 func (ctx *TaskContext) Failed(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
+	ctx.Global.contextFailed(ctx)
 }
 //拒绝,主要是 auth
 func (ctx *TaskContext) Denied(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
+	ctx.Global.contextFailed(ctx)
 }
 /* 上下文处理器 end */
 
@@ -1270,16 +1263,16 @@ func (ctx *TaskContext) Denied(err *Error) {
 /* 上下文响应器 begin */
 //完成操作
 func (ctx *TaskContext) Finish() {
-	ctx.Body = BodyTaskFinish{}
+	ctx.Body = taskBodyFinish{}
 }
 //重新触发
 func (ctx *TaskContext) Retask(delays ...time.Duration) {
 	if len(delays) > 0 {
 		//延时重新触发
-		ctx.Body = BodyTaskRetask{ Delay: delays[0] }
+		ctx.Body = taskBodyRetask{ Delay: delays[0] }
 	} else {
 		//立即重新触发
-		ctx.Body = BodyTaskRetask{ Delay: time.Second*0 }
+		ctx.Body = taskBodyRetask{ Delay: time.Second*0 }
 	}
 }
 /* 上下文响应器 end */

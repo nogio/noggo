@@ -1,8 +1,16 @@
+/*
+	trigger 触发器模块
+	触发器模块，是一个全局模块
+	用于进程内的一些触发，比如数据被创建，修改，删除等等
+	并且触发器不需要三方驱动
+*/
+
 package noggo
 
 
 import (
 	"time"
+	"sync"
 	. "github.com/nogio/noggo/base"
 )
 
@@ -10,69 +18,63 @@ import (
 type (
 	//触发器函数
 	TriggerFunc func(*TriggerContext)
-	TriggerMatch func(*TriggerContext) bool
-	TriggerAcceptFunc func()
 
-
+	//响应完成
+	triggerBodyFinish struct {
+	}
+	//响应重新触发
+	triggerBodyRetrigger struct {
+		Delay time.Duration
+	}
 
 	//触发器模块
-	triggerModule struct {
-												 //路由器连接
-		routerConfig	*routerConfig
-		routerConnect	RouterConnect
-												 //会话连接
+	triggerGlobal struct {
+		mutex sync.Mutex
+
+		//会话配置与连接
 		sessionConfig	*sessionConfig
 		sessionConnect	SessionConnect
 
 
-												 //路由
+		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
-		routeUris 	map[string]string		//记录所有uris指定	map[uri]name
 
-												 //拦截器们
+		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]TriggerFunc
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
-												 //处理器们
+		//处理器们
 		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TriggerFunc
 		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
 	}
 
 	//触发器上下文
 	TriggerContext struct {
-		Module	*triggerModule
-								 //执行线
+		Global	*triggerGlobal
+
+		//执行线
 		nexts []TriggerFunc		//方法列表
 		next int				//下一个索引
 
-								 //基础
+		//基础
 		Id	string			//Session Id  会话时使用
 		Session Map			//存储Session值
 		Sign	*Sign		//签名功能，基于session
 
-								 //请求相关
-		Method	string		//请求的method， 继承之web请求， 暂时无用
-		Path	string		//请求的路径，演变自web， 暂时等于trigger的名称
-		Lang	string		//当前上下文的语言，默认应为default
-
-
-								 //路由相关
+		//配置相关
 		Name string			//解析路由后得到的name
 		Config Map			//解析后得到的路由配置
 		Branchs []Map		//解析后得到的路由分支配置
 
-								 //数据相关
-		Params	Map			//路由解析后uri中的参数
-		Value	Map			//所有请求过来的原始参数
-		Locals	Map			//在ctx中传递数据用的
+		//数据相关
+		Value	Map			//所有请求过来的原始参数汇总
+		Local	Map			//在ctx中传递数据用的
+		Item	Map			//单条记录查询对象
+		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
-		Items	Map			//单条记录查询对象
-		Auths	Map			//签名认证对象
 
-								 //响应相关
-		Code	int			//返回的状态码
-		Type	string		//响应类型
+		//响应相关
 		Body	Any			//响应内容
 
 		Wrong	*Error		//错误信息
@@ -89,52 +91,30 @@ type (
 
 
 //触发器初始化
-func (module *triggerModule) init() {
-	module.initRouter()
-	module.initSession()
-}
-//初始化路由驱动
-func (module *triggerModule) initRouter() {
-	if Config.Trigger.Router == nil {
-		//使用默认的由路连接
-		module.routerConfig = Router.routerConfig
-		module.routerConnect = Router.routerConnect
-	} else {
-		//使用自定义的由路连接
-		module.routerConfig = Config.Trigger.Router
-		module.routerConnect = Router.connect(module.routerConfig)
-
-		if module.routerConnect == nil {
-			panic("触发器连接路由服务失败")
-		} else {
-			err := module.routerConnect.Open()
-			if err != nil {
-				panic("触发器打开路由服务失败 " + err.Error())
-			}
-		}
-	}
+func (global *triggerGlobal) init() {
+	global.initSession()
 }
 
 //初始化会话驱动
-func (module *triggerModule) initSession() {
-	if Config.Trigger.Session == nil {
-		//使用默认的会话连接
-		module.sessionConfig = Session.sessionConfig
-		module.sessionConnect = Session.sessionConnect
+func (global *triggerGlobal) initSession() {
+	if Config.Trigger.Session != nil {
+		//使用自定的
+		global.sessionConfig = Config.Trigger.Session
 	} else {
-		//使用自定义的会话连接
-		module.sessionConfig = Config.Trigger.Session
-		module.sessionConnect = Session.connect(module.sessionConfig)
+		//如果触发器中会话配置为空，使用默认的会话配置
+		global.sessionConfig = Config.Session
+	}
 
+	//连接会话
+	global.sessionConnect = Session.connect(global.sessionConfig)
 
-		if module.sessionConnect == nil {
-			panic("触发器连接会话服务失败")
-		} else {
-			//打开会话连接
-			err := module.sessionConnect.Open()
-			if err != nil {
-				panic("触发器打开会话服务失败 " + err.Error())
-			}
+	if global.sessionConnect == nil {
+		panic("触发器：连接会话失败")
+	} else {
+		//打开会话连接
+		err := global.sessionConnect.Open()
+		if err != nil {
+			panic("触发器：打开会话失败 " + err.Error())
 		}
 	}
 }
@@ -143,24 +123,15 @@ func (module *triggerModule) initSession() {
 
 
 //触发器退出
-func (module *triggerModule) exit() {
-	module.exitRouter()
-	module.exitSession()
-}
-//触发器退出，路由器
-func (module *triggerModule) exitRouter() {
-	//关闭路由
-	if module.routerConnect != nil {
-		module.routerConnect.Close()
-		module.routerConnect = nil
-	}
+func (global *triggerGlobal) exit() {
+	global.exitSession()
 }
 //触发器退出，会话
-func (module *triggerModule) exitSession() {
+func (global *triggerGlobal) exitSession() {
 	//关闭会话
-	if module.sessionConnect != nil {
-		module.sessionConnect.Close()
-		module.sessionConnect = nil
+	if global.sessionConnect != nil {
+		global.sessionConnect.Close()
+		global.sessionConnect = nil
 	}
 }
 
@@ -176,25 +147,26 @@ func (module *triggerModule) exitSession() {
 
 
 
-//注册路由
-func (module *triggerModule) Route(name string, config Map) {
-	//保存配置
-	module.routes[name] = config
-	module.routeNames = append(module.routeNames, name)
+//触发器：注册路由
+func (global *triggerGlobal) Route(name string, config Map) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	//处理uri
-	module.routeUris[name] = name
-	if v,ok := config[KeyMapUri]; ok {
 
-		switch uris := v.(type) {
-		case string:
-			module.routeUris[uris] = name
-		case []string:
-			for _,uri := range uris {
-				module.routeUris[uri] = name
-			}
-		}
+	if global.routes == nil {
+		global.routes = map[string]Map{}
 	}
+	if global.routeNames == nil {
+		global.routeNames = []string{}
+	}
+
+	//保存配置
+	if _,ok := global.routes[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.routeNames = append(global.routeNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.routes[name] = config
 }
 
 
@@ -205,121 +177,135 @@ func (module *triggerModule) Route(name string, config Map) {
 
 
 /* 注册拦截器 begin */
-func (module *triggerModule) RequestFilter(name string, call TriggerFunc) {
+func (global *triggerGlobal) RequestFilter(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.requestFilters == nil {
-		module.requestFilters = make(map[string]TriggerFunc)
+	if global.requestFilters == nil {
+		global.requestFilters = make(map[string]TriggerFunc)
 	}
-	if module.requestFilterNames == nil {
-		module.requestFilterNames = make([]string, 0)
+	if global.requestFilterNames == nil {
+		global.requestFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.requestFilters[name]; ok == false {
-		module.requestFilterNames = append(module.requestFilterNames, name)
+	if _,ok := global.requestFilters[name]; ok == false {
+		global.requestFilterNames = append(global.requestFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.requestFilters[name] = call
+	global.requestFilters[name] = call
 }
-func (module *triggerModule) ExecuteFilter(name string, call TriggerFunc) {
+func (global *triggerGlobal) ExecuteFilter(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.executeFilters == nil {
-		module.executeFilters = make(map[string]TriggerFunc)
+	if global.executeFilters == nil {
+		global.executeFilters = make(map[string]TriggerFunc)
 	}
-	if module.executeFilterNames == nil {
-		module.executeFilterNames = make([]string, 0)
+	if global.executeFilterNames == nil {
+		global.executeFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.executeFilters[name]; ok == false {
-		module.executeFilterNames = append(module.executeFilterNames, name)
+	if _,ok := global.executeFilters[name]; ok == false {
+		global.executeFilterNames = append(global.executeFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.executeFilters[name] = call
+	global.executeFilters[name] = call
 }
-func (module *triggerModule) ResponseFilter(name string, call TriggerFunc) {
+func (global *triggerGlobal) ResponseFilter(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.responseFilters == nil {
-		module.responseFilters = make(map[string]TriggerFunc)
+	if global.responseFilters == nil {
+		global.responseFilters = make(map[string]TriggerFunc)
 	}
-	if module.responseFilterNames == nil {
-		module.responseFilterNames = make([]string, 0)
+	if global.responseFilterNames == nil {
+		global.responseFilterNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.responseFilters[name]; ok == false {
-		module.responseFilterNames = append(module.responseFilterNames, name)
+	if _,ok := global.responseFilters[name]; ok == false {
+		global.responseFilterNames = append(global.responseFilterNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.responseFilters[name] = call
+	global.responseFilters[name] = call
 }
 /* 注册拦截器 end */
 
 
 /* 注册处理器 begin */
-func (module *triggerModule) FoundHandler(name string, call TriggerFunc) {
+func (global *triggerGlobal) FoundHandler(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.foundHandlers == nil {
-		module.foundHandlers = make(map[string]TriggerFunc)
+	if global.foundHandlers == nil {
+		global.foundHandlers = make(map[string]TriggerFunc)
 	}
-	if module.foundHandlerNames == nil {
-		module.foundHandlerNames = make([]string, 0)
+	if global.foundHandlerNames == nil {
+		global.foundHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.foundHandlers[name]; ok == false {
-		module.foundHandlerNames = append(module.foundHandlerNames, name)
+	if _,ok := global.foundHandlers[name]; ok == false {
+		global.foundHandlerNames = append(global.foundHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.foundHandlers[name] = call
+	global.foundHandlers[name] = call
 }
-func (module *triggerModule) ErrorHandler(name string, call TriggerFunc) {
+func (global *triggerGlobal) ErrorHandler(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.errorHandlers == nil {
-		module.errorHandlers = make(map[string]TriggerFunc)
+	if global.errorHandlers == nil {
+		global.errorHandlers = make(map[string]TriggerFunc)
 	}
-	if module.errorHandlerNames == nil {
-		module.errorHandlerNames = make([]string, 0)
+	if global.errorHandlerNames == nil {
+		global.errorHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.errorHandlers[name]; ok == false {
-		module.errorHandlerNames = append(module.errorHandlerNames, name)
+	if _,ok := global.errorHandlers[name]; ok == false {
+		global.errorHandlerNames = append(global.errorHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.errorHandlers[name] = call
+	global.errorHandlers[name] = call
 }
-func (module *triggerModule) FailedHandler(name string, call TriggerFunc) {
+func (global *triggerGlobal) FailedHandler(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.failedHandlers == nil {
-		module.failedHandlers = make(map[string]TriggerFunc)
+	if global.failedHandlers == nil {
+		global.failedHandlers = make(map[string]TriggerFunc)
 	}
-	if module.failedHandlerNames == nil {
-		module.failedHandlerNames = make([]string, 0)
+	if global.failedHandlerNames == nil {
+		global.failedHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.failedHandlers[name]; ok == false {
-		module.failedHandlerNames = append(module.failedHandlerNames, name)
+	if _,ok := global.failedHandlers[name]; ok == false {
+		global.failedHandlerNames = append(global.failedHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.failedHandlers[name] = call
+	global.failedHandlers[name] = call
 }
-func (module *triggerModule) DeniedHandler(name string, call TriggerFunc) {
+func (global *triggerGlobal) DeniedHandler(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
-	if module.deniedHandlers == nil {
-		module.deniedHandlers = make(map[string]TriggerFunc)
+	if global.deniedHandlers == nil {
+		global.deniedHandlers = make(map[string]TriggerFunc)
 	}
-	if module.deniedHandlerNames == nil {
-		module.deniedHandlerNames = make([]string, 0)
+	if global.deniedHandlerNames == nil {
+		global.deniedHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := module.deniedHandlers[name]; ok == false {
-		module.deniedHandlerNames = append(module.deniedHandlerNames, name)
+	if _,ok := global.deniedHandlers[name]; ok == false {
+		global.deniedHandlerNames = append(global.deniedHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	module.deniedHandlers[name] = call
+	global.deniedHandlers[name] = call
 }
 /* 注册处理器 end */
 
@@ -333,44 +319,41 @@ func (module *triggerModule) DeniedHandler(name string, call TriggerFunc) {
 
 
 //创建Trigger上下文
-func (module *triggerModule) newTriggerContext(method, path string, value Map) (*TriggerContext) {
+func (global *triggerGlobal) newTriggerContext(name string, value Map) (*TriggerContext) {
 	return &TriggerContext{
-		Module: module,
-
+		Global: global,
 		next: -1, nexts: []TriggerFunc{},
 
-		Method: method, Path: path,
-		Name: "", Config: Map{}, Branchs:[]Map{},
+		Name: name, Config: Map{}, Branchs:[]Map{},
 
-		Params: Map{}, Value: value, Locals: Map{},
-		Args: Map{}, Items: Map{}, Auths: Map{},
+		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
 }
 
 
 
 //触发器Trigger  请求开始
-func (module *triggerModule) serveTrigger(method, path string, value Map) {
-	ctx := module.newTriggerContext(method, path, value)
+func (global *triggerGlobal) serveTrigger(name string, value Map) {
+	ctx := global.newTriggerContext(name, value)
 
 	//请求处理
+	ctx.handler(global.contextRequest)
 	//filter中的request
 	//用数组保证原始注册顺序
-	for _,name := range module.requestFilterNames {
-		ctx.handler(module.requestFilters[name])
+	for _,name := range global.requestFilterNames {
+		ctx.handler(global.requestFilters[name])
 	}
-	ctx.handler(module.contextRequest)
 
 	//响应处理
-	ctx.handler(module.contextResponse)
+	ctx.handler(global.contextResponse)
 	//filter中的response
 	//用数组保证原始注册顺序
-	for _,name := range module.responseFilterNames {
-		ctx.handler(module.responseFilters[name])
+	for _,name := range global.responseFilterNames {
+		ctx.handler(global.responseFilters[name])
 	}
 
 	//开始执行
-	ctx.handler(module.contextExecute)
+	ctx.handler(global.contextExecute)
 	ctx.Next()
 }
 
@@ -387,15 +370,15 @@ func (module *triggerModule) serveTrigger(method, path string, value Map) {
 
 
 
-//发起触发
-func (module *triggerModule) Touch(path string, args ...Map) {
+//触发器：触发
+func (global *triggerGlobal) Touch(name string, args ...Map) {
 
 	value := Map{}
 	if len(args) > 0 {
 		value = args[0]
 	}
 
-	go module.serveTrigger("", path, value)
+	go global.serveTrigger(name, value)
 }
 
 /*
@@ -429,80 +412,78 @@ func (module *triggerModule) Touch(path string, args ...Map) {
 //trigger 触发器处理器
 //请求处理
 //包含：route解析、request处理、session处理
-func (module *triggerModule) contextRequest(ctx *TriggerContext) {
+func (global *triggerGlobal) contextRequest(ctx *TriggerContext) {
 
-	//路由解析
-	//目前暂不支持driver
-	//直接使用name相等就匹配
-	if name,ok := module.routeUris[ctx.Path]; ok {
-		ctx.Name = name
-		ctx.Config = module.routes[name]
+	//触发器不需要路由解析，直接new的时候就有name了
+	if config,ok := global.routes[ctx.Name]; ok {
+		ctx.Config = config
 	} else {
 		ctx.Config = nil
 	}
-
 
 	//请求处理
 	//主要是SessionId处理、处理传过来的值或表单
 	ctx.Id = ctx.Name	//使用name做为id，以便在同一个触发器之下共享session
 
 	//会话处理
-	ctx.Session = module.sessionConnect.Create(ctx.Id, module.sessionConfig.Expiry)
+	err,m := global.sessionConnect.Query(ctx.Id, global.sessionConfig.Expiry)
+	if err == nil {
+		ctx.Session = m
+	} else {
+		ctx.Session = Map{}
+	}
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
 }
 
 //处理响应
-func (module *triggerModule) contextResponse(ctx *TriggerContext) {
+func (global *triggerGlobal) contextResponse(ctx *TriggerContext) {
 	ctx.Next()
+
 
 	if ctx.Body == nil {
 		//没有响应，应该走到found流程
-	} else {
+		global.contextFound(ctx)
+	}
 
-		switch body := ctx.Body.(type) {
-		case BodyTriggerFinish:
-		//完成不做任何处理
-		case BodyTriggerRetrigger:
-			//目前直接调度，可调整，以后做到task中统一调整
-			//因为万一delay很久。中间正好程序重新或是其它，就丢了
-			//所以有必要使用task机制重新调度
-			time.AfterFunc(body.Delay, func() {
-				Trigger.Touch(ctx.Path, ctx.Value)
-			})
-		default:
-		//默认，也没有什么好处理的
-		}
+
+	switch ctx.Body.(type) {
+	case triggerBodyFinish:
+		global.finishResponder(ctx)
+	case triggerBodyRetrigger:
+		global.retriggerResponder(ctx)
+	default:
+		global.defaultResponder(ctx)
 	}
 }
 
 
 
 //路由执行，处理
-func (module *triggerModule) contextExecute(ctx *TriggerContext) {
+func (global *triggerGlobal) contextExecute(ctx *TriggerContext) {
 
 	//解析路由，拿到actions
 	if ctx.Config == nil {
 		//找不到路由
-		ctx.handler(module.contextFound)
+		ctx.handler(global.contextFound)
 	} else {
 
 
 		//验证，参数，数据处理
 		//验证处理，数据处理， 可以考虑走外部中间件
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
-			ctx.handler(module.contextArgs)
+			ctx.handler(global.contextArgs)
 		}
 		if _,ok := ctx.Config[KeyMapAuth]; ok {
-			ctx.handler(module.contextAuth)
+			ctx.handler(global.contextAuth)
 		}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
-			ctx.handler(module.contextItem)
+			ctx.handler(global.contextItem)
 		}
 
 		//最终都由分支处理
-		ctx.handler(module.contextBranch)
+		ctx.handler(global.contextBranch)
 	}
 
 	ctx.Next()
@@ -510,7 +491,7 @@ func (module *triggerModule) contextExecute(ctx *TriggerContext) {
 
 
 //触发器处理：处理分支
-func (module *triggerModule) contextBranch(ctx *TriggerContext) {
+func (global *triggerGlobal) contextBranch(ctx *TriggerContext) {
 
 	//执行线重置
 	ctx.cleanup()
@@ -574,7 +555,14 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 	ctx.Config = Map{}
 
 	//如果有路由
+	//触发器路由不支持多method，非http
 	if routeConfig,ok := routing[KeyMapRoute]; ok {
+
+		for k,v := range routeConfig.(Map) {
+			ctx.Config[k] = v
+		}
+
+		/*
 		//如果是method=*版
 		if _,ok := routeConfig.(Map)[KeyMapAction]; ok {
 			for k,v := range routeConfig.(Map) {
@@ -587,6 +575,7 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 				}
 			}
 		}
+		*/
 	}
 
 
@@ -594,21 +583,21 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 
 	//先处理参数，验证等的东西
 	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(module.contextArgs)
+		ctx.handler(global.contextArgs)
 	}
 	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(module.contextAuth)
+		ctx.handler(global.contextAuth)
 	}
 	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(module.contextItem)
+		ctx.handler(global.contextItem)
 	}
 
 
 	//action之前的拦截器
 	//filter中的execute
 	//用数组保证原始注册顺序
-	for _,name := range module.executeFilterNames {
-		ctx.handler(module.executeFilters[name])
+	for _,name := range global.executeFilterNames {
+		ctx.handler(global.executeFilters[name])
 	}
 
 	//把action加入调用列表
@@ -648,7 +637,7 @@ func (module *triggerModule) contextBranch(ctx *TriggerContext) {
 
 
 //自带中间件，参数处理
-func (module *triggerModule) contextArgs(ctx *TriggerContext) {
+func (global *triggerGlobal) contextArgs(ctx *TriggerContext) {
 
 	//argn表示参数都可为空
 	argn := false
@@ -656,7 +645,7 @@ func (module *triggerModule) contextArgs(ctx *TriggerContext) {
 		argn = v
 	}
 
-	//所有值都会放在 module.Value 中
+	//所有值都会放在 global.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
 		ctx.Failed(err)
@@ -668,7 +657,7 @@ func (module *triggerModule) contextArgs(ctx *TriggerContext) {
 
 
 //Auth验证处理
-func (module *triggerModule) contextAuth(ctx *TriggerContext) {
+func (global *triggerGlobal) contextAuth(ctx *TriggerContext) {
 
 	if auths,ok := ctx.Config["auth"]; ok {
 		saveMap := Map{}
@@ -754,13 +743,15 @@ func (module *triggerModule) contextAuth(ctx *TriggerContext) {
 		}
 
 		//存入
-		ctx.Auths = saveMap
+		for k,v := range saveMap {
+			ctx.Auth[k] = v
+		}
 	}
 
 	ctx.Next()
 }
 //Entity实体处理
-func (module *triggerModule) contextItem(ctx *TriggerContext) {
+func (global *triggerGlobal) contextItem(ctx *TriggerContext) {
 	if ctx.Config["item"] != nil {
 		cfg := ctx.Config["item"].(Map)
 
@@ -824,7 +815,10 @@ func (module *triggerModule) contextItem(ctx *TriggerContext) {
 			}
 		}
 
-		ctx.Items = saveMap
+		//存入
+		for k,v := range saveMap {
+			ctx.Item[k] = v
+		}
 	}
 	ctx.Next()
 }
@@ -862,7 +856,7 @@ func (module *triggerModule) contextItem(ctx *TriggerContext) {
 
 
 //路由执行，found
-func (module *triggerModule) contextFound(ctx *TriggerContext) {
+func (global *triggerGlobal) contextFound(ctx *TriggerContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -891,19 +885,19 @@ func (module *triggerModule) contextFound(ctx *TriggerContext) {
 
 	//handler中的found
 	//用数组保证原始注册顺序
-	for _,name := range module.foundHandlerNames {
-		ctx.handler(module.foundHandlers[name])
+	for _,name := range global.foundHandlerNames {
+		ctx.handler(global.foundHandlers[name])
 	}
 
 	//最后是默认found中间件
-	ctx.handler(module.foundDefaultHandler)
+	ctx.handler(global.foundDefaultHandler)
 
 	ctx.Next()
 }
 
 
 //路由执行，error
-func (module *triggerModule) contextError(ctx *TriggerContext) {
+func (global *triggerGlobal) contextError(ctx *TriggerContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -933,19 +927,19 @@ func (module *triggerModule) contextError(ctx *TriggerContext) {
 
 	//handler中的error
 	//用数组保证原始注册顺序
-	for _,name := range module.errorHandlerNames {
-		ctx.handler(module.errorHandlers[name])
+	for _,name := range global.errorHandlerNames {
+		ctx.handler(global.errorHandlers[name])
 	}
 
 	//最后是默认error中间件
-	ctx.handler(module.errorDefaultHandler)
+	ctx.handler(global.errorDefaultHandler)
 
 	ctx.Next()
 }
 
 
 //路由执行，failed
-func (module *triggerModule) contextFailed(ctx *TriggerContext) {
+func (global *triggerGlobal) contextFailed(ctx *TriggerContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -975,12 +969,12 @@ func (module *triggerModule) contextFailed(ctx *TriggerContext) {
 
 	//handler中的failed
 	//用数组保证原始注册顺序
-	for _,name := range module.failedHandlerNames {
-		ctx.handler(module.failedHandlers[name])
+	for _,name := range global.failedHandlerNames {
+		ctx.handler(global.failedHandlers[name])
 	}
 
 	//最后是默认failed中间件
-	ctx.handler(module.failedDefaultHandler)
+	ctx.handler(global.failedDefaultHandler)
 
 	ctx.Next()
 }
@@ -988,7 +982,7 @@ func (module *triggerModule) contextFailed(ctx *TriggerContext) {
 
 
 //路由执行，denied
-func (module *triggerModule) contextDenied(ctx *TriggerContext) {
+func (global *triggerGlobal) contextDenied(ctx *TriggerContext) {
 	//清理执行线
 	ctx.cleanup()
 
@@ -1017,12 +1011,12 @@ func (module *triggerModule) contextDenied(ctx *TriggerContext) {
 
 	//handler中的denied
 	//用数组保证原始注册顺序
-	for _,name := range module.deniedHandlerNames {
-		ctx.handler(module.deniedHandlers[name])
+	for _,name := range global.deniedHandlerNames {
+		ctx.handler(global.deniedHandlers[name])
 	}
 
 	//最后是默认denied中间件
-	ctx.handler(module.deniedDefaultHandler)
+	ctx.handler(global.deniedDefaultHandler)
 
 	ctx.Next()
 }
@@ -1039,11 +1033,24 @@ func (module *triggerModule) contextDenied(ctx *TriggerContext) {
 
 
 /* 默认响应器 begin */
-func (module *triggerModule) finishDefaultResponder(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
+func (global *triggerGlobal) finishResponder(ctx *TriggerContext) {
+	//完成就完成了。 不做任何处理
+	//因为目前，触发器不需要给调用者响应信息
 }
-func (module *triggerModule) retryDefaultResponder(ctx *TriggerContext) {
+
+//目前直接调度，可调整，以后做到task中统一调整
+//因为万一delay很久。中间正好程序重新或是其它，就丢了
+//所以有必要使用task机制重新调度
+func (global *triggerGlobal) retriggerResponder(ctx *TriggerContext) {
+	body := ctx.Body.(triggerBodyRetrigger)
+
+	time.AfterFunc(body.Delay, func() {
+		global.Touch(ctx.Name, ctx.Value)
+	})
+}
+func (global *triggerGlobal) defaultResponder(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
+	//因为目前，触发器不需要给调用者响应信息
 }
 /* 默认响应器 end */
 
@@ -1051,17 +1058,21 @@ func (module *triggerModule) retryDefaultResponder(ctx *TriggerContext) {
 
 
 /* 默认处理器 begin */
-func (module *triggerModule) foundDefaultHandler(ctx *TriggerContext) {
+func (global *triggerGlobal) foundDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
+	//因为目前，触发器不需要给调用者响应信息
 }
-func (module *triggerModule) errorDefaultHandler(ctx *TriggerContext) {
+func (global *triggerGlobal) errorDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
+	//因为目前，触发器不需要给调用者响应信息
 }
-func (module *triggerModule) failedDefaultHandler(ctx *TriggerContext) {
+func (global *triggerGlobal) failedDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
+	//因为目前，触发器不需要给调用者响应信息
 }
-func (module *triggerModule) deniedDefaultHandler(ctx *TriggerContext) {
+func (global *triggerGlobal) deniedDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
+	//因为目前，触发器不需要给调用者响应信息
 }
 /* 默认处理器 end */
 
@@ -1145,23 +1156,23 @@ func (ctx *TriggerContext) Next() {
 /* 上下文处理器 begin */
 //不存在
 func (ctx *TriggerContext) Found() {
-	ctx.Module.contextFound(ctx)
+	ctx.Global.contextFound(ctx)
 }
 //返回错误
 func (ctx *TriggerContext) Error(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextError(ctx)
+	ctx.Global.contextError(ctx)
 }
 
 //失败, 就是参数处理失败为主
 func (ctx *TriggerContext) Failed(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
+	ctx.Global.contextFailed(ctx)
 }
 //拒绝,主要是 auth
 func (ctx *TriggerContext) Denied(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
+	ctx.Global.contextFailed(ctx)
 }
 /* 上下文处理器 end */
 
@@ -1174,16 +1185,16 @@ func (ctx *TriggerContext) Denied(err *Error) {
 /* 上下文响应器 begin */
 //完成操作
 func (ctx *TriggerContext) Finish() {
-	ctx.Body = BodyTriggerFinish{}
+	ctx.Body = triggerBodyFinish{}
 }
 //重新触发
 func (ctx *TriggerContext) Retrigger(delays ...time.Duration) {
 	if len(delays) > 0 {
 		//延时重新触发
-		ctx.Body = BodyTriggerRetrigger{ Delay: delays[0] }
+		ctx.Body = triggerBodyRetrigger{ Delay: delays[0] }
 	} else {
 		//立即重新触发
-		ctx.Body = BodyTriggerRetrigger{ Delay: time.Second*0 }
+		ctx.Body = triggerBodyRetrigger{ Delay: time.Second*0 }
 	}
 }
 /* 上下文响应器 end */

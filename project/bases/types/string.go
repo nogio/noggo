@@ -8,7 +8,7 @@ import (
 
 func init() {
 
-
+	//注册Mapping模块的类型
 	noggo.Mapping.Type("string", Map{
 		"name": "字符串", "text": "字符串类型",
 		"valid": func(value Any, config Map) bool {

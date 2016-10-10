@@ -7,6 +7,7 @@ import (
 
 func init() {
 
+	//注册一些状态
 	noggo.Const.State(Map{
 
 		"ok": 0,

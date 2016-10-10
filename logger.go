@@ -1,3 +1,10 @@
+/*
+	日志模块
+	日志模块是一个全局模块，不属于任何一个节点
+
+	主要功能是用于输出各种日志
+*/
+
 package noggo
 
 
@@ -9,16 +16,16 @@ import (
 
 type (
 
-	//路由器驱动
+	//日志驱动
 	LoggerDriver interface {
 		Connect(config Map) (LoggerConnect)
 	}
-	//路由器连接
+	//日志连接
 	LoggerConnect interface {
 		//打开连接
 		Open() error
 		//关闭连接
-		Close()
+		Close() error
 
 		//输出调试
 		Debug(args ...interface{})
@@ -28,11 +35,15 @@ type (
 		Error(args ...interface{})
 	}
 
-	//日志模块
-	loggerModule struct {
-		drivers map[string]LoggerDriver
-		driversMutex sync.Mutex
 
+	//日志模块
+	loggerGlobal struct {
+		mutex sync.Mutex
+
+		//日志驱动容器
+		drivers map[string]LoggerDriver
+
+		//日志配置，日志连接
 		loggerConfig *loggerConfig
 		loggerConnect LoggerConnect
 	}
@@ -43,52 +54,62 @@ type (
 
 
 
-//注册日志器驱动
-func (logger *loggerModule) Register(name string, driver LoggerDriver) {
-	logger.driversMutex.Lock()
-	defer logger.driversMutex.Unlock()
+//注册日志驱动
+func (global *loggerGlobal) Driver(name string, driver LoggerDriver) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.drivers == nil {
+		global.drivers = map[string]LoggerDriver{}
+	}
 
 	if driver == nil {
-		panic("logger: Register driver is nil")
+		panic("日志: 驱动不可为空")
 	}
-	if _, ok := logger.drivers[name]; ok {
-		panic("logger: Registered driver " + name)
-	}
-
-	logger.drivers[name] = driver
+	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
+	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
+	global.drivers[name] = driver
 }
-
 
 
 //连接驱动
-func (logger *loggerModule) connect(config *loggerConfig) (LoggerConnect) {
-
-	if loggerDriver,ok := logger.drivers[config.Driver]; ok {
+func (global *loggerGlobal) connect(config *loggerConfig) (LoggerConnect) {
+	if loggerDriver,ok := global.drivers[config.Driver]; ok {
 		return loggerDriver.Connect(config.Config)
+	} else {
+		panic("日志：不支持的驱动 " + config.Driver)
 	}
-	return nil
 }
 
 //日志初始化
-func (logger *loggerModule) init() {
+func (global *loggerGlobal) init() {
 
 	//先拿到默认的配置
-	logger.loggerConfig = Config.Logger
-	logger.loggerConnect = Logger.connect(logger.loggerConfig)
+	global.loggerConfig = Config.Logger
+	global.loggerConnect = global.connect(global.loggerConfig)
 
-	err := logger.loggerConnect.Open()
-	if err != nil {
-		panic("打开日志连接失败")
+	if global.loggerConnect == nil {
+		panic("日志：连接失败")
+	} else {
+		err := global.loggerConnect.Open()
+		if err != nil {
+			panic("日志：打开失败 " + err.Error())
+		}
 	}
+
 
 }
 //日志退出
-func (logger *loggerModule) exit() {
+func (global *loggerGlobal) exit() {
 	//关闭日志连接
-	if logger.loggerConnect != nil {
-		logger.loggerConnect.Close()
+	if global.loggerConnect != nil {
+		global.loggerConnect.Close()
+		global.loggerConnect = nil
 	}
 }
+
+
+
 
 
 
@@ -96,20 +117,20 @@ func (logger *loggerModule) exit() {
 
 
 //调试
-func (logger *loggerModule) Debug(args ...interface{}) {
-	if logger.loggerConnect != nil && Config.Debug {
-		logger.loggerConnect.Debug(args...)
+func (global *loggerGlobal) Debug(args ...interface{}) {
+	if global.loggerConnect != nil && Config.Debug {
+		global.loggerConnect.Debug(args...)
 	}
 }
 //信息
-func (logger *loggerModule) Info(args ...interface{}) {
-	if logger.loggerConnect != nil {
-		logger.loggerConnect.Info(args...)
+func (global *loggerGlobal) Info(args ...interface{}) {
+	if global.loggerConnect != nil {
+		global.loggerConnect.Info(args...)
 	}
 }
 //错误
-func (logger *loggerModule) Error(args ...interface{}) {
-	if logger.loggerConnect != nil {
-		logger.loggerConnect.Error(args...)
+func (global *loggerGlobal) Error(args ...interface{}) {
+	if global.loggerConnect != nil {
+		global.loggerConnect.Error(args...)
 	}
 }

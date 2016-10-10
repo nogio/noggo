@@ -1,3 +1,9 @@
+/*
+	sign 签名功能
+	主要是用来请求中签名用的
+	一般用在登录验证
+*/
+
 package noggo
 
 import (

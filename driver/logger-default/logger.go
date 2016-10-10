@@ -59,8 +59,8 @@ func (logger *DefaultConnect) Open() error {
 
 
 //关闭连接
-func (logger *DefaultConnect) Close() {
-
+func (logger *DefaultConnect) Close() error {
+	return nil
 }
 
 
@@ -70,12 +70,7 @@ func (logger *DefaultConnect) Close() {
 
 //输出调试
 func (logger *DefaultConnect) Debug(args ...interface{}) {
-	newArgs := []interface{}{
-		"DEBUG", time.Now().Format("2006/01/02 15:04:05"),
-	}
-	newArgs = append(newArgs, args[:]...)
-
-	fmt.Println(newArgs...)
+	log.Println(args...)
 }
 
 

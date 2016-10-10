@@ -8,6 +8,7 @@ import (
 
 func init() {
 
+	//注册mapping模块的加解密方法
 	noggo.Mapping.Crypto("base64", Map{
 		"name": "BASE64加解密", "text": "BASE64加解密",
 		"encode": func(value Any) Any {

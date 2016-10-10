@@ -7,6 +7,7 @@ import (
 
 func init() {
 
+	//注册所有的mime类型
 	noggo.Const.Mime(Map{
 		"text": "text/explain",
 		"html": "text/html",

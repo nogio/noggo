@@ -4,45 +4,30 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"fmt"
 )
 
-
-
-func Launch() {
-	nogInit()
-	nogExit()
-}
-
-
-
-
-//初始化
-func nogInit() {
-	fmt.Println("nogo init...")
-
+func Init() {
 	Logger.init()
-	Router.init()
 	Session.init()
 	Trigger.init()
-	Plan.init()
-	Http.init()
-
-
+	Task.init()
+	Logger.Info("noggo is running...")
 }
 
-func nogExit() {
 
-	//使用管道监听退出信号
+func Exit() {
+	wating()
+	Logger.Info("noggo is exiting...")
+	Task.exit()
+	Trigger.exit()
+	Session.exit()
+	Logger.exit()
+}
+
+
+//使用管道监听退出信号
+func wating() {
 	exitChan := make(chan os.Signal, 1)
 	signal.Notify(exitChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM)
 	<-exitChan
-
-	Logger.exit()
-	Router.exit()
-	Session.exit()
-	Trigger.exit()
-	Plan.exit()
-	Http.exit()
-	fmt.Println("nogo exit...")
 }

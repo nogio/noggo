@@ -14,16 +14,16 @@
     }
   },
 
+  "node": {
+    "ing": {
+      "port": "22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心"
+    },
+    "www": {
+      "port": "22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站"
+    }
+  },
 
 
-  "router": {
-    "driver": "default",
-    "config": { }
-  },
-  "session": {
-    "driver": "memory", "expiry": 3600,
-    "config": { }
-  },
 
 
 
@@ -32,47 +32,64 @@
     "config": { }
   },
 
+  "session": {
+    "driver": "default", "expiry": 3600,
+    "config": {}
+  },
+
   "trigger": {
-    "router": {
-      "driver": "default",
-      "config": {}
-    },
     "session": {
-      "driver": "memory", "expiry": 3600,
+      "driver": "default", "expiry": 3600,
       "config": {}
     }
   },
+  "task": {
+    "driver": "default",
+    "config": {},
+
+    "session": {
+      "driver": "default", "expiry": 3600,
+      "config": {}
+    }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
   "plan": {
     "driver": "default",
     "config": {},
 
-    "router": {
-      "driver": "default",
-      "config": {}
-    },
     "session": {
-      "driver": "memory", "expiry": 3600,
+      "driver": "default", "expiry": 3600,
       "config": {}
     }
   },
 
 
 
-  "task": {
+
+
+
+
+
+
+  "router": {
     "driver": "default",
-    "config": {},
-
-    "router": {
-      "driver": "default",
-      "config": {}
-    },
-    "session": {
-      "driver": "memory", "expiry": 3600,
-      "config": {}
-    }
+    "config": { }
   },
+
 
 
 
@@ -92,6 +109,16 @@
     "port": ":8080", "charset": "utf-8",
     "cookie": "nog", "domain": ""
   },
+
+
+
+  "node": {
+      "www": {
+
+      }
+  },
+
+
 
 
   "test": ""

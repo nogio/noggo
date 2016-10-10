@@ -1,3 +1,9 @@
+/*
+	session 会话模块
+	会话模块，是一个通用模块
+*/
+
+
 package noggo
 
 import (
@@ -5,10 +11,6 @@ import (
 	"sync"
 	"time"
 )
-
-/*
-	session 会话模块
-*/
 
 type (
 
@@ -27,27 +29,25 @@ type (
 		//打开连接
 		Open() error
 		//关闭连接
-		Close()
-		//生成session唯一id方法
-		Id() string
-		//创建或查询会话
-		Create(id string, expiry int64) Map
-		//更新会话数据
-		Update(id string, value Map, expiry int64) bool
+		Close() error
+
+
+		//查询会话，不存在就创建新的返回
+		Query(id string, expiry int64) (error,Map)
+		//更新会话数据，不存在则创建，存在就更新
+		Update(id string, value Map, expiry int64) error
 		//删除会话
-		Remove(id string) bool
+		Remove(id string) error
 		//回收会话，系统会每一段时间自动调用此方法
-		Recycle(expiry int64) bool
+		Recycle(expiry int64) error
 	}
 
 	//会话模块
-	sessionModule struct {
-		drivers map[string]SessionDriver
-		driversMutex sync.Mutex
+	sessionGlobal struct {
+		mutex sync.Mutex
 
-		//默认会话连接
-		sessionConfig *sessionConfig
-		sessionConnect SessionConnect
+		//会话驱动们
+		drivers map[string]SessionDriver
 	}
 )
 
@@ -59,47 +59,38 @@ type (
 
 
 //注册会话驱动
-func (session *sessionModule) Register(name string, driver SessionDriver) {
-	session.driversMutex.Lock()
-	defer session.driversMutex.Unlock()
+func (global *sessionGlobal) Driver(name string, driver SessionDriver) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.drivers == nil {
+		global.drivers = map[string]SessionDriver{}
+	}
 
 	if driver == nil {
-		panic("session: Register driver is nil")
+		panic("会话: 驱动不可为空")
 	}
-	if _, ok := session.drivers[name]; ok {
-		panic("session: Registered driver " + name)
-	}
-
-	session.drivers[name] = driver
+	global.drivers[name] = driver
 }
 
 
 //连接驱动
-func (session *sessionModule) connect(config *sessionConfig) (SessionConnect) {
-	if sessionDriver,ok := session.drivers[config.Driver]; ok {
+func (global *sessionGlobal) connect(config *sessionConfig) (SessionConnect) {
+	if sessionDriver,ok := global.drivers[config.Driver]; ok {
 		return sessionDriver.Connect(config.Config)
+	} else {
+		panic("会话：不支持的驱动 " + config.Driver)
 	}
-	return nil
 }
 
 //会话初始化
-func (session *sessionModule) init() {
-
-	//默认配置
-	session.sessionConfig = Config.Session
-	session.sessionConnect = session.connect(session.sessionConfig)
-
-	err := session.sessionConnect.Open()
-	if err != nil {
-		panic("打开会话连接失败")
-	}
+func (global *sessionGlobal) init() {
+	//会话全局容器，不需要处理任何东西
 }
+
 //会话退出
-func (session *sessionModule) exit() {
-	//关闭日志连接
-	if session.sessionConnect != nil {
-		session.sessionConnect.Close()
-	}
+func (global *sessionGlobal) exit() {
+	//会话全局容器，不需要处理任何东西
 }
 
 
