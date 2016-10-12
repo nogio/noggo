@@ -20,7 +20,7 @@ type (
 	TaskDriver interface {
 		Connect(config Map) (TaskConnect)
 	}
-	TaskCall func(string,string,time.Duration,Map)
+	TaskAcceptFunc func(string,string,time.Duration,Map)
 	//任务连接
 	TaskConnect interface {
 		//打开连接
@@ -29,7 +29,7 @@ type (
 		Close() error
 
 		//注册任务
-		Accept(id string, name string, delay time.Duration, value Map, call TaskCall) error
+		Accept(id string, name string, delay time.Duration, value Map, call TaskAcceptFunc) error
 		//完成任务
 		Finish(id string) error
 	}
@@ -136,7 +136,7 @@ func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
 	if taskDriver,ok := global.drivers[config.Driver]; ok {
 		return taskDriver.Connect(config.Config)
 	} else {
-		panic("日志：不支持的驱动 " + config.Driver)
+		panic("任务：不支持的驱动 " + config.Driver)
 	}
 }
 

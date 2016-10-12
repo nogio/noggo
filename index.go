@@ -36,6 +36,13 @@ var (
 
 
 
+
+	//计划模块
+	Plan *planGlobal
+
+	//http模块
+	//Http *httpGlobal
+
 	/*
 
 
@@ -43,12 +50,8 @@ var (
 	Router *routerModule
 
 
-	//计划模块
-	Plan *planModule
 	//任务模块
 	Task *taskModule
-	//http模块
-	Http *httpModule
 	*/
 )
 
@@ -74,6 +77,16 @@ func init() {
 	Trigger = &triggerGlobal{}
 	//任务模块
 	Task = &taskGlobal{}
+
+
+
+	//计划模块
+	Plan = &planGlobal{}
+
+	//HTTP模块
+	//Http = &httpGlobal{}
+
+
 }
 
 

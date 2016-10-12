@@ -3,6 +3,7 @@ package base
 const (
 
 	ConstLangDefault	= "default"
+	ConstNodeGlobal		= "$global$"
 
 
 

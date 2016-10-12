@@ -124,7 +124,7 @@ type (
 		Debug	bool			`json:"debug"`
 
 		Lang	map[string]langConfig	`json:"lang"`
-		Node	map[string]nodeConfig	`json:"lang"`
+		Node	map[string]nodeConfig	`json:"node"`
 
 
 		//日志配置

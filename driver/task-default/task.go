@@ -67,7 +67,7 @@ func (connect *DefaultTaskConnect) Close() error {
 
 
 //查询会话，
-func (connect *DefaultTaskConnect) Accept(id string, name string, delay time.Duration, value Map, call noggo.TaskCall) error {
+func (connect *DefaultTaskConnect) Accept(id string, name string, delay time.Duration, value Map, call noggo.TaskAcceptFunc) error {
 	time.AfterFunc(delay, func() {
 		call(id,name,delay,value)
 	})

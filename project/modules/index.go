@@ -15,6 +15,6 @@
 package modules
 
 import (
-	//_ "./https"
-	//_ "./plans"
+	_ "./https"
+	_ "./plans"
 )

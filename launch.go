@@ -11,6 +11,7 @@ func Init() {
 	Session.init()
 	Trigger.init()
 	Task.init()
+	Plan.init()
 	Logger.Info("noggo is running...")
 }
 
@@ -18,6 +19,7 @@ func Init() {
 func Exit() {
 	wating()
 	Logger.Info("noggo is exiting...")
+	Plan.exit()
 	Task.exit()
 	Trigger.exit()
 	Session.exit()
