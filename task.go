@@ -29,7 +29,18 @@ type (
 		Close() error
 
 		//注册任务
-		Accept(id string, name string, delay time.Duration, value Map, call TaskAcceptFunc) error
+		Accept(name string, call TaskAcceptFunc) error
+
+
+		//打开连接
+		Start() error
+		//关闭连接
+		Stop() error
+
+
+		//触发任务
+		Touch(id string, name string, delay time.Duration, value Map) error
+
 		//完成任务
 		Finish(id string) error
 	}
@@ -146,20 +157,7 @@ func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
 //任务初始化
 func (global *taskGlobal) init() {
 	global.initSession()
-
-	//先拿到默认的配置
-	global.taskConfig = Config.Task
-	global.taskConnect = global.connect(global.taskConfig)
-
-	if global.taskConnect == nil {
-		panic("任务：连接失败")
-	} else {
-		err := global.taskConnect.Open()
-		if err != nil {
-			panic("任务：打开失败 " + err.Error())
-		}
-	}
-
+	global.initTask()
 }
 
 //初始化会话驱动
@@ -186,18 +184,39 @@ func (global *taskGlobal) initSession() {
 	}
 }
 
+//初始化驱动
+func (global *taskGlobal) initTask() {
+
+	//先拿到默认的配置
+	global.taskConfig = Config.Task
+	global.taskConnect = global.connect(global.taskConfig)
+
+	if global.taskConnect == nil {
+		panic("任务：连接失败")
+	} else {
+		err := global.taskConnect.Open()
+		if err != nil {
+			panic("任务：打开失败 " + err.Error())
+		}
+	}
+
+
+	//注册任务
+	for _,name := range global.routeNames {
+		global.taskConnect.Accept(name, global.serveTask)
+	}
+
+
+	global.taskConnect.Start();
+}
+
 
 
 
 //任务退出
 func (global *taskGlobal) exit() {
 	global.exitSession()
-
-	//关闭连接
-	if global.taskConnect != nil {
-		global.taskConnect.Close()
-		global.taskConnect = nil
-	}
+	global.exitTask()
 }
 //任务退出，会话
 func (global *taskGlobal) exitSession() {
@@ -205,6 +224,15 @@ func (global *taskGlobal) exitSession() {
 	if global.sessionConnect != nil {
 		global.sessionConnect.Close()
 		global.sessionConnect = nil
+	}
+}
+//任务退出
+func (global *taskGlobal) exitTask() {
+	//关闭连接
+	if global.taskConnect != nil {
+		global.taskConnect.Stop();
+		global.taskConnect.Close()
+		global.taskConnect = nil
 	}
 }
 
@@ -455,7 +483,7 @@ func (global *taskGlobal) Touch(name string, delay time.Duration, args ...Map) {
 
 		//直接一个新的ID
 		id := NewMd5Id()
-		global.taskConnect.Accept(id, name, delay, value, global.serveTask)
+		global.taskConnect.Touch(id, name, delay, value)
 	}
 }
 

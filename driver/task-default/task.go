@@ -5,6 +5,7 @@ import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo"
 	"time"
+	"errors"
 )
 
 
@@ -15,6 +16,7 @@ type (
 	//会话连接
 	DefaultTaskConnect struct {
 		config Map
+		tasks map[string]noggo.TaskAcceptFunc
 	}
 )
 
@@ -38,7 +40,7 @@ func Driver() *DefaultTaskDriver {
 //连接任务驱动
 func (session *DefaultTaskDriver) Connect(config Map) (noggo.TaskConnect) {
 	return  &DefaultTaskConnect{
-		config: config,
+		config: config, tasks: map[string]noggo.TaskAcceptFunc{},
 	}
 }
 
@@ -67,12 +69,43 @@ func (connect *DefaultTaskConnect) Close() error {
 
 
 //查询会话，
-func (connect *DefaultTaskConnect) Accept(id string, name string, delay time.Duration, value Map, call noggo.TaskAcceptFunc) error {
-	time.AfterFunc(delay, func() {
-		call(id,name,delay,value)
-	})
+func (connect *DefaultTaskConnect) Accept(name string, call noggo.TaskAcceptFunc) error {
+	connect.tasks[name] = call
 	return nil
 }
+
+
+
+//开始
+func (connect *DefaultTaskConnect) Start() error {
+	return nil
+}
+
+//结束
+func (connect *DefaultTaskConnect) Stop() error {
+	return nil
+}
+
+
+
+
+
+//触发任务
+func (connect *DefaultTaskConnect) Touch(id string, name string, delay time.Duration, value Map) error {
+
+	if call,ok := connect.tasks[name]; ok {
+		time.AfterFunc(delay, func() {
+			call(id,name,delay,value)
+		})
+
+		return nil
+
+	} else {
+		return errors.New("不支持的任务")
+	}
+}
+
+
 
 
 
