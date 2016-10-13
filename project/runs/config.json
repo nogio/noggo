@@ -18,10 +18,10 @@
   
   "node": {
     "ing": {
-      "id": "ing", "port": "22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心"
+      "id": "ing", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心"
     },
     "www": {
-      "id": "www", "port": "22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站"
+      "id": "www", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站"
     }
   },
 
@@ -80,36 +80,16 @@
   },
 
 
-
-
-
-
-
-
-
-  "router": {
-    "driver": "default",
-    "config": { }
-  },
-
-
-
-
   "http": {
     "driver": "default",
     "config": {},
 
-    "router": {
-      "driver": "default",
-      "config": {}
-    },
     "session": {
-      "driver": "memory", "expiry": 3600,
+      "driver": "default", "expiry": 3600,
       "config": {}
     },
 
-    "port": ":8080", "charset": "utf-8",
-    "cookie": "nog", "domain": ""
+    "charset": "utf-8", "cookie": "nog", "domain": ""
   },
 
 

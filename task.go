@@ -440,18 +440,12 @@ func (global *taskGlobal) serveTask(id string, name string, delay time.Duration,
 
 	//请求处理
 	ctx.handler(global.contextRequest)
+	//响应处理
+	ctx.handler(global.contextResponse)
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range global.requestFilterNames {
 		ctx.handler(global.requestFilters[name])
-	}
-
-	//响应处理
-	ctx.handler(global.contextResponse)
-	//filter中的response
-	//用数组保证原始注册顺序
-	for _,name := range global.responseFilterNames {
-		ctx.handler(global.responseFilters[name])
 	}
 
 	//开始执行
@@ -545,25 +539,25 @@ func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 
 //处理响应
 func (global *taskGlobal) contextResponse(ctx *TaskContext) {
+	//因为response是在所有请求前的， 所以先调用一下
+	//然后对结果进行处理
 	ctx.Next()
 
 
-	if ctx.Body == nil {
-		//没有响应，应该走到found流程
-		global.contextFound(ctx)
+	//清理执行线
+	ctx.cleanup()
+
+	//filter中的request
+	//用数组保证原始注册顺序
+	for _,name := range global.responseFilterNames {
+		ctx.handler(global.responseFilters[name])
 	}
 
+	//这个函数才是真正响应的处理函数
+	ctx.handler(global.contextResponder)
 
-	switch ctx.Body.(type) {
-	case taskBodyFinish:
-		global.finishResponder(ctx)
-	case taskBodyRetask:
-		global.retaskResponder(ctx)
-	default:
-		global.defaultResponder(ctx)
-	}
+	ctx.Next()
 }
-
 
 
 //路由执行，处理
@@ -1132,6 +1126,38 @@ func (global *taskGlobal) contextDenied(ctx *TaskContext) {
 /*
 	任务模块方法 end
 */
+
+
+
+
+//处理响应
+func (global *taskGlobal) contextResponder(ctx *TaskContext) {
+
+	if ctx.Body == nil {
+		//没有响应，应该走到found流程
+		global.contextFound(ctx)
+	}
+
+
+	switch ctx.Body.(type) {
+	case taskBodyFinish:
+		global.finishResponder(ctx)
+	case taskBodyRetask:
+		global.retaskResponder(ctx)
+	default:
+		global.defaultResponder(ctx)
+	}
+}
+
+
+
+
+
+
+
+
+
+
 
 
 

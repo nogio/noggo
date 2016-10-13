@@ -338,18 +338,12 @@ func (global *triggerGlobal) serveTrigger(name string, value Map) {
 
 	//请求处理
 	ctx.handler(global.contextRequest)
+	//响应处理
+	ctx.handler(global.contextResponse)
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range global.requestFilterNames {
 		ctx.handler(global.requestFilters[name])
-	}
-
-	//响应处理
-	ctx.handler(global.contextResponse)
-	//filter中的response
-	//用数组保证原始注册顺序
-	for _,name := range global.responseFilterNames {
-		ctx.handler(global.responseFilters[name])
 	}
 
 	//开始执行
@@ -439,24 +433,26 @@ func (global *triggerGlobal) contextRequest(ctx *TriggerContext) {
 
 //处理响应
 func (global *triggerGlobal) contextResponse(ctx *TriggerContext) {
+	//因为response是在所有请求前的， 所以先调用一下
+	//然后对结果进行处理
 	ctx.Next()
 
 
-	if ctx.Body == nil {
-		//没有响应，应该走到found流程
-		global.contextFound(ctx)
+	//清理执行线
+	ctx.cleanup()
+
+	//filter中的request
+	//用数组保证原始注册顺序
+	for _,name := range global.responseFilterNames {
+		ctx.handler(global.responseFilters[name])
 	}
 
+	//这个函数才是真正响应的处理函数
+	ctx.handler(global.contextResponder)
 
-	switch ctx.Body.(type) {
-	case triggerBodyFinish:
-		global.finishResponder(ctx)
-	case triggerBodyRetrigger:
-		global.retriggerResponder(ctx)
-	default:
-		global.defaultResponder(ctx)
-	}
+	ctx.Next()
 }
+
 
 
 
@@ -1026,6 +1022,29 @@ func (global *triggerGlobal) contextDenied(ctx *TriggerContext) {
 /*
 	触发器模块方法 end
 */
+
+
+
+//处理响应
+func (global *triggerGlobal) contextResponder(ctx *TriggerContext) {
+
+	if ctx.Body == nil {
+		//没有响应，应该走到found流程
+		global.contextFound(ctx)
+	}
+
+	switch ctx.Body.(type) {
+	case triggerBodyFinish:
+		global.finishResponder(ctx)
+	case triggerBodyRetrigger:
+		global.retriggerResponder(ctx)
+	default:
+		global.defaultResponder(ctx)
+	}
+}
+
+
+
 
 
 

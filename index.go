@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"encoding/json"
+	. "github.com/nogio/noggo/base"
+	"errors"
 )
 
 var (
-	Nodes map[string]*Noggo
+	nodes map[string]*Noggo
 
 	//当前位置
 	//此变量比较重要，是用来注册对象时，表明当前的位置，如当前节点，当前数据库，等等
@@ -41,7 +43,7 @@ var (
 	Plan *planGlobal
 
 	//http模块
-	//Http *httpGlobal
+	Http *httpGlobal
 
 	/*
 
@@ -59,7 +61,7 @@ var (
 
 //框架初驱化
 func init() {
-	Nodes = map[string]*Noggo{}
+	nodes = map[string]*Noggo{}
 	//当前位置为空
 	Current = ""
 	//读取配置文件
@@ -84,8 +86,21 @@ func init() {
 	Plan = &planGlobal{}
 
 	//HTTP模块
-	//Http = &httpGlobal{}
+	Http = &httpGlobal{}
 
+
+
+	//加载多语言
+	err, cfg := readJsonFile(fmt.Sprintf("langs/%v.json", ConstLangDefault))
+	if err == nil {
+		Const.Lang(ConstLangDefault, cfg)
+	}
+	for k,_ := range Config.Lang {
+		err, cfg := readJsonFile(fmt.Sprintf("langs/%v.json", k))
+		if err == nil {
+			Const.Lang(k, cfg)
+		}
+	}
 
 }
 
@@ -104,4 +119,16 @@ func readJsonConfig() (configConfig) {
 	}
 
 	return m
+}
+
+func readJsonFile(filename string) (error,Map) {
+	bytes, err := ioutil.ReadFile(filename)
+	if err == nil {
+		m := make(Map)
+		err := json.Unmarshal(bytes, &m)
+		if err == nil {
+			return nil, m
+		}
+	}
+	return errors.New("读取失败"), nil
 }

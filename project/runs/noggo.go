@@ -6,7 +6,7 @@ import (
 	_ "../drivers"
 	_ "../globals"
 	_ "../modules"
-	//_ "../nodes"
+	_ "../nodes"
 	"os"
 )
 
@@ -41,7 +41,6 @@ func main() {
 			node.Run()
 		}
 	}
-
 
 	noggo.Exit()
 }

@@ -275,8 +275,162 @@ func (global *planGlobal) ResponseFilter(name string, call PlanFunc) {
 
 
 
+//找不到处理器
+func (global *planGlobal) FoundHandler(name string, call PlanFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.foundHandlers == nil {
+		global.foundHandlers = map[string]map[string]PlanFunc{}
+	}
+	if global.foundHandlerNames == nil {
+		global.foundHandlerNames =  map[string][]string{}
+	}
 
 
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+
+	//如果节点配置不存在，创建
+	if global.foundHandlers[nodeName] == nil {
+		global.foundHandlers[nodeName] = map[string]PlanFunc{}
+	}
+	if global.foundHandlerNames[nodeName] == nil {
+		global.foundHandlerNames[nodeName] = []string{}
+	}
+
+
+
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := global.foundHandlers[nodeName][name]; ok == false {
+		global.foundHandlerNames[nodeName] = append(global.foundHandlerNames[nodeName], name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	global.foundHandlers[nodeName][name] = call
+}
+//错误处理器
+func (global *planGlobal) ErrorHandler(name string, call PlanFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.errorHandlers == nil {
+		global.errorHandlers = map[string]map[string]PlanFunc{}
+	}
+	if global.errorHandlerNames == nil {
+		global.errorHandlerNames =  map[string][]string{}
+	}
+
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+
+	//如果节点配置不存在，创建
+	if global.errorHandlers[nodeName] == nil {
+		global.errorHandlers[nodeName] = map[string]PlanFunc{}
+	}
+	if global.errorHandlerNames[nodeName] == nil {
+		global.errorHandlerNames[nodeName] = []string{}
+	}
+
+
+
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := global.errorHandlers[nodeName][name]; ok == false {
+		global.errorHandlerNames[nodeName] = append(global.errorHandlerNames[nodeName], name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	global.errorHandlers[nodeName][name] = call
+}
+
+
+
+//失败处理器
+func (global *planGlobal) FailedHandler(name string, call PlanFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.failedHandlers == nil {
+		global.failedHandlers = map[string]map[string]PlanFunc{}
+	}
+	if global.failedHandlerNames == nil {
+		global.failedHandlerNames =  map[string][]string{}
+	}
+
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+
+	//如果节点配置不存在，创建
+	if global.failedHandlers[nodeName] == nil {
+		global.failedHandlers[nodeName] = map[string]PlanFunc{}
+	}
+	if global.failedHandlerNames[nodeName] == nil {
+		global.failedHandlerNames[nodeName] = []string{}
+	}
+
+
+
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := global.failedHandlers[nodeName][name]; ok == false {
+		global.failedHandlerNames[nodeName] = append(global.failedHandlerNames[nodeName], name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	global.failedHandlers[nodeName][name] = call
+}
+
+//拒绝处理器
+func (global *planGlobal) DeniedHandler(name string, call PlanFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.deniedHandlers == nil {
+		global.deniedHandlers = map[string]map[string]PlanFunc{}
+	}
+	if global.deniedHandlerNames == nil {
+		global.deniedHandlerNames =  map[string][]string{}
+	}
+
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+
+	//如果节点配置不存在，创建
+	if global.deniedHandlers[nodeName] == nil {
+		global.deniedHandlers[nodeName] = map[string]PlanFunc{}
+	}
+	if global.deniedHandlerNames[nodeName] == nil {
+		global.deniedHandlerNames[nodeName] = []string{}
+	}
+
+
+
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := global.deniedHandlers[nodeName][name]; ok == false {
+		global.deniedHandlerNames[nodeName] = append(global.deniedHandlerNames[nodeName], name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	global.deniedHandlers[nodeName][name] = call
+}
 //-----------------------------------------------------------------------------------------------------------------------//
 
 
@@ -862,20 +1016,13 @@ func (module *planModule) servePlan(name string, value Map) {
 
 	ctx := module.newPlanContext(name, value)
 
-	//请求处理
+	ctx.handler(module.contextRequest)
+	//最终所有的响应处理，优先
+	ctx.handler(module.contextResponse)
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range module.requestFilterNames {
 		ctx.handler(module.requestFilters[name])
-	}
-	ctx.handler(module.contextRequest)
-
-	//响应处理
-	ctx.handler(module.contextResponse)
-	//filter中的response
-	//用数组保证原始注册顺序
-	for _,name := range module.responseFilterNames {
-		ctx.handler(module.responseFilters[name])
 	}
 
 	//开始执行
@@ -925,23 +1072,24 @@ func (module *planModule) contextRequest(ctx *PlanContext) {
 
 //处理响应
 func (module *planModule) contextResponse(ctx *PlanContext) {
+	//因为response是在所有请求前的， 所以先调用一下
+	//然后对结果进行处理
 	ctx.Next()
 
 
-	if ctx.Body == nil {
-		//没有响应，应该走到found流程
-		module.contextFound(ctx)
+	//清理执行线
+	ctx.cleanup()
+
+	//filter中的request
+	//用数组保证原始注册顺序
+	for _,name := range module.responseFilterNames {
+		ctx.handler(module.responseFilters[name])
 	}
 
+	//这个函数才是真正响应的处理函数
+	ctx.handler(module.contextResponder)
 
-	switch ctx.Body.(type) {
-	case planBodyFinish:
-		module.finishResponder(ctx)
-	case planBodyReplan:
-		module.replanResponder(ctx)
-	default:
-		module.defaultResponder(ctx)
-	}
+	ctx.Next()
 }
 
 
@@ -1513,6 +1661,29 @@ func (module *planModule) contextDenied(ctx *PlanContext) {
 	计划模块方法 end
 */
 
+
+
+
+/* 默认响应器 begin */
+//这个才是真的响应处理
+func (module *planModule) contextResponder(ctx *PlanContext) {
+
+	if ctx.Body == nil {
+		//没有响应，应该走到found流程
+		module.contextFound(ctx)
+	}
+
+
+	switch ctx.Body.(type) {
+	case planBodyFinish:
+		module.finishResponder(ctx)
+	case planBodyReplan:
+		module.replanResponder(ctx)
+	default:
+		module.defaultResponder(ctx)
+	}
+
+}
 
 
 

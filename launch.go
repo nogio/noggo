@@ -12,13 +12,21 @@ func Init() {
 	Trigger.init()
 	Task.init()
 	Plan.init()
-	Logger.Info("noggo is running...")
+	Http.init()
+	Logger.Info("noggo is initiating...")
 }
 
 
 func Exit() {
 	wating()
 	Logger.Info("noggo is exiting...")
+
+	//退出所有节点
+	for _,node := range nodes {
+		node.End()
+	}
+
+	Http.exit()
 	Plan.exit()
 	Task.exit()
 	Trigger.exit()
