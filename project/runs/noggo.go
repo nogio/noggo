@@ -3,7 +3,7 @@ package main
 import (
 	"github.com/nogio/noggo"
 	_ "../bases"
-	_ "../drivers"
+	_ "../extends"
 	_ "../globals"
 	_ "../modules"
 	_ "../nodes"
