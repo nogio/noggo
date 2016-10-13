@@ -63,6 +63,11 @@ type (
 		//任务驱动容器
 		drivers map[string]TaskDriver
 
+		//中间件
+		middlers    map[string]TaskFunc
+		middlerNames []string
+
+
 		//日志配置，日志连接
 		taskConfig *taskConfig
 		taskConnect TaskConnect
@@ -124,6 +129,16 @@ type (
 	任务模块方法 begin
 */
 
+
+//连接驱动
+func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
+	if taskDriver,ok := global.drivers[config.Driver]; ok {
+		return taskDriver.Connect(config.Config)
+	} else {
+		panic("任务：不支持的驱动 " + config.Driver)
+	}
+}
+
 //注册任务驱动
 func (global *taskGlobal) Driver(name string, driver TaskDriver) {
 	global.mutex.Lock()
@@ -140,16 +155,28 @@ func (global *taskGlobal) Driver(name string, driver TaskDriver) {
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
 	global.drivers[name] = driver
 }
+func (global *taskGlobal) Middler(name string, call TaskFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
 
 
-//连接驱动
-func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
-	if taskDriver,ok := global.drivers[config.Driver]; ok {
-		return taskDriver.Connect(config.Config)
-	} else {
-		panic("任务：不支持的驱动 " + config.Driver)
+	if global.middlers == nil {
+		global.middlers = map[string]TaskFunc{}
 	}
+	if global.middlerNames == nil {
+		global.middlerNames = []string{}
+	}
+
+	//保存配置
+	if _,ok := global.middlers[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.middlerNames = append(global.middlerNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.middlers[name] = call
 }
+
+
 
 
 
@@ -442,6 +469,14 @@ func (global *taskGlobal) serveTask(id string, name string, delay time.Duration,
 	ctx.handler(global.contextRequest)
 	//响应处理
 	ctx.handler(global.contextResponse)
+
+	//中间件
+	//用数组保证原始注册顺序
+	for _,name := range Task.middlerNames {
+		ctx.handler(Task.middlers[name])
+	}
+
+
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range global.requestFilterNames {

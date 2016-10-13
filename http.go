@@ -46,9 +46,12 @@ type (
 	//HTTP全局容器
 	httpGlobal	struct {
 		mutex sync.Mutex
-		                                             //驱动
-		drivers map[string]HttpDriver
 
+		//驱动
+		drivers map[string]HttpDriver
+		//中间件
+		middlers    map[string]HttpFunc
+		middlerNames []string
 
 		//路由
 		routes 		map[string]map[string]Map	//路由定义							map[node]map[name]Map
@@ -90,6 +93,27 @@ func (global *httpGlobal) Driver(name string, driver HttpDriver) {
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
 	global.drivers[name] = driver
+}
+
+func (global *httpGlobal) Middler(name string, call HttpFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+
+	if global.middlers == nil {
+		global.middlers = map[string]HttpFunc{}
+	}
+	if global.middlerNames == nil {
+		global.middlerNames = []string{}
+	}
+
+	//保存配置
+	if _,ok := global.middlers[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.middlerNames = append(global.middlerNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.middlers[name] = call
 }
 
 
@@ -672,7 +696,7 @@ func (module *httpModule) endHttp() {
 
 
 
-//任务：注册路由
+//HTTP：注册路由
 func (module *httpModule) Route(name string, config Map) {
 	module.mutex.Lock()
 	defer module.mutex.Unlock()
@@ -1066,7 +1090,7 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 	value := Map{}
 
 	return &HttpContext{
-		Module: module,
+		Node: module.Node, Module: module,
 		next: -1, nexts: []HttpFunc{},
 
 		Res: res, Req: req,
@@ -1092,6 +1116,13 @@ func (module *httpModule) serveHttp(res http.ResponseWriter, req *http.Request) 
 	ctx.handler(module.contextRequest)
 	//最终所有的响应处理，优先
 	ctx.handler(module.contextResponse)
+
+	//中间件
+	//用数组保证原始注册顺序
+	for _,name := range Http.middlerNames {
+		ctx.handler(Http.middlers[name])
+	}
+
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range module.requestFilterNames {
@@ -1306,7 +1337,6 @@ func (module *httpModule) contextExecute(ctx *HttpContext) {
 		ctx.handler(module.contextFound)
 	} else {
 
-
 		//验证，参数，数据处理
 		//验证处理，数据处理， 可以考虑走外部中间件
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
@@ -1453,6 +1483,9 @@ func (module *httpModule) contextBranch(ctx *HttpContext) {
 		default:
 		}
 	}
+
+	//走到这了， 肯定 是200了
+	ctx.Code = 200
 
 	ctx.Next()
 }
@@ -1792,6 +1825,8 @@ func (module *httpModule) contextFound(ctx *HttpContext) {
 	//最后是默认found中间件
 	ctx.handler(module.foundDefaultHandler)
 
+	ctx.Code = 404
+
 	ctx.Next()
 }
 
@@ -1833,6 +1868,8 @@ func (module *httpModule) contextError(ctx *HttpContext) {
 
 	//最后是默认error中间件
 	ctx.handler(module.errorDefaultHandler)
+
+	ctx.Code = 500
 
 	ctx.Next()
 }
@@ -1876,6 +1913,8 @@ func (module *httpModule) contextFailed(ctx *HttpContext) {
 	//最后是默认failed中间件
 	ctx.handler(module.failedDefaultHandler)
 
+	ctx.Code = 500
+
 	ctx.Next()
 }
 
@@ -1917,6 +1956,8 @@ func (module *httpModule) contextDenied(ctx *HttpContext) {
 
 	//最后是默认denied中间件
 	ctx.handler(module.deniedDefaultHandler)
+
+	ctx.Code = 500
 
 	ctx.Next()
 }

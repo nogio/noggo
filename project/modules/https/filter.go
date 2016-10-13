@@ -2,13 +2,12 @@ package https
 
 import (
 	"github.com/nogio/noggo"
-	"time"
 )
 
 func init() {
 
 	//请求日志拦截器
-	noggo.Http.RequestFilter("logger", func(ctx *noggo.HttpContext) {
+	noggo.Http.RequestFilter("request", func(ctx *noggo.HttpContext) {
 		//请求开始前
 		ctx.Next()
 		//请求结束
@@ -27,6 +26,5 @@ func init() {
 		ctx.Next()
 		//响应之后
 	})
-
 
 }

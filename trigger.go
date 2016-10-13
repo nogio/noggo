@@ -30,6 +30,11 @@ type (
 	//触发器模块
 	triggerGlobal struct {
 		mutex sync.Mutex
+		                                         //中间件
+		middlers    map[string]TriggerFunc
+		middlerNames []string
+
+
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
@@ -90,6 +95,35 @@ type (
 
 
 
+func (global *triggerGlobal) Middler(name string, call TriggerFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+
+	if global.middlers == nil {
+		global.middlers = map[string]TriggerFunc{}
+	}
+	if global.middlerNames == nil {
+		global.middlerNames = []string{}
+	}
+
+	//保存配置
+	if _,ok := global.middlers[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.middlerNames = append(global.middlerNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.middlers[name] = call
+}
+
+
+
+
+
+
+
+
+
 //触发器初始化
 func (global *triggerGlobal) init() {
 	global.initSession()
@@ -134,6 +168,9 @@ func (global *triggerGlobal) exitSession() {
 		global.sessionConnect = nil
 	}
 }
+
+
+
 
 
 
@@ -340,6 +377,13 @@ func (global *triggerGlobal) serveTrigger(name string, value Map) {
 	ctx.handler(global.contextRequest)
 	//响应处理
 	ctx.handler(global.contextResponse)
+
+	//中间件
+	//用数组保证原始注册顺序
+	for _,name := range Trigger.middlerNames {
+		ctx.handler(Trigger.middlers[name])
+	}
+
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range global.requestFilterNames {

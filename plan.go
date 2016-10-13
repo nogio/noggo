@@ -47,6 +47,9 @@ type (
 		//驱动
 		drivers map[string]PlanDriver
 
+		//中间件
+		middlers    map[string]PlanFunc
+		middlerNames []string
 
 		//路由
 		routes 		map[string]map[string]Map	//路由定义							map[node]map[name]Map
@@ -88,6 +91,28 @@ func (global *planGlobal) Driver(name string, driver PlanDriver) {
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
 	global.drivers[name] = driver
+}
+
+
+func (global *planGlobal) Middler(name string, call PlanFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+
+	if global.middlers == nil {
+		global.middlers = map[string]PlanFunc{}
+	}
+	if global.middlerNames == nil {
+		global.middlerNames = []string{}
+	}
+
+	//保存配置
+	if _,ok := global.middlers[name]; ok == false {
+		//没有注册过name，才把name加到列表
+		global.middlerNames = append(global.middlerNames, name)
+	}
+	//可以后注册重写原有路由配置，所以直接保存
+	global.middlers[name] = call
 }
 
 
@@ -1019,6 +1044,14 @@ func (module *planModule) servePlan(name string, value Map) {
 	ctx.handler(module.contextRequest)
 	//最终所有的响应处理，优先
 	ctx.handler(module.contextResponse)
+
+
+	//中间件
+	//用数组保证原始注册顺序
+	for _,name := range Plan.middlerNames {
+		ctx.handler(Plan.middlers[name])
+	}
+
 	//filter中的request
 	//用数组保证原始注册顺序
 	for _,name := range module.requestFilterNames {

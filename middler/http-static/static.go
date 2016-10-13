@@ -15,7 +15,7 @@ func Middler() (noggo.HttpFunc) {
 
 		//先搜索节点所在目录
 		// statics/node/xxx
-		file = fmt.Sprintf("%sstatics/%s%s", ctx.Node.Name, ctx.Path)
+		file = fmt.Sprintf("statics/%s%s", ctx.Node.Name, ctx.Path)
 		fi, _ := os.Stat(file)
 		if fi != nil && !fi.IsDir() {
 			ctx.File(file)
@@ -23,7 +23,7 @@ func Middler() (noggo.HttpFunc) {
 
 			//全局静态目录
 			// statics/default
-			file = fmt.Sprintf("%sstatics/default%s", ctx.Path)
+			file = fmt.Sprintf("statics/default%s", ctx.Path)
 			fi, _ := os.Stat(file)
 			if fi != nil && !fi.IsDir() {
 				ctx.File(file)
