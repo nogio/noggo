@@ -37,6 +37,7 @@ func New(name string) (*Noggo) {
 		node.Plan = newPlanModule(node)
 		node.Http = newHttpModule(node)
 
+
 		//加入节点列表
 		nodes[name] = node
 

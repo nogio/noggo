@@ -93,5 +93,10 @@
   },
 
 
+  "view": {
+    "driver": "default",
+    "config": {}
+  },
+
   "test": ""
 }

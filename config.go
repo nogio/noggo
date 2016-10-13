@@ -119,6 +119,15 @@ type (
 
 
 
+	//view配置
+	viewConfig struct {
+		//view驱动
+		Driver	string	`json:"driver"`
+		//view驱动配置
+		Config	Map		`json:"config"`
+	}
+
+
 	//配置
 	configConfig struct {
 		Debug	bool			`json:"debug"`
@@ -148,11 +157,8 @@ type (
 		//http配置
 		Http *httpConfig		`json:"http"`
 
-
-
-
-		//默认路由配置
-		Router	*routerConfig	`json:"router"`
+		//view
+		View *viewConfig		`json:"view"`
 	}
 
 )

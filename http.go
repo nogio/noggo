@@ -487,6 +487,10 @@ type (
 		sessionConfig	*sessionConfig
 		sessionConnect	SessionConnect
 
+		//View配置与连接
+		viewConfig	*viewConfig
+		viewConnect	ViewConnect
+
 		//HTTP配置与连接
 		httpConfig	*httpConfig
 		httpConnect	HttpConnect
@@ -619,6 +623,7 @@ type (
 //HTTP模块初始化
 func (module *httpModule) run() {
 	module.runSession()
+	module.runView()
 	module.runHttp()
 }
 func (module *httpModule) runSession() {
@@ -641,6 +646,27 @@ func (module *httpModule) runSession() {
 		if err != nil {
 			panic("节点HTTP：打开会话失败 " + err.Error())
 		}
+	}
+}
+
+func (module *httpModule) runView() {
+
+	module.viewConfig = Config.View
+	module.viewConnect = View.connect(module.viewConfig)
+
+	if module.viewConnect == nil {
+		panic("节点HTTP：连接View失败")
+	} else {
+		//打开会话连接
+		err := module.viewConnect.Open()
+		if err != nil {
+			panic("节点HTTP：打开View失败 " + err.Error())
+		}
+	}
+
+	//可以注册Helper
+	for k,v := range View.helpers {
+		module.viewConnect.Helper(k, v)
 	}
 }
 func (module *httpModule) runHttp() {
@@ -672,6 +698,7 @@ func (module *httpModule) runHttp() {
 //HTTP模块退出
 func (module *httpModule) end() {
 	module.endSession()
+	module.endView()
 	module.endHttp()
 }
 //退出SESSION
@@ -679,6 +706,13 @@ func (module *httpModule) endSession() {
 	if module.sessionConnect != nil {
 		module.sessionConnect.Close()
 		module.sessionConnect = nil
+	}
+}
+//退出view
+func (module *httpModule) endView() {
+	if module.viewConnect != nil {
+		module.viewConnect.Close()
+		module.viewConnect = nil
 	}
 }
 //退出HTTP本身

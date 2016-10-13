@@ -45,6 +45,10 @@ var (
 	//http模块
 	Http *httpGlobal
 
+
+	//view
+	View *viewGlobal
+
 	/*
 
 
@@ -72,21 +76,38 @@ func init() {
 	//Mapping模块
 	Mapping = &mappingGlobal{}
 	//日志模块
-	Logger = &loggerGlobal{}
+	Logger = &loggerGlobal{
+		drivers: map[string]LoggerDriver{},
+	}
 	//会话模块
-	Session = &sessionGlobal{}
+	Session = &sessionGlobal{
+		drivers: map[string]SessionDriver{},
+	}
 	//触发器模块
-	Trigger = &triggerGlobal{}
+	Trigger = &triggerGlobal{
+		middlers:map[string]TriggerFunc{},
+	}
 	//任务模块
-	Task = &taskGlobal{}
+	Task = &taskGlobal{
+		drivers: map[string]TaskDriver{},  middlers:map[string]TaskFunc{},
+	}
 
 
 
 	//计划模块
-	Plan = &planGlobal{}
+	Plan = &planGlobal{
+		drivers: map[string]PlanDriver{}, middlers: map[string]PlanFunc{},
+	}
 
 	//HTTP模块
-	Http = &httpGlobal{}
+	Http = &httpGlobal{
+		drivers: map[string]HttpDriver{}, middlers:map[string]HttpFunc{},
+	}
+
+	//View
+	View = &viewGlobal{
+		drivers: map[string]ViewDriver{}, helpers: map[string]Any{},
+	}
 
 
 

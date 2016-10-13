@@ -13,6 +13,7 @@ func Init() {
 	Task.init()
 	Plan.init()
 	Http.init()
+	View.init()
 	Logger.Info("noggo is initiating...")
 }
 
@@ -26,6 +27,7 @@ func Exit() {
 		node.End()
 	}
 
+	View.exit()
 	Http.exit()
 	Plan.exit()
 	Task.exit()
