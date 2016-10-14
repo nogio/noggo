@@ -12,7 +12,8 @@ func init() {
 		"route": Map{
 			"name": "首页", "text": "首页",
 			"action": func(ctx *noggo.HttpContext) {
-				ctx.Text("这里是www首页")
+				ctx.Data["msg"] = "消息来自路由"
+				ctx.View("index")
 			},
 		},
 	})

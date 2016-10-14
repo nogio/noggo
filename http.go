@@ -497,7 +497,7 @@ type (
 
 
 		//所在节点
-		Node	*Noggo
+		node	*Noggo
 
 
 		//路由
@@ -1136,6 +1136,8 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 
 		Param: Map{}, Query: Map{}, Form: Map{}, Upload: Map{}, Client: Map{},
 		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
+
+		Data: Map{},
 	}
 }
 
@@ -2078,7 +2080,10 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 		//但是这里已经走完response了。再ctx.Error好像没用了
 		//这是一个死循环， 因为走了ctx.Error， 还有可能再返回json
 		//又会走到这里，在response中。 继续把response加入调用列表吧。这样保险
-		ctx.Error(NewError(err.Error()))
+		//这里应该转到error上下文处理
+		http.Error(ctx.Res, err.Error(), 500)
+
+
 	} else {
 
 		if ctx.Type == "" {
@@ -2095,8 +2100,9 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 
 	bytes, err := xml.Marshal(body.Xml)
 	if err != nil {
-		//出错啊
-		ctx.Error(NewError(err.Error()))
+		//这里应该转到error上下文处理
+		http.Error(ctx.Res, err.Error(), 500)
+
 	} else {
 
 		if ctx.Type == "" {
@@ -2133,7 +2139,24 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 	fmt.Fprint(ctx.Res, body.Body)
 }
 func (module *httpModule) viewResponder(ctx *HttpContext) {
-	//先不支持VIEW的样子？
+	if ctx.Type == "" {
+		ctx.Type = "html"
+	}
+
+	body := ctx.Body.(httpBodyView)
+
+	err,html := module.viewConnect.Parse(ctx, body.View, body.Model, ctx.Data)
+	if err != nil {
+
+		//这里应该转到error上下文处理
+		http.Error(ctx.Res, err.Error(), 500)
+
+	} else {
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.Res.WriteHeader(ctx.Code)
+		fmt.Fprint(ctx.Res, html)
+	}
+
 }
 func (module *httpModule) defaultResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
