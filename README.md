@@ -10,6 +10,11 @@ noggo 是 隶属于 nogio 基于 golang 实现的后端开发框架，如框架�
 
 
 # 示例
+
+```
+go get github.com/nogio/noggo
+```
+
 ```golang
 package main
 
