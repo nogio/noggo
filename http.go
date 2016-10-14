@@ -18,11 +18,13 @@ import (
 	"fmt"
 	"encoding/json"
 	"encoding/xml"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
 
+	/*
 	HttpAcceptFunc func(res http.ResponseWriter, req *http.Request)
 
 	//HTTP驱动
@@ -43,12 +45,13 @@ type (
 		//开始SSL
 		StartTLS(addr string, certFile, keyFile string) error
 	}
+	*/
 	//HTTP全局容器
 	httpGlobal	struct {
 		mutex sync.Mutex
 
 		//驱动
-		drivers map[string]HttpDriver
+		drivers map[string]driver.HttpDriver
 		//中间件
 		middlers    map[string]HttpFunc
 		middlerNames []string
@@ -69,7 +72,7 @@ type (
 )
 
 //HTTP：连接驱动
-func (module *httpGlobal) connect(config *httpConfig) (HttpConnect) {
+func (module *httpGlobal) connect(config *httpConfig) (driver.HttpConnect) {
 	if httpDriver,ok := module.drivers[config.Driver]; ok {
 		return httpDriver.Connect(config.Config)
 	} else {
@@ -79,33 +82,21 @@ func (module *httpGlobal) connect(config *httpConfig) (HttpConnect) {
 
 
 //注册HTTP驱动
-func (global *httpGlobal) Driver(name string, driver HttpDriver) {
+func (global *httpGlobal) Driver(name string, config driver.HttpDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
-	if global.drivers == nil {
-		global.drivers = map[string]HttpDriver{}
-	}
-
-	if driver == nil {
+	if config == nil {
 		panic("HTTP: 驱动不可为空")
 	}
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 
 func (global *httpGlobal) Middler(name string, call HttpFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
-
-
-	if global.middlers == nil {
-		global.middlers = map[string]HttpFunc{}
-	}
-	if global.middlerNames == nil {
-		global.middlerNames = []string{}
-	}
 
 	//保存配置
 	if _,ok := global.middlers[name]; ok == false {
@@ -485,15 +476,15 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	SessionConnect
+		sessionConnect	driver.SessionConnect
 
 		//View配置与连接
 		viewConfig	*viewConfig
-		viewConnect	ViewConnect
+		viewConnect	driver.ViewConnect
 
 		//HTTP配置与连接
 		httpConfig	*httpConfig
-		httpConnect	HttpConnect
+		httpConnect	driver.HttpConnect
 
 
 		//所在节点
@@ -690,7 +681,7 @@ func (module *httpModule) runHttp() {
 	//开始HTTP
 	//这里要判断是否SSL，如果是应该开始SSL
 	//注意，connect.Start不应该阻塞线程
-	module.httpConnect.Start(module.Node.Port)
+	module.httpConnect.Start(module.node.Port)
 
 }
 
@@ -918,12 +909,10 @@ func (module *httpModule) DeniedHandler(name string, call HttpFunc) {
 
 
 
-
-
 //创建HTTP模块
 func newHttpModule(node *Noggo) (*httpModule) {
 	module := &httpModule{
-		Node: node,
+		node: node,
 	}
 
 
@@ -1124,7 +1113,7 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 	value := Map{}
 
 	return &HttpContext{
-		Node: module.Node, Module: module,
+		Node: module.node, Module: module,
 		next: -1, nexts: []HttpFunc{},
 
 		Res: res, Req: req,
@@ -1461,11 +1450,6 @@ func (module *httpModule) contextBranch(ctx *HttpContext) {
 	//HTTP路由不支持多method，非http
 	if routeConfig,ok := routing[KeyMapRoute]; ok {
 
-		for k,v := range routeConfig.(Map) {
-			ctx.Config[k] = v
-		}
-
-		/*
 		//如果是method=*版
 		if _,ok := routeConfig.(Map)[KeyMapAction]; ok {
 			for k,v := range routeConfig.(Map) {
@@ -1476,52 +1460,62 @@ func (module *httpModule) contextBranch(ctx *HttpContext) {
 				for k,v := range methodConfig.(Map) {
 					ctx.Config[k] = v
 				}
+			} else {
+				ctx.Config = nil
 			}
 		}
-		*/
+	} else {
+		ctx.Config = nil
 	}
 
+	if ctx.Config == nil {
+		//还是不存在
+		ctx.Code = 404
+		ctx.handler(module.contextFound)
+	} else {
+
+		//走到这了， 肯定 是200了
+		ctx.Code = 200
 
 
+		//先处理参数，验证等的东西
+		if _,ok := ctx.Config[KeyMapArgs]; ok {
+			ctx.handler(module.contextArgs)
+		}
+		if _,ok := ctx.Config[KeyMapAuth]; ok {
+			ctx.handler(module.contextAuth)
+		}
+		if _,ok := ctx.Config[KeyMapItem]; ok {
+			ctx.handler(module.contextItem)
+		}
 
-	//先处理参数，验证等的东西
-	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(module.contextArgs)
-	}
-	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(module.contextAuth)
-	}
-	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(module.contextItem)
-	}
 
+		//action之前的拦截器
+		//filter中的execute
+		//用数组保证原始注册顺序
+		for _,name := range module.executeFilterNames {
+			ctx.handler(module.executeFilters[name])
+		}
 
-	//action之前的拦截器
-	//filter中的execute
-	//用数组保证原始注册顺序
-	for _,name := range module.executeFilterNames {
-		ctx.handler(module.executeFilters[name])
-	}
-
-	//把action加入调用列表
-	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
-		switch actions:=actionConfig.(type) {
-		case func(*HttpContext):
-			ctx.handler(actions)
-		case []func(*HttpContext):
-			for _,action := range actions {
-				ctx.handler(action)
+		//把action加入调用列表
+		if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
+			switch actions:=actionConfig.(type) {
+			case func(*HttpContext):
+				ctx.handler(actions)
+			case []func(*HttpContext):
+				for _,action := range actions {
+					ctx.handler(action)
+				}
+			case HttpFunc:
+				ctx.handler(actions)
+			case []HttpFunc:
+				ctx.handler(actions...)
+			default:
 			}
-		case HttpFunc:
-			ctx.handler(actions)
-		case []HttpFunc:
-			ctx.handler(actions...)
-		default:
 		}
 	}
 
-	//走到这了， 肯定 是200了
-	ctx.Code = 200
+
 
 	ctx.Next()
 }
@@ -2145,7 +2139,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 
 	body := ctx.Body.(httpBodyView)
 
-	err,html := module.viewConnect.Parse(ctx, body.View, body.Model, ctx.Data)
+	err,html := module.viewConnect.Parse(body.View, body.Model, ctx.Data)
 	if err != nil {
 
 		//这里应该转到error上下文处理
@@ -2400,5 +2394,102 @@ func (ctx *HttpContext) Ip() string {
 
 
 
+
+
+
+
+
+//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
+
+
+
+//注册中间件
+func (module *httpModule) Use(call HttpFunc) {
+	//直接加到请求拦截器，和中间件位置一样
+	module.RequestFilter(NewMd5Id(), call)
+}
+
+
+//注册all方法
+func (module *httpModule) All(path string, call HttpFunc) {
+	module.Route(NewMd5Id(), Map{
+		"uri": path,
+		"route": Map{
+			"name": path, "text": path,
+			"action": call,
+		},
+	})
+}
+//注册get方法
+func (module *httpModule) Get(path string, call HttpFunc) {
+	module.Route(NewMd5Id(), Map{
+		"uri": path,
+		"route": Map{
+			"get": Map{
+				"name": path, "text": path,
+				"action": call,
+			},
+		},
+	})
+}
+//注册post方法
+func (module *httpModule) Post(path string, call HttpFunc) {
+	module.Route(NewMd5Id(), Map{
+		"uri": path,
+		"route": Map{
+			"post": Map{
+				"name": path, "text": path,
+				"action": call,
+			},
+		},
+	})
+}
+//注册put方法
+func (module *httpModule) Put(path string, call HttpFunc) {
+	module.Route(NewMd5Id(), Map{
+		"uri": path,
+		"route": Map{
+			"put": Map{
+				"name": path, "text": path,
+				"action": call,
+			},
+		},
+	})
+}
+//注册delete方法
+func (module *httpModule) Delete(path string, call HttpFunc) {
+	module.Route(NewMd5Id(), Map{
+		"uri": path,
+		"route": Map{
+			"delete": Map{
+				"name": path, "text": path,
+				"action": call,
+			},
+		},
+	})
+}
+/* 注册处理器 end */
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
 
 

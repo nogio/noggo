@@ -5,23 +5,33 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 	"errors"
+	"github.com/nogio/noggo/driver/http-default"
+	"github.com/nogio/noggo/driver/plan-default"
+	"github.com/nogio/noggo/driver/task-default"
+	"github.com/nogio/noggo/driver/session-default"
+	"github.com/nogio/noggo/driver/logger-default"
+	"github.com/nogio/noggo/driver/view-default"
 )
 
 var (
-	nodes map[string]*Noggo
+	nodes []*Noggo
 
 	//当前位置
 	//此变量比较重要，是用来注册对象时，表明当前的位置，如当前节点，当前数据库，等等
 	Current string
 
 	//全局配置
-	Config configConfig
+	Config *configConfig
 
 	//常量模块
 	Const *constGlobal
 	//Map模块
 	Mapping	*mappingGlobal
+
+
+
 
 	//日志模块
 	Logger *loggerGlobal
@@ -65,23 +75,41 @@ var (
 
 //框架初驱化
 func init() {
-	nodes = map[string]*Noggo{}
+	nodes = []*Noggo{}
 	//当前位置为空
 	Current = ""
-	//读取配置文件
-	Config = readJsonConfig()
+
+	//设置一个默认的配置
+	Config = &configConfig{
+		Debug: true,
+		Lang: map[string]langConfig{},
+		Node: map[string]nodeConfig{},
+
+		Logger: &loggerConfig{ Driver: "default", Config: Map{} },
+		Session: &sessionConfig{ Driver: "default", Config: Map{} },
+
+		Trigger: &triggerConfig{ },
+		Task: &taskConfig{ Driver: "default", Config: Map{} },
+
+		Plan: &planConfig{ Driver: "default", Config: Map{} },
+		Http: &httpConfig{ Driver: "default", Config: Map{}, Charset:"", Cookie:"noggo", Domain:"" },
+		View: &viewConfig{ Driver: "default", Config: Map{} },
+	}
 
 	//常量模块
 	Const = &constGlobal{}
 	//Mapping模块
 	Mapping = &mappingGlobal{}
+
+
+
 	//日志模块
 	Logger = &loggerGlobal{
-		drivers: map[string]LoggerDriver{},
+		drivers: map[string]driver.LoggerDriver{},
 	}
 	//会话模块
 	Session = &sessionGlobal{
-		drivers: map[string]SessionDriver{},
+		drivers: map[string]driver.SessionDriver{},
 	}
 	//触发器模块
 	Trigger = &triggerGlobal{
@@ -89,28 +117,41 @@ func init() {
 	}
 	//任务模块
 	Task = &taskGlobal{
-		drivers: map[string]TaskDriver{},  middlers:map[string]TaskFunc{},
+		drivers: map[string]driver.TaskDriver{},  middlers:map[string]TaskFunc{},
 	}
 
 
 
 	//计划模块
 	Plan = &planGlobal{
-		drivers: map[string]PlanDriver{}, middlers: map[string]PlanFunc{},
+		drivers: map[string]driver.PlanDriver{}, middlers: map[string]PlanFunc{},
 	}
 
 	//HTTP模块
 	Http = &httpGlobal{
-		drivers: map[string]HttpDriver{}, middlers:map[string]HttpFunc{},
+		drivers: map[string]driver.HttpDriver{}, middlers:map[string]HttpFunc{},
 	}
 
 	//View
 	View = &viewGlobal{
-		drivers: map[string]ViewDriver{}, helpers: map[string]Any{},
+		drivers: map[string]driver.ViewDriver{}, helpers: map[string]Any{},
 	}
 
 
 
+	loadConfig()
+	loadLang()
+	loadDriver()
+}
+
+//读取配置文件
+func loadConfig() {
+	err,cfg := readJsonConfig()
+	if err == nil {
+		Config = cfg
+	}
+}
+func loadLang() {
 	//加载多语言
 	err, cfg := readJsonFile(fmt.Sprintf("langs/%v.json", ConstLangDefault))
 	if err == nil {
@@ -122,24 +163,40 @@ func init() {
 			Const.Lang(k, cfg)
 		}
 	}
+}
+//加载默认驱动
+func loadDriver() {
+	Logger.Driver(ConstDriverDefault, logger_default.Driver())
+	Session.Driver(ConstDriverDefault, session_default.Driver())
 
+	Task.Driver(ConstDriverDefault, task_default.Driver())
+
+	Plan.Driver(ConstDriverDefault, plan_default.Driver())
+	Http.Driver(ConstDriverDefault, http_default.Driver())
+	View.Driver(ConstDriverDefault, view_default.Driver())
 }
 
 
-func readJsonConfig() (configConfig) {
-	m := configConfig{}
+
+
+
+
+
+
+func readJsonConfig() (error,*configConfig) {
 
 	bytes, err := ioutil.ReadFile("config.json")
 	if err != nil {
-		panic(fmt.Sprintf("读取配置文件出错:%v", err))
+		return err, nil
 	} else {
-		err := json.Unmarshal(bytes, &m)
+		m := &configConfig{}
+		err := json.Unmarshal(bytes, m)
 		if err != nil {
-			panic(fmt.Sprintf("解析配置文件出错:%v", err))
+			return err, nil
+		} else {
+			return nil, m
 		}
 	}
-
-	return m
 }
 
 func readJsonFile(filename string) (error,Map) {

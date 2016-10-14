@@ -10,6 +10,7 @@ import (
 
 const (
 
+	ConstDriverDefault  = "default"
 	ConstLangDefault	= "default"
 	ConstNodeGlobal		= "$global$"
 

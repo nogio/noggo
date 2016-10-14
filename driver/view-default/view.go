@@ -4,7 +4,6 @@ package view_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
 	"errors"
 	"fmt"
 	"html/template"
@@ -19,12 +18,13 @@ import (
 
 type (
 	DefaultView struct {
-		ctx *noggo.HttpContext
+		//ctx *noggo.HttpContext
+		paths []string  //view搜索的目录列表
+		data    Map         //此为整个VIEW通用的data
 
 		engine *template.Template
 		helper template.FuncMap
 
-		data    Map         //此为整个VIEW通用的data
 
 		body string     //解析后的body暂存
 		path string     //记录body当前的目录
@@ -38,8 +38,8 @@ type (
 	}
 )
 
-func newDefaultView(ctx *noggo.HttpContext, data Map) (*DefaultView) {
-	view := &DefaultView{ ctx: ctx, data: data }
+func newDefaultView(paths []string, data Map) (*DefaultView) {
+	view := &DefaultView{ paths: paths, data: data }
 	view.metas = []string{}
 	view.styles = []string{}
 	view.scripts = []string{}
@@ -551,9 +551,15 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 			if view.path != "" {
 				viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, view.layout))
 			}
-			viewpaths = append(viewpaths, fmt.Sprintf("views/%s/_default/%s.html", view.ctx.Node.Name, view.layout))
+			for _,p := range view.paths {
+				viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, view.layout))
+			}
+
+			/*
+			viewpaths = append(viewpaths, fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("views/_default/%s.html", view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("views/default/%s.html", view.layout))
+			*/
 
 
 			var viewname string
@@ -606,12 +612,20 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 
 	//定义View搜索的路径
 	viewpaths := []string{
+		/*
 		fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, name),
-		fmt.Sprintf("views/%s/_default/%s.html", view.ctx.Node.Name, name),
+		fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, name),
 		fmt.Sprintf("views/%s/%s/index.html", view.ctx.Node.Name, name),
-		fmt.Sprintf("views/_default/%s.html", name),
-		fmt.Sprintf("views/_default/%s/index.html", name),
+		fmt.Sprintf("views/default/%s.html", name),
+		fmt.Sprintf("views/default/%s/index.html", name),
+		*/
 	};
+
+	for _,p := range view.paths {
+		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, name))
+	}
+
+
 
 	var viewname string
 
@@ -666,9 +680,15 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 	if view.path != "" {
 		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, name))
 	}
+	/*
 	viewpaths = append(viewpaths, fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("views/default/%s.html", name))
+	*/
+
+	for _,p := range view.paths {
+		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, name))
+	}
 
 	var viewname string
 	for _,s := range viewpaths {

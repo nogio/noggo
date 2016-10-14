@@ -7,13 +7,14 @@
 package noggo
 
 import (
-	. "github.com/nogio/noggo/base"
+	//. "github.com/nogio/noggo/base"
 	"sync"
-	"time"
+	"github.com/nogio/noggo/driver"
 )
 
 type (
 
+	/*
 	//会话值
 	SessionValue struct {
 		Value	Map
@@ -41,13 +42,14 @@ type (
 		//回收会话，系统会每一段时间自动调用此方法
 		Recycle(expiry int64) error
 	}
+	*/
 
 	//会话模块
 	sessionGlobal struct {
 		mutex sync.Mutex
 
 		//会话驱动们
-		drivers map[string]SessionDriver
+		drivers map[string]driver.SessionDriver
 	}
 )
 
@@ -59,23 +61,23 @@ type (
 
 
 //注册会话驱动
-func (global *sessionGlobal) Driver(name string, driver SessionDriver) {
+func (global *sessionGlobal) Driver(name string, config driver.SessionDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]SessionDriver{}
+		global.drivers = map[string]driver.SessionDriver{}
 	}
 
-	if driver == nil {
+	if config == nil {
 		panic("会话: 驱动不可为空")
 	}
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 
 
 //连接驱动
-func (global *sessionGlobal) connect(config *sessionConfig) (SessionConnect) {
+func (global *sessionGlobal) connect(config *sessionConfig) (driver.SessionConnect) {
 	if sessionDriver,ok := global.drivers[config.Driver]; ok {
 		return sessionDriver.Connect(config.Config)
 	} else {

@@ -2,7 +2,7 @@ package http_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 	"net/http"
 )
 
@@ -14,7 +14,7 @@ type (
 	//连接
 	DefaultHttpConnect struct {
 		config Map
-		execute noggo.HttpAcceptFunc    //func(res http.ResponseWriter, req *http.Request)
+		execute driver.HttpAcceptFunc    //func(res http.ResponseWriter, req *http.Request)
 		server *http.Server
 	}
 )
@@ -30,7 +30,7 @@ func Driver() *DefaultHttpDriver {
 
 
 //连接
-func (driver *DefaultHttpDriver) Connect(config Map) (noggo.HttpConnect) {
+func (driver *DefaultHttpDriver) Connect(config Map) (driver.HttpConnect) {
 	//新建连接
 	return &DefaultHttpConnect{
 		config: config,
@@ -64,7 +64,7 @@ func (connect *DefaultHttpConnect) Close() error {
 
 
 //监听
-func (connect *DefaultHttpConnect) Accept(execute noggo.HttpAcceptFunc) error {
+func (connect *DefaultHttpConnect) Accept(execute driver.HttpAcceptFunc) error {
 	connect.execute = execute
 	return nil
 }

@@ -4,7 +4,7 @@ package view_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 )
 
 
@@ -37,7 +37,7 @@ func Driver() *DefaultViewDriver {
 
 
 //连接会话驱动
-func (driver *DefaultViewDriver) Connect(config Map) (noggo.ViewConnect) {
+func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect) {
 	return  &DefaultViewConnect{
 		config: config, helpers: map[string]Any{},
 	}
@@ -75,8 +75,8 @@ func (connect *DefaultViewConnect) Helper(name string, helper Any) error {
 
 
 //解析VIEW
-func (connect *DefaultViewConnect) Parse(ctx *noggo.HttpContext, name string, model Map, data Map) (error,string) {
-	view := newDefaultView(ctx, data)
+func (connect *DefaultViewConnect) Parse(name string, model Map, data Map) (error,string) {
+	view := newDefaultView([]string{ "views" }, data)
 	return view.Parse(name, model)
 }
 

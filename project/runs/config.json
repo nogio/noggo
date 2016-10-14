@@ -39,6 +39,7 @@
     "config": {}
   },
 
+
   "trigger": {
     "session": {
       "driver": "default", "expiry": 3600,

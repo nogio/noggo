@@ -12,6 +12,7 @@ import (
 	"time"
 	"sync"
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 )
 
 
@@ -38,7 +39,7 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	SessionConnect
+		sessionConnect	driver.SessionConnect
 
 
 		//路由
@@ -98,14 +99,6 @@ type (
 func (global *triggerGlobal) Middler(name string, call TriggerFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
-
-
-	if global.middlers == nil {
-		global.middlers = map[string]TriggerFunc{}
-	}
-	if global.middlerNames == nil {
-		global.middlerNames = []string{}
-	}
 
 	//保存配置
 	if _,ok := global.middlers[name]; ok == false {
@@ -616,44 +609,52 @@ func (global *triggerGlobal) contextBranch(ctx *TriggerContext) {
 			}
 		}
 		*/
+	} else {
+		ctx.Config = nil
 	}
 
+	if ctx.Config == nil {
+		//还是不存在的
+		ctx.handler(global.contextFound)
+	} else {
 
 
 
-	//先处理参数，验证等的东西
-	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(global.contextArgs)
-	}
-	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(global.contextAuth)
-	}
-	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(global.contextItem)
-	}
+
+		//先处理参数，验证等的东西
+		if _,ok := ctx.Config[KeyMapArgs]; ok {
+			ctx.handler(global.contextArgs)
+		}
+		if _,ok := ctx.Config[KeyMapAuth]; ok {
+			ctx.handler(global.contextAuth)
+		}
+		if _,ok := ctx.Config[KeyMapItem]; ok {
+			ctx.handler(global.contextItem)
+		}
 
 
-	//action之前的拦截器
-	//filter中的execute
-	//用数组保证原始注册顺序
-	for _,name := range global.executeFilterNames {
-		ctx.handler(global.executeFilters[name])
-	}
+		//action之前的拦截器
+		//filter中的execute
+		//用数组保证原始注册顺序
+		for _,name := range global.executeFilterNames {
+			ctx.handler(global.executeFilters[name])
+		}
 
-	//把action加入调用列表
-	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
-		switch actions:=actionConfig.(type) {
-		case func(*TriggerContext):
-			ctx.handler(actions)
-		case []func(*TriggerContext):
-			for _,action := range actions {
-				ctx.handler(action)
+		//把action加入调用列表
+		if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
+			switch actions:=actionConfig.(type) {
+			case func(*TriggerContext):
+				ctx.handler(actions)
+			case []func(*TriggerContext):
+				for _,action := range actions {
+					ctx.handler(action)
+				}
+			case TriggerFunc:
+				ctx.handler(actions)
+			case []TriggerFunc:
+				ctx.handler(actions...)
+			default:
 			}
-		case TriggerFunc:
-			ctx.handler(actions)
-		case []TriggerFunc:
-			ctx.handler(actions...)
-		default:
 		}
 	}
 

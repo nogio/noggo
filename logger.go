@@ -9,13 +9,15 @@ package noggo
 
 
 import (
-	. "github.com/nogio/noggo/base"
+	//. "github.com/nogio/noggo/base"
 	"sync"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
 
+	/*
 	//日志驱动
 	LoggerDriver interface {
 		Connect(config Map) (LoggerConnect)
@@ -34,6 +36,7 @@ type (
 		//输出错误
 		Error(args ...interface{})
 	}
+	*/
 
 
 	//日志模块
@@ -41,11 +44,11 @@ type (
 		mutex sync.Mutex
 
 		//日志驱动容器
-		drivers map[string]LoggerDriver
+		drivers map[string]driver.LoggerDriver
 
 		//日志配置，日志连接
 		loggerConfig *loggerConfig
-		loggerConnect LoggerConnect
+		loggerConnect driver.LoggerConnect
 	}
 )
 
@@ -55,25 +58,21 @@ type (
 
 
 //注册日志驱动
-func (global *loggerGlobal) Driver(name string, driver LoggerDriver) {
+func (global *loggerGlobal) Driver(name string, config driver.LoggerDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
-	if global.drivers == nil {
-		global.drivers = map[string]LoggerDriver{}
-	}
-
-	if driver == nil {
+	if config == nil {
 		panic("日志: 驱动不可为空")
 	}
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 
 
 //连接驱动
-func (global *loggerGlobal) connect(config *loggerConfig) (LoggerConnect) {
+func (global *loggerGlobal) connect(config *loggerConfig) (driver.LoggerConnect) {
 	if loggerDriver,ok := global.drivers[config.Driver]; ok {
 		return loggerDriver.Connect(config.Config)
 	} else {

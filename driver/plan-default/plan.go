@@ -3,7 +3,7 @@ package plan_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 	"github.com/nogio/noggo/driver/plan-default/cron"
 	"errors"
 )
@@ -33,7 +33,7 @@ func Driver() *DefaultPlanDriver {
 
 
 //打开路由器
-func (driver *DefaultPlanDriver) Connect(config Map) (noggo.PlanConnect) {
+func (driver *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect) {
 	//新建连接
 	return &DefaultPlanConnect{
 		config: config, plans: []string{},

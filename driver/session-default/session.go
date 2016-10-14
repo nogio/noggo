@@ -11,7 +11,7 @@ package session_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 	"sync"
 	"time"
 )
@@ -24,8 +24,13 @@ type (
 	//会话连接
 	DefaultConnect struct {
 		config Map
-		sessions map[string]noggo.SessionValue
+		sessions map[string]DefaultSessionValue
 		sessionsMutex sync.Mutex
+	}
+
+	DefaultSessionValue struct {
+		Value	Map
+		Expiry	time.Time
 	}
 )
 
@@ -47,9 +52,9 @@ func Driver() *DefaultDriver {
 
 
 //连接会话驱动
-func (session *DefaultDriver) Connect(config Map) (noggo.SessionConnect) {
+func (session *DefaultDriver) Connect(config Map) (driver.SessionConnect) {
 	return  &DefaultConnect{
-		config: config, sessions: map[string]noggo.SessionValue{},
+		config: config, sessions: map[string]DefaultSessionValue{},
 	}
 }
 
@@ -85,7 +90,7 @@ func (session *DefaultConnect) Query(id string, expiry int64) (error,Map) {
 	if v,ok := session.sessions[id]; ok {
 		return nil, v.Value
 	} else {
-		v := noggo.SessionValue{
+		v := DefaultSessionValue{
 			Value: Map{}, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 		}
 		session.sessions[id] = v
@@ -100,7 +105,7 @@ func (session *DefaultConnect) Update(id string, value Map, expiry int64) error 
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
-	session.sessions[id] = noggo.SessionValue{
+	session.sessions[id] = DefaultSessionValue{
 		Value: value, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 	}
 

@@ -9,13 +9,19 @@ import (
 
 
 //返回中间件
-func Middler() (noggo.HttpFunc) {
+func Middler(paths ...string) (noggo.HttpFunc) {
+
+	path := "statics"
+	if len(paths) > 0 {
+		path = paths[0]
+	}
+
 	return func(ctx *noggo.HttpContext) {
 		var file string
 
 		//先搜索节点所在目录
 		// statics/node/xxx
-		file = fmt.Sprintf("statics/%s%s", ctx.Node.Name, ctx.Path)
+		file = fmt.Sprintf("%s/%s%s", path, ctx.Node.Name, ctx.Path)
 		fi, _ := os.Stat(file)
 		if fi != nil && !fi.IsDir() {
 			ctx.File(file)
@@ -23,7 +29,7 @@ func Middler() (noggo.HttpFunc) {
 
 			//全局静态目录
 			// statics/default
-			file = fmt.Sprintf("statics/default%s", ctx.Path)
+			file = fmt.Sprintf("%s/default%s", path, ctx.Path)
 			fi, _ := os.Stat(file)
 			if fi != nil && !fi.IsDir() {
 				ctx.File(file)

@@ -3,7 +3,7 @@ package task_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 	"time"
 	"errors"
 )
@@ -16,7 +16,7 @@ type (
 	//会话连接
 	DefaultTaskConnect struct {
 		config Map
-		tasks map[string]noggo.TaskAcceptFunc
+		tasks map[string]driver.TaskAcceptFunc
 	}
 )
 
@@ -38,9 +38,9 @@ func Driver() *DefaultTaskDriver {
 
 
 //连接任务驱动
-func (session *DefaultTaskDriver) Connect(config Map) (noggo.TaskConnect) {
+func (session *DefaultTaskDriver) Connect(config Map) (driver.TaskConnect) {
 	return  &DefaultTaskConnect{
-		config: config, tasks: map[string]noggo.TaskAcceptFunc{},
+		config: config, tasks: map[string]driver.TaskAcceptFunc{},
 	}
 }
 
@@ -69,7 +69,7 @@ func (connect *DefaultTaskConnect) Close() error {
 
 
 //查询会话，
-func (connect *DefaultTaskConnect) Accept(name string, call noggo.TaskAcceptFunc) error {
+func (connect *DefaultTaskConnect) Accept(name string, call driver.TaskAcceptFunc) error {
 	connect.tasks[name] = call
 	return nil
 }

@@ -3,7 +3,7 @@ package logger_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver"
 	"log"
 	"time"
 	"fmt"
@@ -31,7 +31,7 @@ func Driver() *DefaultLogger {
 
 
 //打开日志器
-func (logger *DefaultLogger) Connect(config Map) (noggo.LoggerConnect) {
+func (logger *DefaultLogger) Connect(config Map) (driver.LoggerConnect) {
 	//新建日志器连接
 	return &DefaultConnect{
 		config: config,

@@ -13,11 +13,13 @@ import (
 	"sync"
 	"time"
 	"fmt"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
 
+	/*
 	//计划驱动
 	PlanDriver interface {
 		Connect(config Map) (PlanConnect)
@@ -41,11 +43,12 @@ type (
 		//停止计划
 		Stop() error
 	}
+	*/
 	//计划全局容器
 	planGlobal	struct {
 		mutex sync.Mutex
 		//驱动
-		drivers map[string]PlanDriver
+		drivers map[string]driver.PlanDriver
 
 		//中间件
 		middlers    map[string]PlanFunc
@@ -67,7 +70,7 @@ type (
 )
 
 //计划：连接驱动
-func (module *planGlobal) connect(config *planConfig) (PlanConnect) {
+func (module *planGlobal) connect(config *planConfig) (driver.PlanConnect) {
 	if planDriver,ok := module.drivers[config.Driver]; ok {
 		return planDriver.Connect(config.Config)
 	} else {
@@ -77,20 +80,20 @@ func (module *planGlobal) connect(config *planConfig) (PlanConnect) {
 
 
 //注册计划驱动
-func (global *planGlobal) Driver(name string, driver PlanDriver) {
+func (global *planGlobal) Driver(name string, config driver.PlanDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]PlanDriver{}
+		global.drivers = map[string]driver.PlanDriver{}
 	}
 
-	if driver == nil {
+	if config == nil {
 		panic("计划: 驱动不可为空")
 	}
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 
 
@@ -488,15 +491,15 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	SessionConnect
+		sessionConnect	driver.SessionConnect
 
 		//计划配置与连接
 		planConfig	*planConfig
-		planConnect	PlanConnect
+		planConnect	driver.PlanConnect
 
 
 		//所在节点
-		Node	*Noggo
+		node	*Noggo
 
 
 		//路由
@@ -828,7 +831,7 @@ func (module *planModule) DeniedHandler(name string, call PlanFunc) {
 //创建计划模块
 func newPlanModule(node *Noggo) (*planModule) {
 	module := &planModule{
-		Node: node,
+		node: node,
 	}
 
 
@@ -1024,7 +1027,7 @@ func newPlanModule(node *Noggo) (*planModule) {
 //创建Plan上下文
 func (module *planModule) newPlanContext(name string, value Map) (*PlanContext) {
 	return &PlanContext{
-		Node: module.Node, Module: module,
+		Node: module.node, Module: module,
 
 		next: -1, nexts: []PlanFunc{},
 
@@ -1243,44 +1246,52 @@ func (module *planModule) contextBranch(ctx *PlanContext) {
 			}
 		}
 		*/
+	} else {
+		ctx.Config = nil
 	}
 
+	if ctx.Config == nil {
+		//还是不存在的
+		ctx.handler(module.contextFound)
+	} else {
 
 
 
-	//先处理参数，验证等的东西
-	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(module.contextArgs)
-	}
-	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(module.contextAuth)
-	}
-	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(module.contextItem)
-	}
+
+		//先处理参数，验证等的东西
+		if _,ok := ctx.Config[KeyMapArgs]; ok {
+			ctx.handler(module.contextArgs)
+		}
+		if _,ok := ctx.Config[KeyMapAuth]; ok {
+			ctx.handler(module.contextAuth)
+		}
+		if _,ok := ctx.Config[KeyMapItem]; ok {
+			ctx.handler(module.contextItem)
+		}
 
 
-	//action之前的拦截器
-	//filter中的execute
-	//用数组保证原始注册顺序
-	for _,name := range module.executeFilterNames {
-		ctx.handler(module.executeFilters[name])
-	}
+		//action之前的拦截器
+		//filter中的execute
+		//用数组保证原始注册顺序
+		for _,name := range module.executeFilterNames {
+			ctx.handler(module.executeFilters[name])
+		}
 
-	//把action加入调用列表
-	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
-		switch actions:=actionConfig.(type) {
-		case func(*PlanContext):
-			ctx.handler(actions)
-		case []func(*PlanContext):
-			for _,action := range actions {
-				ctx.handler(action)
+		//把action加入调用列表
+		if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
+			switch actions:=actionConfig.(type) {
+			case func(*PlanContext):
+				ctx.handler(actions)
+			case []func(*PlanContext):
+				for _,action := range actions {
+					ctx.handler(action)
+				}
+			case PlanFunc:
+				ctx.handler(actions)
+			case []PlanFunc:
+				ctx.handler(actions...)
+			default:
 			}
-		case PlanFunc:
-			ctx.handler(actions)
-		case []PlanFunc:
-			ctx.handler(actions...)
-		default:
 		}
 	}
 
@@ -1926,5 +1937,40 @@ func (ctx *PlanContext) Replan(delays ...time.Duration) {
 
 
 
+
+
+
+
+
+//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
+
+
+
+//注册中间件
+func (module *planModule) Use(call PlanFunc) {
+	//直接加到请求拦截器，和中间件位置一样
+	module.RequestFilter(NewMd5Id(), call)
+}
+
+
+//注册all方法
+func (module *planModule) Add(time string, call PlanFunc) {
+	module.Route(NewMd5Id(), Map{
+		"time": time,
+		"route": Map{
+			"name": time, "text": time,
+			"action": call,
+		},
+	})
+}
+
+
+
+
+
+
+
+
+//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
 
 

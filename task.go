@@ -12,10 +12,12 @@ import (
 	"time"
 	"sync"
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
+	/*
 	//任务驱动
 	TaskDriver interface {
 		Connect(config Map) (TaskConnect)
@@ -44,6 +46,7 @@ type (
 		//完成任务
 		Finish(id string) error
 	}
+	*/
 
 	//任务函数
 	TaskFunc func(*TaskContext)
@@ -61,7 +64,7 @@ type (
 		mutex sync.Mutex
 
 		//任务驱动容器
-		drivers map[string]TaskDriver
+		drivers map[string]driver.TaskDriver
 
 		//中间件
 		middlers    map[string]TaskFunc
@@ -70,11 +73,11 @@ type (
 
 		//日志配置，日志连接
 		taskConfig *taskConfig
-		taskConnect TaskConnect
+		taskConnect driver.TaskConnect
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	SessionConnect
+		sessionConnect	driver.SessionConnect
 
 
 		//路由
@@ -131,7 +134,7 @@ type (
 
 
 //连接驱动
-func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
+func (global *taskGlobal) connect(config *taskConfig) (driver.TaskConnect) {
 	if taskDriver,ok := global.drivers[config.Driver]; ok {
 		return taskDriver.Connect(config.Config)
 	} else {
@@ -140,32 +143,20 @@ func (global *taskGlobal) connect(config *taskConfig) (TaskConnect) {
 }
 
 //注册任务驱动
-func (global *taskGlobal) Driver(name string, driver TaskDriver) {
+func (global *taskGlobal) Driver(name string, config driver.TaskDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
-	if global.drivers == nil {
-		global.drivers = map[string]TaskDriver{}
-	}
-
-	if driver == nil {
+	if config == nil {
 		panic("任务: 驱动不可为空")
 	}
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 func (global *taskGlobal) Middler(name string, call TaskFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
-
-
-	if global.middlers == nil {
-		global.middlers = map[string]TaskFunc{}
-	}
-	if global.middlerNames == nil {
-		global.middlerNames = []string{}
-	}
 
 	//保存配置
 	if _,ok := global.middlers[name]; ok == false {
@@ -711,44 +702,52 @@ func (global *taskGlobal) contextBranch(ctx *TaskContext) {
 			}
 		}
 		*/
+	} else {
+		ctx.Config = nil
 	}
 
+	if ctx.Config == nil {
+		//还是不存在的
+		ctx.handler(global.contextFound)
+	} else {
 
 
 
-	//先处理参数，验证等的东西
-	if _,ok := ctx.Config[KeyMapArgs]; ok {
-		ctx.handler(global.contextArgs)
-	}
-	if _,ok := ctx.Config[KeyMapAuth]; ok {
-		ctx.handler(global.contextAuth)
-	}
-	if _,ok := ctx.Config[KeyMapItem]; ok {
-		ctx.handler(global.contextItem)
-	}
+
+		//先处理参数，验证等的东西
+		if _,ok := ctx.Config[KeyMapArgs]; ok {
+			ctx.handler(global.contextArgs)
+		}
+		if _,ok := ctx.Config[KeyMapAuth]; ok {
+			ctx.handler(global.contextAuth)
+		}
+		if _,ok := ctx.Config[KeyMapItem]; ok {
+			ctx.handler(global.contextItem)
+		}
 
 
-	//action之前的拦截器
-	//filter中的execute
-	//用数组保证原始注册顺序
-	for _,name := range global.executeFilterNames {
-		ctx.handler(global.executeFilters[name])
-	}
+		//action之前的拦截器
+		//filter中的execute
+		//用数组保证原始注册顺序
+		for _,name := range global.executeFilterNames {
+			ctx.handler(global.executeFilters[name])
+		}
 
-	//把action加入调用列表
-	if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
-		switch actions:=actionConfig.(type) {
-		case func(*TaskContext):
-			ctx.handler(actions)
-		case []func(*TaskContext):
-			for _,action := range actions {
-				ctx.handler(action)
+		//把action加入调用列表
+		if actionConfig,ok := ctx.Config[KeyMapAction]; ok {
+			switch actions:=actionConfig.(type) {
+			case func(*TaskContext):
+				ctx.handler(actions)
+			case []func(*TaskContext):
+				for _,action := range actions {
+					ctx.handler(action)
+				}
+			case TaskFunc:
+				ctx.handler(actions)
+			case []TaskFunc:
+				ctx.handler(actions...)
+			default:
 			}
-		case TaskFunc:
-			ctx.handler(actions)
-		case []TaskFunc:
-			ctx.handler(actions...)
-		default:
 		}
 	}
 

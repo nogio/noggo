@@ -8,13 +8,14 @@ package noggo
 
 
 import (
-	"time"
 	"sync"
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
+	/*
 	//视图驱动
 	ViewDriver interface {
 		Connect(config Map) (ViewConnect)
@@ -33,13 +34,14 @@ type (
 		//解析
 		Parse(ctx *HttpContext, view string, model Map, data Map) (error,string)
 	}
+	*/
 
 	//视图模块
 	viewGlobal struct {
 		mutex sync.Mutex
 
 		//视图驱动
-		drivers map[string]ViewDriver
+		drivers map[string]driver.ViewDriver
 
 		//视图函数库
 		//因为可能各种各样的函数，所以用Any类型
@@ -48,7 +50,7 @@ type (
 
 		//日志配置，日志连接
 		viewConfig *viewConfig
-		viewConnect ViewConnect
+		viewConnect driver.ViewConnect
 
 	}
 )
@@ -56,7 +58,7 @@ type (
 
 
 //连接驱动
-func (global *viewGlobal) connect(config *viewConfig) (ViewConnect) {
+func (global *viewGlobal) connect(config *viewConfig) (driver.ViewConnect) {
 	if viewDriver,ok := global.drivers[config.Driver]; ok {
 		return viewDriver.Connect(config.Config)
 	} else {
@@ -65,20 +67,16 @@ func (global *viewGlobal) connect(config *viewConfig) (ViewConnect) {
 }
 
 //注册视图驱动
-func (global *viewGlobal) Driver(name string, driver ViewDriver) {
+func (global *viewGlobal) Driver(name string, config driver.ViewDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
-	if global.drivers == nil {
-		global.drivers = map[string]ViewDriver{}
-	}
-
-	if driver == nil {
+	if config == nil {
 		panic("视图: 驱动不可为空")
 	}
 	//不做存在判断，因为要支持后注册的驱动替换已注册的驱动
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
-	global.drivers[name] = driver
+	global.drivers[name] = config
 }
 func (global *viewGlobal) Helper(name string, helper Any) {
 	global.mutex.Lock()
