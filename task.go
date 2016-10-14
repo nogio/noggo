@@ -13,6 +13,7 @@ import (
 	"sync"
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
+	"errors"
 )
 
 
@@ -223,7 +224,6 @@ func (global *taskGlobal) initTask() {
 	for _,name := range global.routeNames {
 		global.taskConnect.Accept(name, global.serveTask)
 	}
-
 
 	global.taskConnect.Start();
 }
@@ -493,9 +493,11 @@ func (global *taskGlobal) serveTask(id string, name string, delay time.Duration,
 
 
 //任务：触发
-func (global *taskGlobal) Touch(name string, delay time.Duration, args ...Map) {
+func (global *taskGlobal) After(name string, delay time.Duration, args ...Map) (error) {
 
-	if global.taskConnect != nil {
+	if global.taskConnect == nil {
+		return errors.New("任务未连接")
+	} else {
 		value := Map{}
 		if len(args) > 0 {
 			value = args[0]
@@ -503,7 +505,7 @@ func (global *taskGlobal) Touch(name string, delay time.Duration, args ...Map) {
 
 		//直接一个新的ID
 		id := NewMd5Id()
-		global.taskConnect.Touch(id, name, delay, value)
+		return global.taskConnect.After(id, name, delay, value)
 	}
 }
 
@@ -1378,4 +1380,38 @@ func (ctx *TaskContext) Retask(delays ...time.Duration) {
 /*
 	任务上下文方法 end
 */
+
+
+
+//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
+
+
+
+//注册中间件
+func (global *taskGlobal) Use(call TaskFunc) {
+	//直接加到请求拦截器，和中间件位置一样
+	global.RequestFilter(NewMd5Id(), call)
+}
+
+
+//添加任务
+func (global *taskGlobal) Add(name string, call TaskFunc) {
+	global.Route(name, Map{
+		"route": Map{
+			"name": name, "text": name,
+			"action": call,
+		},
+	})
+
+	Logger.Debug("加了任务啊", name, call)
+}
+
+
+
+
+
+
+
+
+//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
 

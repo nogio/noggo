@@ -6,15 +6,25 @@ import (
 	"syscall"
 )
 
+var (
+	initialized bool
+)
+
 func Init() {
-	Logger.init()
-	Session.init()
-	Trigger.init()
-	Task.init()
-	Plan.init()
-	Http.init()
-	View.init()
-	Logger.Info("noggo is initiating...")
+	if initialized == false {
+		Logger.init()
+		Session.init()
+
+		Trigger.init()
+		Task.init()
+
+		Plan.init()
+		Http.init()
+		View.init()
+		Logger.Info("noggo is initiating...")
+
+		initialized = true
+	}
 }
 
 

@@ -7,6 +7,8 @@ import (
 
 type (
 	Noggo struct {
+		running bool
+
 		//节点名称和唯一标识
 		Id		string
 		Name	string
@@ -29,12 +31,10 @@ func New(names ...string) (*Noggo) {
 	}
 
 
-	//如果是直接运行的， 先初始化
-	if name == ConstNodeGlobal {
-		Init()
+	//如果已经实例过了, 直接返回
+	if nodes[name] != nil {
+		return nodes[name]
 	}
-
-
 
 
 	node := &Noggo{}
@@ -56,7 +56,7 @@ func New(names ...string) (*Noggo) {
 
 
 	//加入节点列表
-	nodes = append(nodes, node)
+	nodes[name] = node
 
 	return node
 }
@@ -70,15 +70,29 @@ func (node *Noggo) Run(ports ...string) {
 		node.Port = ports[0]
 	}
 
-	node.Plan.run()
-	node.Http.run()
 
-	//如果是直接运行， 就监听退出信号
-	if node.Name == ConstNodeGlobal {
-		Logger.Info("noggo", "is running at", node.Port)
-		Exit()
-	} else {
-		Logger.Info("node", node.Name, node.Id, "is running at", node.Port)
+
+	//如果还没初妈化， 先初始化
+	if initialized == false {
+		Init()
+	}
+
+
+
+	if node.running == false {
+
+		node.Plan.run()
+		node.Http.run()
+
+		node.running = true
+
+		//如果是直接运行， 就监听退出信号
+		if node.Name == ConstNodeGlobal {
+			Logger.Info("noggo", "is running at", node.Port)
+			Exit()
+		} else {
+			Logger.Info("node", node.Name, node.Id, "is running at", node.Port)
+		}
 	}
 }
 //结束节点
@@ -116,6 +130,33 @@ func (node *Noggo) Use(call Any) {
 		node.Plan.Use(v)
 	case func(*PlanContext):
 		node.Plan.Use(v)
+	}
+}
+
+
+
+
+//添加路由
+func (node *Noggo) Add(name string, call Any) {
+	switch v := call.(type) {
+
+	case TriggerFunc:
+		Trigger.Add(name, v)
+	case func(*TriggerContext):
+		Trigger.Add(name, v)
+	case TaskFunc:
+		Task.Add(name, v)
+	case func(*TaskContext):
+		Task.Add(name, v)
+
+	case HttpFunc:
+		node.Http.All(name, v)
+	case func(*HttpContext):
+		node.Http.All(name, v)
+	case PlanFunc:
+		node.Plan.Add(name, v)
+	case func(*PlanContext):
+		node.Plan.Add(name, v)
 	}
 }
 

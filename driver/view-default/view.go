@@ -18,8 +18,9 @@ import (
 
 type (
 	DefaultView struct {
-		//ctx *noggo.HttpContext
-		paths []string  //view搜索的目录列表
+		root    string  //根目录
+
+		node    string
 		data    Map         //此为整个VIEW通用的data
 
 		engine *template.Template
@@ -38,8 +39,8 @@ type (
 	}
 )
 
-func newDefaultView(paths []string, data Map) (*DefaultView) {
-	view := &DefaultView{ paths: paths, data: data }
+func newDefaultView(root string, node string, data Map, helpers Map) (*DefaultView) {
+	view := &DefaultView{ root: root, node: node, data: data }
 	view.metas = []string{}
 	view.styles = []string{}
 	view.scripts = []string{}
@@ -48,86 +49,8 @@ func newDefaultView(paths []string, data Map) (*DefaultView) {
 	view.footers = []string{}
 	view.blocks = map[string][]string{}
 
-	return view
-}
-
-
-func (view *DefaultView) Parse(name string, model Map) (error,string) {
-	view.title = ""
-
+	//工具方法
 	view.helper = template.FuncMap{
-		/*
-		"agent": func() string{
-			return view.web.Agent()
-		},
-		"ip": func() string{
-			return view.web.Ip()
-		},
-		"backurl": func() string{
-			return view.web.Url.Back()
-		},
-		"lasturl": func() string{
-			return view.web.Url.Last()
-		},
-		"nodeurl": func(name string, args ...string) string{
-			return view.web.Url.Node(name, args...)
-		},
-		"node": func(name string, args ...string) string{
-			return view.web.Url.Node(name, args...)
-		},
-		"route": func(name string, vals ...Any) string{
-			args := []Map{}
-			for _,v := range vals {
-				switch t := v.(type) {
-				case Map:
-					args = append(args, t)
-				default:
-					m := Map{}
-					e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
-					if e == nil {
-						args = append(args, m)
-					}
-				}
-
-			}
-			return view.web.Url.Route(name, args...)
-		},
-		"routo": func(site,name string, vals ...Any) string {
-			args := []Map{}
-			for _,v := range vals {
-				switch t := v.(type) {
-				case Map:
-					args = append(args, t)
-				default:
-					m := Map{}
-					e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
-					if e == nil {
-						args = append(args, m)
-					}
-				}
-			}
-			return view.web.Url.Routo(site,name, args...)
-		},
-		"signYes": func(key string) bool {
-			return view.web.Sign.Yes(key)
-		},
-		"signId": func(key string) string {
-			return fmt.Sprintf("%v", view.web.Sign.Id(key))
-		},
-		"signName": func(key string) Any {
-			return view.web.Sign.Name(key)
-		},
-		*/
-
-		/*
-		"storage": func(item Map) string {
-			return view.web.Url.Storage(item)
-		},
-		"thumbnail": func(item Map, w,h,t int64) string {
-			return view.web.Url.Thumbnail(item, w,h,t)
-		},
-		*/
-
 
 		//支持布局页
 		"layout": func(name string, vals ...Any) string {
@@ -348,33 +271,9 @@ func (view *DefaultView) Parse(name string, model Map) (error,string) {
 
 
 
-		/*
-		"enum": func(data,model,field string,v Any) (template.HTML) {
-			html := ""
 
-			value := fmt.Sprintf("%v", v)
 
-			enums := Data.Enums(data,model,field)
-			if v,ok := enums[value]; ok {
-				html = fmt.Sprintf("%v", v)
-			}
-			return template.HTML(html)
-		},
-		"status":  func(data,model string, value Any) template.HTML {
-			html := ""
 
-			if value == nil {
-				html = `<span class="green">正常</span>`
-			} else {
-				enums := Data.Status(data, model)
-				key := fmt.Sprintf("%v", value)
-				if v, ok := enums[key]; ok {
-					html = fmt.Sprintf(`<span class="red">%v</span>`, v)
-				}
-			}
-			return template.HTML(html)
-		},
-		*/
 		"html": func(text Any) (template.HTML) {
 			if text != nil {
 				return template.HTML(fmt.Sprintf("%v", text))
@@ -505,21 +404,123 @@ func (view *DefaultView) Parse(name string, model Map) (error,string) {
 
 			return false
 		},
+
+
+
+		/*
+			"agent": func() string{
+				return view.web.Agent()
+			},
+			"ip": func() string{
+				return view.web.Ip()
+			},
+			"backurl": func() string{
+				return view.web.Url.Back()
+			},
+			"lasturl": func() string{
+				return view.web.Url.Last()
+			},
+			"nodeurl": func(name string, args ...string) string{
+				return view.web.Url.Node(name, args...)
+			},
+			"node": func(name string, args ...string) string{
+				return view.web.Url.Node(name, args...)
+			},
+			"route": func(name string, vals ...Any) string{
+				args := []Map{}
+				for _,v := range vals {
+					switch t := v.(type) {
+					case Map:
+						args = append(args, t)
+					default:
+						m := Map{}
+						e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
+						if e == nil {
+							args = append(args, m)
+						}
+					}
+
+				}
+				return view.web.Url.Route(name, args...)
+			},
+			"routo": func(site,name string, vals ...Any) string {
+				args := []Map{}
+				for _,v := range vals {
+					switch t := v.(type) {
+					case Map:
+						args = append(args, t)
+					default:
+						m := Map{}
+						e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
+						if e == nil {
+							args = append(args, m)
+						}
+					}
+				}
+				return view.web.Url.Routo(site,name, args...)
+			},
+			"signYes": func(key string) bool {
+				return view.web.Sign.Yes(key)
+			},
+			"signId": func(key string) string {
+				return fmt.Sprintf("%v", view.web.Sign.Id(key))
+			},
+			"signName": func(key string) Any {
+				return view.web.Sign.Name(key)
+			},
+			*/
+
+		/*
+		"storage": func(item Map) string {
+			return view.web.Url.Storage(item)
+		},
+		"thumbnail": func(item Map, w,h,t int64) string {
+			return view.web.Url.Thumbnail(item, w,h,t)
+		},
+		*/
+
+
+
+
+		/*
+		"enum": func(data,model,field string,v Any) (template.HTML) {
+			html := ""
+
+			value := fmt.Sprintf("%v", v)
+
+			enums := Data.Enums(data,model,field)
+			if v,ok := enums[value]; ok {
+				html = fmt.Sprintf("%v", v)
+			}
+			return template.HTML(html)
+		},
+		"status":  func(data,model string, value Any) template.HTML {
+			html := ""
+
+			if value == nil {
+				html = `<span class="green">正常</span>`
+			} else {
+				enums := Data.Status(data, model)
+				key := fmt.Sprintf("%v", value)
+				if v, ok := enums[key]; ok {
+					html = fmt.Sprintf(`<span class="red">%v</span>`, v)
+				}
+			}
+			return template.HTML(html)
+		},
+	*/
+
+	}
+	for k,v := range helpers {
+		view.helper[k] = v
 	}
 
-	/*
-	//注册 helpers
-	for _,n := range view.web.Service.helperNames {
-		name := n   //必须用局部变量,因为调用的时候,循环结束,n永远等于最后一个值
-		view.helper[name] = func(args ...Any) Any {
-			action := view.web.Service.HelperAction(name)
-			if action != nil {
-				return action(view.web, args...)
-			}
-			return nil
-		}
-	}
-	*/
+	return view
+}
+
+
+func (view *DefaultView) Parse(name string, model Map) (error,string) {
+	view.title = ""
 
 	view.engine = template.New("default").Delims("<%", "%>").Funcs(view.helper)
 	return view.Layout(name,model)
@@ -551,15 +552,10 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 			if view.path != "" {
 				viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, view.layout))
 			}
-			for _,p := range view.paths {
-				viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, view.layout))
-			}
-
-			/*
-			viewpaths = append(viewpaths, fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("views/default/%s.html", view.layout))
-			*/
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.node, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.root, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, view.layout))
 
 
 			var viewname string
@@ -612,18 +608,14 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 
 	//定义View搜索的路径
 	viewpaths := []string{
-		/*
-		fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, name),
-		fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, name),
-		fmt.Sprintf("views/%s/%s/index.html", view.ctx.Node.Name, name),
-		fmt.Sprintf("views/default/%s.html", name),
-		fmt.Sprintf("views/default/%s/index.html", name),
-		*/
+		fmt.Sprintf("%s/%s/%s.html", view.root, view.node, name),
+		fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, name),
+		fmt.Sprintf("%s/%s.html", view.root, name),
+		fmt.Sprintf("%s/%s/index.html", view.root, name),
+		fmt.Sprintf("%s/%s/%s/index.html", view.root, view.node, name),
+		fmt.Sprintf("%s/default/%s.html", view.root, name),
+		fmt.Sprintf("%s/default/%s/index.html", view.root, name),
 	};
-
-	for _,p := range view.paths {
-		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, name))
-	}
 
 
 
@@ -678,17 +670,12 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 	//先搜索body所在目录
 	viewpaths := []string{};
 	if view.path != "" {
-		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, name))
+		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, view.path, name))
 	}
-	/*
-	viewpaths = append(viewpaths, fmt.Sprintf("views/%s/default/%s.html", view.ctx.Node.Name, name))
-	viewpaths = append(viewpaths, fmt.Sprintf("views/%s/%s.html", view.ctx.Node.Name, name))
-	viewpaths = append(viewpaths, fmt.Sprintf("views/default/%s.html", name))
-	*/
-
-	for _,p := range view.paths {
-		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", p, name))
-	}
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.node, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.root, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, name))
 
 	var viewname string
 	for _,s := range viewpaths {

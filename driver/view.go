@@ -18,10 +18,11 @@ type (
 		//关闭连接
 		Close() error
 
-		//帮助VIEW函数
-		Helper(name string, helper Any) error
-
 		//解析
-		Parse(view string, model Map, data Map) (error,string)
+		//node      节点名称
+		//view      视图文件（不带扩展名）
+		//model     视图模型
+		//data      viewdata
+		Parse(node string, helpers Map, data Map, view string, model Map) (error,string)
 	}
 )

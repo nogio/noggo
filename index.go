@@ -16,7 +16,7 @@ import (
 )
 
 var (
-	nodes []*Noggo
+	nodes map[string]*Noggo
 
 	//当前位置
 	//此变量比较重要，是用来注册对象时，表明当前的位置，如当前节点，当前数据库，等等
@@ -59,23 +59,13 @@ var (
 	//view
 	View *viewGlobal
 
-	/*
-
-
-	//路由器模块
-	Router *routerModule
-
-
-	//任务模块
-	Task *taskModule
-	*/
 )
 
 
 
 //框架初驱化
 func init() {
-	nodes = []*Noggo{}
+	nodes = map[string]*Noggo{}
 	//当前位置为空
 	Current = ""
 

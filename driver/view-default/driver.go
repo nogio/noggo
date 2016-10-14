@@ -11,19 +11,28 @@ import (
 
 type (
 	//驱动
-	DefaultViewDriver struct {}
+	DefaultViewDriver struct {
+		root string
+	}
 	//会话连接
 	DefaultViewConnect struct {
 		config Map
-		helpers map[string]Any
+		root string
 	}
 )
 
 
 
 //返回驱动
-func Driver() *DefaultViewDriver {
-	return &DefaultViewDriver{}
+func Driver(roots ...string) *DefaultViewDriver {
+	root := "views"
+	if len(roots) > 0 {
+		root = roots[0]
+	}
+
+	return &DefaultViewDriver{
+		root: root,
+	}
 }
 
 
@@ -39,7 +48,7 @@ func Driver() *DefaultViewDriver {
 //连接会话驱动
 func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect) {
 	return  &DefaultViewConnect{
-		config: config, helpers: map[string]Any{},
+		config: config, root: driver.root,
 	}
 }
 
@@ -65,18 +74,11 @@ func (connect *DefaultViewConnect) Close() error {
 }
 
 
-//注册helper
-func (connect *DefaultViewConnect) Helper(name string, helper Any) error {
-	connect.helpers[name] = helper
-	return nil
-}
-
-
 
 
 //解析VIEW
-func (connect *DefaultViewConnect) Parse(name string, model Map, data Map) (error,string) {
-	view := newDefaultView([]string{ "views" }, data)
+func (connect *DefaultViewConnect) Parse(node string, helpers Map, data Map, name string, model Map) (error,string) {
+	view := newDefaultView(connect.root, node, data, helpers)
 	return view.Parse(name, model)
 }
 

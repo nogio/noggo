@@ -15,7 +15,7 @@ func main() {
 
 	//Get请求首页
 	nog.Get("/", func(ctx *noggo.HttpContext) {
-		ctx.Text("get hello noggo")
+		ctx.Text("hello noggo")
 	})
 
 	nog.Run(":8080")

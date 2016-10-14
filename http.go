@@ -654,11 +654,6 @@ func (module *httpModule) runView() {
 			panic("节点HTTP：打开View失败 " + err.Error())
 		}
 	}
-
-	//可以注册Helper
-	for k,v := range View.helpers {
-		module.viewConnect.Helper(k, v)
-	}
 }
 func (module *httpModule) runHttp() {
 
@@ -2139,7 +2134,19 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 
 	body := ctx.Body.(httpBodyView)
 
-	err,html := module.viewConnect.Parse(body.View, body.Model, ctx.Data)
+
+
+
+	//helper要在这里处理
+	helpers := Map{}
+	//可以注册Helper
+	for k,v := range View.helpers {
+		helpers[k] = v
+	}
+
+
+
+	err,html := module.viewConnect.Parse(ctx.Node.Name, helpers, ctx.Data, body.View, body.Model)
 	if err != nil {
 
 		//这里应该转到error上下文处理

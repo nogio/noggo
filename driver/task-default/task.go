@@ -90,8 +90,8 @@ func (connect *DefaultTaskConnect) Stop() error {
 
 
 
-//触发任务
-func (connect *DefaultTaskConnect) Touch(id string, name string, delay time.Duration, value Map) error {
+//发起任务
+func (connect *DefaultTaskConnect) After(id string, name string, delay time.Duration, value Map) error {
 
 	if call,ok := connect.tasks[name]; ok {
 		time.AfterFunc(delay, func() {

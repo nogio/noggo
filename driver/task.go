@@ -29,7 +29,7 @@ type (
 
 
 		//触发任务
-		Touch(id string, name string, delay time.Duration, value Map) error
+		After(id string, name string, delay time.Duration, value Map) error
 
 		//完成任务
 		Finish(id string) error

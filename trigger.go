@@ -1277,3 +1277,51 @@ func (ctx *TriggerContext) Retrigger(delays ...time.Duration) {
 	触发器上下文方法 end
 */
 
+
+
+
+
+
+
+
+
+
+
+
+//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
+
+//注册中间件
+func (global *triggerGlobal) Use(call TriggerFunc) {
+	//直接加到请求拦截器，和中间件位置一样
+	global.RequestFilter(NewMd5Id(), call)
+}
+
+
+//添加任务
+func (global *triggerGlobal) Add(name string, call TriggerFunc) {
+	global.Route(name, Map{
+		"route": Map{
+			"name": name, "text": name,
+			"action": call,
+		},
+	})
+}
+
+
+
+
+
+
+
+
+//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
+
+
+
+
+
+
+
+
+
+

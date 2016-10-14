@@ -11,6 +11,7 @@ import (
 )
 
 func main() {
+	//框架初始化
 	noggo.Init()
 
 
@@ -20,6 +21,7 @@ func main() {
 	//noggo www ing		运行指定节点
 
 
+	//同时运行多个/所有节点
 	nodes := []string{}
 	if len(os.Args) == 1 || (len(os.Args) == 2 && os.Args[1] == "*") {
 		for k, _ := range noggo.Config.Node {
@@ -32,8 +34,6 @@ func main() {
 			}
 		}
 	}
-
-
 	//开始运行
 	for _, name := range nodes {
 		node := noggo.New(name)
@@ -42,5 +42,8 @@ func main() {
 		}
 	}
 
+
+
+	//监听退出
 	noggo.Exit()
 }

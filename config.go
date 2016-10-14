@@ -147,11 +147,6 @@ type (
 
 
 
-
-
-
-
-
 		//计划配置
 		Plan *planConfig		`json:"plan"`
 		//http配置

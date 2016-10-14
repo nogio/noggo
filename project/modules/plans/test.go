@@ -16,7 +16,7 @@ func init() {
 				noggo.Logger.Debug(ctx.Node.Name, "测试计划开始了")
 
 				//2秒后执行任务
-				noggo.Task.Touch("test", time.Second*2)
+				noggo.Task.After("test", time.Second*2)
 
 				ctx.Finish()
 			},
