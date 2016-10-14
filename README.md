@@ -33,7 +33,27 @@ func main() {
 
 	//Get请求首页
 	nog.Get("/", func(ctx *noggo.HttpContext) {
-		ctx.Text("get hello noggo")
+
+		//3秒后开始一个任务
+		noggo.Task.After("test", time.Second*3)
+
+        //返回一段文本给客户端
+		ctx.Text("hello noggo")
+	})
+
+
+
+
+	//添加一个每10秒运行的周期性计划
+	nog.Add("*/10 * * * * *", func(ctx *noggo.PlanContext) {
+		noggo.Logger.Debug("10秒计划开始执行了")
+		ctx.Finish()
+	})
+
+	//添加一个测试任务
+	nog.Add("test", func(ctx *noggo.TaskContext) {
+		noggo.Logger.Debug("测试任务开始执行了")
+		ctx.Finish()
 	})
 
 	nog.Run(":8080")
