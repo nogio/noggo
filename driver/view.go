@@ -19,10 +19,6 @@ type (
 		Close() error
 
 		//解析
-		//node      节点名称
-		//view      视图文件（不带扩展名）
-		//model     视图模型
-		//data      viewdata
 		Parse(node string, helpers Map, data Map, view string, model Map) (error,string)
 	}
 )
