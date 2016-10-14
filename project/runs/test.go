@@ -3,7 +3,6 @@ package main
 import (
 	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/middler"
-	"time"
 )
 
 func main() {
@@ -16,15 +15,15 @@ func main() {
 
 	//Get请求首页
 	nog.Get("/", func(ctx *noggo.HttpContext) {
+		ctx.Data["msg"] = "这是什么消息"
+		ctx.View("index")
 
 		//3秒后开始一个任务
-		noggo.Task.After("test", time.Second*3)
+		//noggo.Task.After("test", time.Second*3)
 
 		//返回一段文本给客户端
-		ctx.Text("hello noggo")
+		//ctx.Text("hello noggo")
 	})
-
-
 
 
 	//添加一个每10秒运行的周期性计划

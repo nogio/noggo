@@ -2070,6 +2070,7 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 		//这是一个死循环， 因为走了ctx.Error， 还有可能再返回json
 		//又会走到这里，在response中。 继续把response加入调用列表吧。这样保险
 		//这里应该转到error上下文处理
+		//待修改
 		http.Error(ctx.Res, err.Error(), 500)
 
 
@@ -2090,6 +2091,7 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 	bytes, err := xml.Marshal(body.Xml)
 	if err != nil {
 		//这里应该转到error上下文处理
+		//待修改
 		http.Error(ctx.Res, err.Error(), 500)
 
 	} else {
@@ -2137,19 +2139,24 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 
 
 
-	//helper要在这里处理
-	helpers := Map{}
-	//可以注册Helper
-	for k,v := range View.helpers {
-		helpers[k] = v
+	parse := &driver.ViewParse{
+		Node: ctx.Node.Name, Lang: ctx.Lang,
+		Data: ctx.Data, View: body.View, Model: body.Model,
+		Helpers: Map{},
 	}
 
 
+	//helper要在这里处理
+	//可以注册Helper
+	for k,v := range View.helpers {
+		parse.Helpers[k] = v
+	}
 
-	err,html := module.viewConnect.Parse(ctx.Node.Name, helpers, ctx.Data, body.View, body.Model)
+	err,html := module.viewConnect.Parse(parse)
 	if err != nil {
 
 		//这里应该转到error上下文处理
+		//待修改
 		http.Error(ctx.Res, err.Error(), 500)
 
 	} else {

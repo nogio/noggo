@@ -77,9 +77,10 @@ func (connect *DefaultViewConnect) Close() error {
 
 
 //解析VIEW
-func (connect *DefaultViewConnect) Parse(node string, helpers Map, data Map, name string, model Map) (error,string) {
-	view := newDefaultView(connect.root, node, data, helpers)
-	return view.Parse(name, model)
+//func (connect *DefaultViewConnect) Parse(node string, helpers Map, data Map, name string, model Map) (error,string) {
+func (connect *DefaultViewConnect) Parse(parse *driver.ViewParse) (error,string) {
+	view := newDefaultView(connect.root, parse)
+	return view.Parse()
 }
 
 

@@ -10,6 +10,14 @@ type (
 	TaskDriver interface {
 		Connect(config Map) (TaskConnect)
 	}
+
+	TaskAfter struct {
+		Id      string
+		Name    string
+		Delay   time.Duration
+		Value   Map
+	}
+
 	TaskAcceptFunc func(string,string,time.Duration,Map)
 	//任务连接
 	TaskConnect interface {

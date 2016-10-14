@@ -9,6 +9,13 @@ type (
 	PlanDriver interface {
 		Connect(config Map) (PlanConnect)
 	}
+
+	PlanAccept struct {
+		Name    string
+		Time    string
+		Call    func()
+	}
+
 	//计划连接
 	PlanConnect interface {
 		//打开连接

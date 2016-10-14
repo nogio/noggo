@@ -13,19 +13,17 @@ import (
 	"strings"
 	"encoding/json"
 	"time"
+	"github.com/nogio/noggo/driver"
 )
 
 
 type (
 	DefaultView struct {
 		root    string  //根目录
-
-		node    string
-		data    Map         //此为整个VIEW通用的data
+		parse   *driver.ViewParse
 
 		engine *template.Template
 		helper template.FuncMap
-
 
 		body string     //解析后的body暂存
 		path string     //记录body当前的目录
@@ -39,8 +37,8 @@ type (
 	}
 )
 
-func newDefaultView(root string, node string, data Map, helpers Map) (*DefaultView) {
-	view := &DefaultView{ root: root, node: node, data: data }
+func newDefaultView(root string, parse *driver.ViewParse) (*DefaultView) {
+	view := &DefaultView{ root: root, parse: parse }
 	view.metas = []string{}
 	view.styles = []string{}
 	view.scripts = []string{}
@@ -511,7 +509,7 @@ func newDefaultView(root string, node string, data Map, helpers Map) (*DefaultVi
 	*/
 
 	}
-	for k,v := range helpers {
+	for k,v := range parse.Helpers {
 		view.helper[k] = v
 	}
 
@@ -519,11 +517,11 @@ func newDefaultView(root string, node string, data Map, helpers Map) (*DefaultVi
 }
 
 
-func (view *DefaultView) Parse(name string, model Map) (error,string) {
+func (view *DefaultView) Parse() (error,string) {
 	view.title = ""
 
 	view.engine = template.New("default").Delims("<%", "%>").Funcs(view.helper)
-	return view.Layout(name,model)
+	return view.Layout(view.parse.View,view.parse.Model)
 }
 
 
@@ -552,8 +550,8 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 			if view.path != "" {
 				viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, view.layout))
 			}
-			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.node, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.parse.Node, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.parse.Node, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.root, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, view.layout))
 
@@ -583,7 +581,7 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 					buf := bytes.NewBuffer(make([]byte, 0))
 
 					e := t.Execute(buf, Map{
-						"data":	view.data,
+						"data":	view.parse.Data,
 						"model": view.model,
 					})
 					if e != nil {
@@ -608,11 +606,11 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 
 	//定义View搜索的路径
 	viewpaths := []string{
-		fmt.Sprintf("%s/%s/%s.html", view.root, view.node, name),
-		fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, name),
+		fmt.Sprintf("%s/%s/%s.html", view.root, view.parse.Node, name),
+		fmt.Sprintf("%s/%s/default/%s.html", view.root, view.parse.Node, name),
 		fmt.Sprintf("%s/%s.html", view.root, name),
 		fmt.Sprintf("%s/%s/index.html", view.root, name),
-		fmt.Sprintf("%s/%s/%s/index.html", view.root, view.node, name),
+		fmt.Sprintf("%s/%s/%s/index.html", view.root, view.parse.Node, name),
 		fmt.Sprintf("%s/default/%s.html", view.root, name),
 		fmt.Sprintf("%s/default/%s/index.html", view.root, name),
 	};
@@ -645,7 +643,7 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 			buf := bytes.NewBuffer(make([]byte, 0))
 
 			e := t.Execute(buf, Map{
-				"data":	view.data,
+				"data":	view.parse.Data,
 				"model": bodyModel,
 			})
 			if e != nil {
@@ -672,8 +670,8 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 	if view.path != "" {
 		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, view.path, name))
 	}
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.node, name))
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.node, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.parse.Node, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.parse.Node, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.root, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, name))
 
@@ -718,7 +716,7 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 
 
 		e := t.Execute(buf, Map{
-			"data":	view.data,
+			"data":	view.parse.Data,
 			"model": renderModel,
 		})
 		if e != nil {
