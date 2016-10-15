@@ -1,4 +1,4 @@
-package noggo
+package base
 
 
 import (
@@ -21,12 +21,6 @@ var objectIdCounter uint32 = 0
 // to NewObjectId function.
 var machineId = readMachineId()
 
-// ObjectId is a unique ID identifying a BSON value. It must be exactly 12 bytes
-// long. MongoDB objects by default have such a property set in their "_id"
-// property.
-//
-// http://www.mongodb.org/display/DOCS/Object+IDs
-type NogId string
 
 
 // readMachineId generates machine id and puts it into the machineId global
@@ -55,7 +49,7 @@ func readMachineId() []byte {
 // 3byte 机器ID
 // 2byte pid
 // 3byte 自增ID
-func NewId() string {
+func NewNogId() string {
 	var b [12]byte
 	// Timestamp, 4 bytes, big endian
 	binary.BigEndian.PutUint32(b[:], uint32(time.Now().Unix()))
@@ -76,7 +70,7 @@ func NewId() string {
 }
 
 func NewMd5Id() string {
-	id := NewId()
+	id := NewNogId()
 	md5Ctx := md5.New()
 	md5Ctx.Write([]byte(id))
 	cipherStr := md5Ctx.Sum(nil)

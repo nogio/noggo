@@ -219,11 +219,16 @@ func (global *taskGlobal) initTask() {
 		}
 	}
 
+	//注册回调
+	global.taskConnect.Accept(global.serveTask)
 
 	//注册任务
+	//貌似不需要注册了，因为只要注册一个NAME。 貌似没意义
+	/*
 	for _,name := range global.routeNames {
 		global.taskConnect.Accept(name, global.serveTask)
 	}
+	*/
 
 	global.taskConnect.Start();
 }
@@ -443,8 +448,7 @@ func (global *taskGlobal) newTaskContext(id string, name string, delay time.Dura
 		Global: global,
 		next: -1, nexts: []TaskFunc{},
 
-		Id: id,
-		Name: name, Config: nil, Branchs:nil,
+		Id: id, Name: name, Config: nil, Branchs:nil,
 
 		Delay: delay, Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
@@ -503,9 +507,7 @@ func (global *taskGlobal) After(name string, delay time.Duration, args ...Map) (
 			value = args[0]
 		}
 
-		//直接一个新的ID
-		id := NewMd5Id()
-		return global.taskConnect.After(id, name, delay, value)
+		return global.taskConnect.After(name, delay, value)
 	}
 }
 
@@ -1211,9 +1213,8 @@ func (global *taskGlobal) finishResponder(ctx *TaskContext) {
 //所以有必要使用task机制重新调度
 func (global *taskGlobal) retaskResponder(ctx *TaskContext) {
 	body := ctx.Body.(taskBodyRetask)
-
 	//重新处理任务
-	go global.serveTask(ctx.Id, ctx.Name, body.Delay, ctx.Value)
+	global.taskConnect.Retask(ctx.Id, body.Delay)
 }
 func (global *taskGlobal) defaultResponder(ctx *TaskContext) {
 	//默认处理器， 一般执行不到。 默认完成吧

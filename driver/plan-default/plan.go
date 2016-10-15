@@ -6,7 +6,13 @@ import (
 	"github.com/nogio/noggo/driver"
 	"github.com/nogio/noggo/driver/plan-default/cron"
 	"errors"
+	"time"
+	"sync"
 )
+
+
+//有BUG一枚~~~
+//Create如果加了同步锁， 会一直被锁着， 要考虑处理一下
 
 
 
@@ -19,7 +25,12 @@ type (
 	DefaultPlanConnect struct {
 		config Map
 		cron *cron.Cron
-		plans []string
+		callback    driver.PlanCallback
+
+		//同步锁
+		mutex   sync.Mutex
+		//计划数据保存，三方驱动可以持久化
+		datas   map[string]driver.PlanData
 	}
 )
 
@@ -33,10 +44,10 @@ func Driver() *DefaultPlanDriver {
 
 
 //打开路由器
-func (driver *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect) {
+func (ddddd *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect) {
 	//新建连接
 	return &DefaultPlanConnect{
-		config: config, plans: []string{},
+		config: config, datas: map[string]driver.PlanData{},
 	}
 }
 
@@ -58,6 +69,13 @@ func (driver *DefaultPlanConnect) Close() error {
 
 
 
+
+
+//注册回调
+func (connect *DefaultPlanConnect) Accept(callback driver.PlanCallback) error {
+	connect.callback = callback
+	return nil
+}
 
 
 
@@ -85,16 +103,26 @@ func (driver *DefaultPlanConnect) Stop() error {
 
 
 
-//添加监听
-func (driver *DefaultPlanConnect) Accept(name, time string, call func()) error {
-	if driver.cron == nil {
+//创建计划
+func (connect *DefaultPlanConnect) Create(name, time string) error {
+	if connect.cron == nil {
 		return errors.New("plan-default.accept: cron is nil")
 	}
 
-	//加入列表，记录所有name
-	driver.plans = append(driver.plans, name)
+	connect.cron.AddFunc(time, func() {
 
-	driver.cron.AddFunc(time, call, name)
+		//新建计划
+		id := NewMd5Id()
+		plan := driver.PlanData{
+			Name: name, Time: time, Value: Map{},
+		}
+		//保存计划
+		connect.datas[id] = plan
+		//调用计划
+		connect.callback(id, plan.Name, plan.Time, plan.Value)
+
+	}, name)
+
 	return nil
 }
 
@@ -103,26 +131,39 @@ func (driver *DefaultPlanConnect) Accept(name, time string, call func()) error {
 
 
 //移除监听
-func (driver *DefaultPlanConnect) Remove(id string) error {
-	if driver.cron == nil {
+func (connect *DefaultPlanConnect) Remove(name string) error {
+	if connect.cron == nil {
 		return errors.New("plan-default.accept: cron is nil")
 	}
-	driver.cron.RemoveJob(id)
+	connect.cron.RemoveJob(name)
 	return nil
 }
 
 
 
-//清理所有计划
-func (driver *DefaultPlanConnect) Clear() error {
-	if driver.cron == nil {
-		return errors.New("plan-default.accept: cron is nil")
-	}
 
-	//移动所有
-	for _,name := range driver.plans {
-		driver.cron.RemoveJob(name)
-	}
+
+
+
+//完成任务，从列表中清理
+func (connect *DefaultPlanConnect) Finish(id string) error {
+
+
+	//从列表中删除
+	//三方驱动， 应该做一些持久化的处理
+	//更新掉此任务已经完成
+	delete(connect.datas, id)
 
 	return nil
+}
+//重开任务
+func (connect *DefaultPlanConnect) Replan(id string, delay time.Duration) error {
+	if plan,ok := connect.datas[id]; ok {
+
+		time.AfterFunc(delay, func() {
+			connect.callback(id, plan.Name, plan.Time, plan.Value)
+		})
+	}
+
+	return errors.New("计划不存在")
 }

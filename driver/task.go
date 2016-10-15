@@ -11,14 +11,14 @@ type (
 		Connect(config Map) (TaskConnect)
 	}
 
-	TaskAfter struct {
-		Id      string
+	TaskCallback func(string,string,time.Duration,Map)
+
+	TaskData struct {
 		Name    string
 		Delay   time.Duration
 		Value   Map
 	}
 
-	TaskAcceptFunc func(string,string,time.Duration,Map)
 	//任务连接
 	TaskConnect interface {
 		//打开连接
@@ -26,20 +26,23 @@ type (
 		//关闭连接
 		Close() error
 
-		//注册任务
-		Accept(name string, call TaskAcceptFunc) error
+
+		//注册回调
+		Accept(callback TaskCallback) error
 
 
-		//打开连接
+		//开始任务
 		Start() error
-		//关闭连接
+		//停止任务
 		Stop() error
 
 
 		//触发任务
-		After(id string, name string, delay time.Duration, value Map) error
+		After(name string, delay time.Duration, value Map) error
 
 		//完成任务
 		Finish(id string) error
+		//重新开始任务
+		Retask(id string, delay time.Duration) error
 	}
 )

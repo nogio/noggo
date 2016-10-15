@@ -6,7 +6,9 @@ import (
 	"github.com/nogio/noggo/driver"
 	"time"
 	"errors"
+	"github.com/anacrolix/sync"
 )
+
 
 
 
@@ -15,8 +17,10 @@ type (
 	DefaultTaskDriver struct {}
 	//会话连接
 	DefaultTaskConnect struct {
-		config Map
-		tasks map[string]driver.TaskAcceptFunc
+		mutex   sync.Mutex
+		config      Map
+		callback    driver.TaskCallback
+		datas       map[string]driver.TaskData
 	}
 )
 
@@ -40,7 +44,7 @@ func Driver() *DefaultTaskDriver {
 //连接任务驱动
 func (session *DefaultTaskDriver) Connect(config Map) (driver.TaskConnect) {
 	return  &DefaultTaskConnect{
-		config: config, tasks: map[string]driver.TaskAcceptFunc{},
+		config: config, datas: map[string]driver.TaskData{},
 	}
 }
 
@@ -68,9 +72,9 @@ func (connect *DefaultTaskConnect) Close() error {
 
 
 
-//查询会话，
-func (connect *DefaultTaskConnect) Accept(name string, call driver.TaskAcceptFunc) error {
-	connect.tasks[name] = call
+//注册回调
+func (connect *DefaultTaskConnect) Accept(callback driver.TaskCallback) error {
+	connect.callback = callback
 	return nil
 }
 
@@ -91,18 +95,30 @@ func (connect *DefaultTaskConnect) Stop() error {
 
 
 //发起任务
-func (connect *DefaultTaskConnect) After(id string, name string, delay time.Duration, value Map) error {
+func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value Map) error {
 
-	if call,ok := connect.tasks[name]; ok {
-		time.AfterFunc(delay, func() {
-			call(id,name,delay,value)
-		})
-
-		return nil
-
-	} else {
-		return errors.New("不支持的任务")
+	if connect.callback == nil {
+		return errors.New("未注册回调")
 	}
+
+	connect.mutex.Lock()
+	defer connect.mutex.Unlock()
+
+	//新建任务
+	id := NewMd5Id()
+	task := driver.TaskData{
+		Name: name, Delay: delay, Value: value,
+	}
+
+	//保存任务
+	connect.datas[id] = task
+
+	//直接回调
+	time.AfterFunc(delay, func() {
+		connect.callback(id,task.Name, task.Delay, task.Value)
+	})
+
+	return nil
 }
 
 
@@ -111,7 +127,28 @@ func (connect *DefaultTaskConnect) After(id string, name string, delay time.Dura
 
 //完成任务，从列表中清理
 func (connect *DefaultTaskConnect) Finish(id string) error {
-	//不做任务处理
+	connect.mutex.Lock()
+	defer connect.mutex.Unlock()
+
+	//从列表中删除
 	//三方驱动， 应该做一些持久化的处理
+	//更新掉此任务已经完成
+	delete(connect.datas, id)
+
 	return nil
+}
+//重开任务
+func (connect *DefaultTaskConnect) Retask(id string, delay time.Duration) error {
+	if task,ok := connect.datas[id]; ok {
+
+		//更新一下任务信息
+		task.Delay = delay
+		connect.datas[id] = task
+
+		time.AfterFunc(delay, func() {
+			connect.callback(id, task.Name, task.Delay, task.Value)
+		})
+	}
+
+	return errors.New("任务不存在")
 }

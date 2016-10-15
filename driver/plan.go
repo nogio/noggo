@@ -2,6 +2,7 @@ package driver
 
 import (
 	. "github.com/nogio/noggo/base"
+	"time"
 )
 
 type (
@@ -10,11 +11,13 @@ type (
 		Connect(config Map) (PlanConnect)
 	}
 
-	PlanAccept struct {
+	PlanData struct {
 		Name    string
 		Time    string
-		Call    func()
+		Value   Map
 	}
+
+	PlanCallback func(string,string,string,Map)
 
 	//计划连接
 	PlanConnect interface {
@@ -23,16 +26,23 @@ type (
 		//关闭连接
 		Close() error
 
-		//注册计划
-		Accept(name,time string, call func()) error
+		//注册回调
+		Accept(callback PlanCallback) error
+
+		//创建计划
+		Create(name string, time string) error
 		//删除计划
-		Remove(id string) error
-		//清空计划
-		Clear() error
+		Remove(name string) error
 
 		//开始计划
 		Start() error
 		//停止计划
 		Stop() error
+
+
+		//完成计划
+		Finish(id string) error
+		//重开计划
+		Replan(id string, delay time.Duration) error
 	}
 )

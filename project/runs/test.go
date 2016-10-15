@@ -3,7 +3,12 @@ package main
 import (
 	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/middler"
+	"time"
 )
+
+func init() {
+}
+
 
 func main() {
 
@@ -19,7 +24,7 @@ func main() {
 		ctx.View("index")
 
 		//3秒后开始一个任务
-		//noggo.Task.After("test", time.Second*3)
+		noggo.Task.After("test", time.Second*3)
 
 		//返回一段文本给客户端
 		//ctx.Text("hello noggo")

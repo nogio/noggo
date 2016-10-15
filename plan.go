@@ -12,7 +12,6 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"time"
-	"fmt"
 	"github.com/nogio/noggo/driver"
 )
 
@@ -505,7 +504,7 @@ type (
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
-		routeTimes	map[string][]string		//计划的时间，一个计划可以多个时间。map[name]time
+		routeTimes	map[string]string		//计划的时间，一个计划可以多个时间。map[name]time
 
 		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]PlanFunc
@@ -534,6 +533,9 @@ type (
 		Name string			//解析路由后得到的name
 		Config Map			//解析后得到的路由配置
 		Branchs []Map		//解析后得到的路由分支配置
+
+		//此计划的时间
+		Time    string
 
 		//数据相关
 		Value	Map			//所有请求过来的原始参数汇总
@@ -595,17 +597,13 @@ func (module *planModule) runPlan() {
 	}
 
 
+	//注册回调
+	module.planConnect.Accept(module.servePlan)
 
 
-	//注册计划
-	for name,times := range module.routeTimes {
-		for index,time := range times {
-			id := fmt.Sprintf("%v.%v", name, index)
-			//监听计划
-			module.planConnect.Accept(id, time, func() {
-				module.servePlan(name, Map{})
-			})
-		}
+	//创建计划
+	for name,time := range module.routeTimes {
+		module.planConnect.Create(name, time)
 	}
 
 	//开始计划
@@ -628,6 +626,7 @@ func (module *planModule) endSession() {
 //退出计划本身
 func (module *planModule) endPlan() {
 	if module.planConnect != nil {
+		module.planConnect.Stop()
 		module.planConnect.Close()
 		module.planConnect = nil
 	}
@@ -666,17 +665,15 @@ func (module *planModule) Route(name string, config Map) {
 
 
 	if module.routeTimes == nil {
-		module.routeTimes = map[string][]string{}
+		module.routeTimes = map[string]string{}
 	}
 
 
 	//处理time
 	if v,ok := config[KeyMapTime]; ok {
-		switch times := v.(type) {
+		switch ttt := v.(type) {
 		case string:
-			module.routeTimes[name] = []string { times }
-		case []string:
-			module.routeTimes[name] = times
+			module.routeTimes[name] = ttt
 		}
 	}
 }
@@ -1025,13 +1022,13 @@ func newPlanModule(node *Noggo) (*planModule) {
 
 
 //创建Plan上下文
-func (module *planModule) newPlanContext(name string, value Map) (*PlanContext) {
+func (module *planModule) newPlanContext(id string, name string, time string, value Map) (*PlanContext) {
 	return &PlanContext{
 		Node: module.node, Module: module,
 
 		next: -1, nexts: []PlanFunc{},
 
-		Id: name, Name: name, Config: nil, Branchs:nil,
+		Id: id, Name: name, Config: nil, Branchs:nil,
 
 		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
@@ -1040,9 +1037,9 @@ func (module *planModule) newPlanContext(name string, value Map) (*PlanContext) 
 
 
 //计划Plan  请求开始
-func (module *planModule) servePlan(name string, value Map) {
+func (module *planModule) servePlan(id string, name string, time string, value Map) {
 
-	ctx := module.newPlanContext(name, value)
+	ctx := module.newPlanContext(id, name, time, value)
 
 	ctx.handler(module.contextRequest)
 	//最终所有的响应处理，优先
@@ -1735,29 +1732,14 @@ func (module *planModule) contextResponder(ctx *PlanContext) {
 
 /* 默认响应器 begin */
 func (module *planModule) finishResponder(ctx *PlanContext) {
-	//通知驱动，计划完成
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
-
-//目前直接调度，可调整，以后做到plan中统一调整
-//因为万一delay很久。中间正好程序重新或是其它，就丢了
-//所以有必要使用plan机制重新调度
 func (module *planModule) replanResponder(ctx *PlanContext) {
-	//通知驱动，计划完成
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	body := ctx.Body.(planBodyReplan)
+	module.planConnect.Replan(ctx.Id, body.Delay)
 }
 func (module *planModule) defaultResponder(ctx *PlanContext) {
-	//默认处理器， 一般执行不到。 默认完成吧
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
 /* 默认响应器 end */
 
@@ -1767,28 +1749,16 @@ func (module *planModule) defaultResponder(ctx *PlanContext) {
 /* 默认处理器 begin */
 //代码中没有指定相关的处理器，才会执行到默认处理器
 func (module *planModule) foundDefaultHandler(ctx *PlanContext) {
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
 func (module *planModule) errorDefaultHandler(ctx *PlanContext) {
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
 func (module *planModule) failedDefaultHandler(ctx *PlanContext) {
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
 func (module *planModule) deniedDefaultHandler(ctx *PlanContext) {
-	//但是计划完成后， 好像不需要处理什么
-	//除非计划驱动也要做持久化，计划每一次的运行，和结果
-	//获取所有的驱动。 都加入 Found,Error,Failed,Denied
-	//以及它们各自有的如Finish,Replan这样的接口，那就太复杂了
+	module.planConnect.Finish(ctx.Id)
 }
 /* 默认处理器 end */
 

@@ -23,7 +23,5 @@ type (
 		Update(id string, value Map, expiry int64) error
 		//删除会话
 		Remove(id string) error
-		//回收会话，系统会每一段时间自动调用此方法
-		Recycle(expiry int64) error
 	}
 )

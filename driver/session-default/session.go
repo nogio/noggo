@@ -126,6 +126,7 @@ func (session *DefaultConnect) Remove(id string) error {
 
 
 //回收会话
+//自动回收过期的会话
 func (session *DefaultConnect) Recycle(expiry int64) error {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()

@@ -1321,6 +1321,10 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 
 //处理响应
 func (module *httpModule) contextResponse(ctx *HttpContext) {
+
+	//默认一个500，这样才正常
+	ctx.Code = 500
+
 	//因为response是在所有请求前的， 所以先调用一下
 	//然后对结果进行处理
 	ctx.Next()
@@ -1471,7 +1475,6 @@ func (module *httpModule) contextBranch(ctx *HttpContext) {
 
 		//走到这了， 肯定 是200了
 		ctx.Code = 200
-
 
 		//先处理参数，验证等的东西
 		if _,ok := ctx.Config[KeyMapArgs]; ok {

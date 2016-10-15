@@ -14,7 +14,7 @@ type (
 	//连接
 	DefaultHttpConnect struct {
 		config Map
-		execute driver.HttpAcceptFunc    //func(res http.ResponseWriter, req *http.Request)
+		execute driver.HttpAcceptCall    //func(res http.ResponseWriter, req *http.Request)
 		server *http.Server
 	}
 )
@@ -64,7 +64,7 @@ func (connect *DefaultHttpConnect) Close() error {
 
 
 //监听
-func (connect *DefaultHttpConnect) Accept(execute driver.HttpAcceptFunc) error {
+func (connect *DefaultHttpConnect) Accept(execute driver.HttpAcceptCall) error {
 	connect.execute = execute
 	return nil
 }

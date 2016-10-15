@@ -6,24 +6,28 @@ import (
 )
 
 type (
-	HttpAcceptFunc func(res http.ResponseWriter, req *http.Request)
 
 	//HTTP驱动
 	HttpDriver interface {
 		Connect(config Map) (HttpConnect)
 	}
+
+	HttpAcceptCall func(res http.ResponseWriter, req *http.Request)
+
 	//HTTP连接
 	HttpConnect interface {
-		//打开
+		//打开驱动连接
 		Open() error
-		//关闭
+		//关闭驱动连接
 		Close() error
-		//注册
-		Accept(call HttpAcceptFunc) error
+
+		//注册回调
+		Accept(call HttpAcceptCall) error
 
 		//开始
 		Start(addr string) error
-		//开始SSL
+		//开始TLS
 		StartTLS(addr string, certFile, keyFile string) error
+
 	}
 )
