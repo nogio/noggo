@@ -8,7 +8,7 @@ import (
 
 func init() {
 
-	noggo.Model.Register("test", Map{
+	noggo.Data.Register("test", Map{
 		"name": "测试", "text": "测试表",
 		"fields": Map{
 			"id": Map{
