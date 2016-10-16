@@ -133,11 +133,14 @@ func (global *triggerGlobal) initSession() {
 	}
 
 	//连接会话
-	global.sessionConnect = Session.connect(global.sessionConfig)
+	err,conn := Session.connect(global.sessionConfig)
 
-	if global.sessionConnect == nil {
-		panic("触发器：连接会话失败")
+	if err !=nil {
+		panic("触发器：连接会话失败：" + err.Error())
 	} else {
+
+		global.sessionConnect = conn
+
 		//打开会话连接
 		err := global.sessionConnect.Open()
 		if err != nil {

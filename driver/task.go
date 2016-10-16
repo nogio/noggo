@@ -8,7 +8,7 @@ import (
 type (
 	//任务驱动
 	TaskDriver interface {
-		Connect(config Map) (TaskConnect)
+		Connect(config Map) (error,TaskConnect)
 	}
 
 	//回调函数

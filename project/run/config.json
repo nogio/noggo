@@ -1,0 +1,124 @@
+{
+  "debug": true,
+
+  "lang": {
+    "zh-cn": {
+      "name": "简体中文", "text": "简体中文", "accepts": ["cn","zh-cn","zh-hans"]
+    },
+    "zh-tw": {
+      "name": "繁体中文", "text": "繁体中文", "accepts": ["tw","zh-tw"]
+    },
+    "en-us": {
+      "name": "English", "text": "English", "accepts": ["en","en-us"]
+    }
+  },
+
+
+  
+  "node": {
+    "ing": {
+      "id": "ing", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心"
+    },
+    "www": {
+      "id": "www", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站"
+    }
+  },
+
+
+
+  "data": {
+    "main": {
+      "driver": "pgsql",
+      "config": {
+        "url": "postgres://127.0.0.1/maindb"
+      }
+    },
+    "temp": {
+      "driver": "pgsql",
+      "config": {
+        "url": "postgres://127.0.0.1/tempdb"
+      }
+    }
+  },
+
+
+
+
+  "logger": {
+    "driver": "default",
+    "config": { }
+  },
+
+  "session": {
+    "driver": "default", "expiry": 3600,
+    "config": {}
+  },
+
+
+  "trigger": {
+    "session": {
+      "driver": "default", "expiry": 3600,
+      "config": {}
+    }
+  },
+  "task": {
+    "driver": "default",
+    "config": {},
+
+    "session": {
+      "driver": "default", "expiry": 3600,
+      "config": {}
+    }
+  },
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  "plan": {
+    "driver": "default",
+    "config": {},
+
+    "session": {
+      "driver": "default", "expiry": 3600,
+      "config": {}
+    }
+  },
+
+
+  "http": {
+    "driver": "default",
+    "config": {},
+
+    "session": {
+      "driver": "default", "expiry": 3600,
+      "config": {}
+    },
+
+    "charset": "utf-8", "cookie": "nog", "domain": ""
+  },
+
+
+  "view": {
+    "driver": "default",
+    "config": {}
+  },
+
+
+
+
+
+
+
+  "test": ""
+}

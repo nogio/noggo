@@ -54,10 +54,9 @@ func Driver() (driver.PlanDriver) {
 
 
 
-//打开路由器
-func (drv *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect) {
-	//新建连接
-	return &DefaultPlanConnect{
+//连接
+func (drv *DefaultPlanDriver) Connect(config Map) (error,driver.PlanConnect) {
+	return nil,&DefaultPlanConnect{
 		config: config, datas: map[string]PlanData{},
 	}
 }

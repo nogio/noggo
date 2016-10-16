@@ -24,6 +24,14 @@ type (
 		Text string	`json:"text"`
 	}
 
+	//data配置
+	dataConfig struct {
+		//data驱动
+		Driver	string	`json:"driver"`
+		//data驱动配置
+		Config	Map		`json:"config"`
+	}
+
 
 
 
@@ -134,6 +142,7 @@ type (
 
 		Lang	map[string]langConfig	`json:"lang"`
 		Node	map[string]nodeConfig	`json:"node"`
+		Data	map[string]dataConfig	`json:"data"`
 
 
 		//日志配置

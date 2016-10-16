@@ -8,7 +8,7 @@ import (
 type (
 	//视图驱动
 	ViewDriver interface {
-		Connect(config Map) (ViewConnect)
+		Connect(config Map) (error,ViewConnect)
 	}
 	//ViewAcceptFunc func(string,string,time.Duration,Map)
 

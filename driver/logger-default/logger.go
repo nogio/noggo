@@ -30,10 +30,9 @@ func Driver() (driver.LoggerDriver) {
 
 
 
-//打开日志器
-func (logger *DefaultLoggerDriver) Connect(config Map) (driver.LoggerConnect) {
-	//新建日志器连接
-	return &DefaultConnect{
+//连接驱动
+func (logger *DefaultLoggerDriver) Connect(config Map) (error,driver.LoggerConnect) {
+	return nil,&DefaultConnect{
 		config: config,
 	}
 }

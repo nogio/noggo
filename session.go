@@ -77,7 +77,7 @@ func (global *sessionGlobal) Driver(name string, config driver.SessionDriver) {
 
 
 //连接驱动
-func (global *sessionGlobal) connect(config *sessionConfig) (driver.SessionConnect) {
+func (global *sessionGlobal) connect(config *sessionConfig) (error,driver.SessionConnect) {
 	if sessionDriver,ok := global.drivers[config.Driver]; ok {
 		return sessionDriver.Connect(config.Config)
 	} else {

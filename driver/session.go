@@ -7,7 +7,7 @@ import (
 type (
 	//会话驱动
 	SessionDriver interface {
-		Connect(config Map) (SessionConnect)
+		Connect(config Map) (error,SessionConnect)
 	}
 	//会话连接
 	SessionConnect interface {

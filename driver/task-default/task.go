@@ -48,9 +48,9 @@ func Driver() (driver.TaskDriver) {
 
 
 
-//连接任务驱动
-func (session *DefaultTaskDriver) Connect(config Map) (driver.TaskConnect) {
-	return  &DefaultTaskConnect{
+//连接驱动
+func (session *DefaultTaskDriver) Connect(config Map) (error,driver.TaskConnect) {
+	return nil, &DefaultTaskConnect{
 		config: config, datas: map[string]TaskData{},
 	}
 }

@@ -72,7 +72,7 @@ type (
 )
 
 //HTTP：连接驱动
-func (module *httpGlobal) connect(config *httpConfig) (driver.HttpConnect) {
+func (module *httpGlobal) connect(config *httpConfig) (error,driver.HttpConnect) {
 	if httpDriver,ok := module.drivers[config.Driver]; ok {
 		return httpDriver.Connect(config.Config)
 	} else {
@@ -627,11 +627,14 @@ func (module *httpModule) runSession() {
 	}
 
 	//连接会话
-	module.sessionConnect = Session.connect(module.sessionConfig)
+	err,conn := Session.connect(module.sessionConfig)
 
-	if module.sessionConnect == nil {
-		panic("节点HTTP：连接会话失败")
+	if err != nil {
+		panic("节点HTTP：连接会话失败：" + err.Error())
 	} else {
+
+		module.sessionConnect = conn
+
 		//打开会话连接
 		err := module.sessionConnect.Open()
 		if err != nil {
@@ -643,11 +646,14 @@ func (module *httpModule) runSession() {
 func (module *httpModule) runView() {
 
 	module.viewConfig = Config.View
-	module.viewConnect = View.connect(module.viewConfig)
+	err,con := View.connect(module.viewConfig)
 
-	if module.viewConnect == nil {
-		panic("节点HTTP：连接View失败")
+	if err != nil {
+		panic("节点HTTP：连接View失败：" + err.Error())
 	} else {
+
+		module.viewConnect = con
+
 		//打开会话连接
 		err := module.viewConnect.Open()
 		if err != nil {
@@ -658,11 +664,14 @@ func (module *httpModule) runView() {
 func (module *httpModule) runHttp() {
 
 	module.httpConfig = Config.Http
-	module.httpConnect = Http.connect(module.httpConfig)
+	err,con := Http.connect(module.httpConfig)
 
-	if module.httpConnect == nil {
-		panic("节点HTTP：连接失败")
+	if err != nil {
+		panic("节点HTTP：连接失败：" + err.Error())
 	} else {
+
+		module.httpConnect = con
+
 		//打开会话连接
 		err := module.httpConnect.Open()
 		if err != nil {

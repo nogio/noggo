@@ -69,7 +69,7 @@ type (
 )
 
 //计划：连接驱动
-func (module *planGlobal) connect(config *planConfig) (driver.PlanConnect) {
+func (module *planGlobal) connect(config *planConfig) (error,driver.PlanConnect) {
 	if planDriver,ok := module.drivers[config.Driver]; ok {
 		return planDriver.Connect(config.Config)
 	} else {
@@ -571,11 +571,14 @@ func (module *planModule) runSession() {
 	}
 
 	//连接会话
-	module.sessionConnect = Session.connect(module.sessionConfig)
+	err,conn := Session.connect(module.sessionConfig)
 
-	if module.sessionConnect == nil {
-		panic("节点计划：连接会话失败")
+	if err != nil {
+		panic("节点计划：连接会话失败：" + err.Error())
 	} else {
+
+		module.sessionConnect = conn
+
 		//打开会话连接
 		err := module.sessionConnect.Open()
 		if err != nil {
@@ -586,12 +589,15 @@ func (module *planModule) runSession() {
 func (module *planModule) runPlan() {
 
 	module.planConfig = Config.Plan
-	module.planConnect = Plan.connect(module.planConfig)
+	err,con := Plan.connect(module.planConfig)
 
 
-	if module.planConnect == nil {
-		panic("节点计划：连接失败")
+	if err != nil {
+		panic("节点计划：连接失败：" + err.Error())
 	} else {
+
+		module.planConnect = con
+
 		//打开会话连接
 		err := module.planConnect.Open()
 		if err != nil {

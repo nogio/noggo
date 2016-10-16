@@ -36,9 +36,10 @@ var (
 	//日志模块
 	Logger *loggerGlobal
 
-
 	//会话模块
 	Session *sessionGlobal
+
+
 
 	//触发器模块
 	Trigger *triggerGlobal
@@ -58,6 +59,11 @@ var (
 
 	//view
 	View *viewGlobal
+
+
+
+	//数据
+	Data *dataGlobal
 
 )
 
@@ -128,6 +134,8 @@ func init() {
 	}
 
 
+	//数据
+	Data = &dataGlobal{}
 
 	loadConfig()
 	loadLang()
@@ -231,5 +239,35 @@ func Driver(name string, drv Any) {
 		View.Driver(name, v)
 	default:
 		panic("未支持的驱动")
+	}
+}
+
+//注册中间件
+//方便注册各种中间件
+func Middler(call Any) {
+	switch v := call.(type) {
+
+	case TriggerFunc:
+		Trigger.Middler(NewMd5Id(), v)
+	case func(*TriggerContext):
+		Trigger.Middler(NewMd5Id(), v)
+
+	case TaskFunc:
+		Task.Middler(NewMd5Id(), v)
+	case func(*TaskContext):
+		Task.Middler(NewMd5Id(), v)
+
+	case HttpFunc:
+		Http.Middler(NewMd5Id(), v)
+	case func(*HttpContext):
+		Http.Middler(NewMd5Id(), v)
+
+	case PlanFunc:
+		Plan.Middler(NewMd5Id(), v)
+	case func(*PlanContext):
+		Plan.Middler(NewMd5Id(), v)
+
+	default:
+		panic("未支持的中间件")
 	}
 }

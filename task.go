@@ -138,7 +138,7 @@ type (
 
 
 //连接驱动
-func (global *taskGlobal) connect(config *taskConfig) (driver.TaskConnect) {
+func (global *taskGlobal) connect(config *taskConfig) (error,driver.TaskConnect) {
 	if taskDriver,ok := global.drivers[config.Driver]; ok {
 		return taskDriver.Connect(config.Config)
 	} else {
@@ -193,11 +193,14 @@ func (global *taskGlobal) initSession() {
 	}
 
 	//连接会话
-	global.sessionConnect = Session.connect(global.sessionConfig)
+	err,conn := Session.connect(global.sessionConfig)
 
-	if global.sessionConnect == nil {
-		panic("任务：连接会话失败")
+	if err != nil {
+		panic("任务：连接会话失败：" + err.Error())
 	} else {
+
+		global.sessionConnect = conn
+
 		//打开会话连接
 		err := global.sessionConnect.Open()
 		if err != nil {
@@ -211,11 +214,14 @@ func (global *taskGlobal) initTask() {
 
 	//先拿到默认的配置
 	global.taskConfig = Config.Task
-	global.taskConnect = global.connect(global.taskConfig)
+	err,con := global.connect(global.taskConfig)
 
-	if global.taskConnect == nil {
-		panic("任务：连接失败")
+	if err != nil {
+		panic("任务：连接失败：" + err.Error())
 	} else {
+
+		global.taskConnect = con
+
 		err := global.taskConnect.Open()
 		if err != nil {
 			panic("任务：打开失败 " + err.Error())

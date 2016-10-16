@@ -51,9 +51,9 @@ func Driver() (driver.SessionDriver) {
 
 
 
-//连接会话驱动
-func (session *DefaultDriver) Connect(config Map) (driver.SessionConnect) {
-	return  &DefaultConnect{
+//连接
+func (session *DefaultDriver) Connect(config Map) (error,driver.SessionConnect) {
+	return nil,&DefaultConnect{
 		config: config, sessions: map[string]DefaultSessionValue{},
 	}
 }

@@ -46,8 +46,8 @@ func Driver(roots ...string) (driver.ViewDriver) {
 
 
 //连接驱动
-func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect) {
-	return  &DefaultViewConnect{
+func (driver *DefaultViewDriver) Connect(config Map) (error,driver.ViewConnect) {
+	return nil,&DefaultViewConnect{
 		config: config, root: driver.root,
 	}
 }
