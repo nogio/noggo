@@ -150,9 +150,9 @@ func (node *Noggo) Add(name string, call Any) {
 		Task.Add(name, v)
 
 	case HttpFunc:
-		node.Http.All(name, v)
+		node.Http.Any(name, v)
 	case func(*HttpContext):
-		node.Http.All(name, v)
+		node.Http.Any(name, v)
 	case PlanFunc:
 		node.Plan.Add(name, v)
 	case func(*PlanContext):
@@ -161,9 +161,9 @@ func (node *Noggo) Add(name string, call Any) {
 }
 
 
-//注册all方法
-func (node *Noggo) All(path string, call HttpFunc) {
-	node.Http.All(path, call)
+//注册Any方法
+func (node *Noggo) Any(path string, call HttpFunc) {
+	node.Http.Any(path, call)
 }
 //注册get方法
 func (node *Noggo) Get(path string, call HttpFunc) {

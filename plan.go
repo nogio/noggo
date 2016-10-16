@@ -524,6 +524,9 @@ type (
 		nexts []PlanFunc		//方法列表
 		next int				//下一个索引
 
+		req *driver.PlanRequest
+		res driver.PlanResponse
+
 		//基础
 		Id	string			//Session Id  会话时使用
 		Session Map			//存储Session值
@@ -1022,24 +1025,27 @@ func newPlanModule(node *Noggo) (*planModule) {
 
 
 //创建Plan上下文
-func (module *planModule) newPlanContext(id string, name string, time string, value Map) (*PlanContext) {
+//func (module *planModule) newPlanContext(id string, name string, time string, value Map) (*PlanContext) {
+func (module *planModule) newPlanContext(req *driver.PlanRequest, res driver.PlanResponse) (*PlanContext) {
 	return &PlanContext{
 		Node: module.node, Module: module,
-
 		next: -1, nexts: []PlanFunc{},
 
-		Id: id, Name: name, Config: nil, Branchs:nil,
+		req: req, res: res,
 
-		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
+		Id: req.Id, Name: req.Name, Config: nil, Branchs:nil,
+
+		Value: req.Value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
 }
 
 
 
 //计划Plan  请求开始
-func (module *planModule) servePlan(id string, name string, time string, value Map) {
+//func (module *planModule) servePlan(id string, name string, time string, value Map) {
+func (module *planModule) servePlan(req *driver.PlanRequest, res driver.PlanResponse) {
 
-	ctx := module.newPlanContext(id, name, time, value)
+	ctx := module.newPlanContext(req, res)
 
 	ctx.handler(module.contextRequest)
 	//最终所有的响应处理，优先
@@ -1732,14 +1738,14 @@ func (module *planModule) contextResponder(ctx *PlanContext) {
 
 /* 默认响应器 begin */
 func (module *planModule) finishResponder(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (module *planModule) replanResponder(ctx *PlanContext) {
 	body := ctx.Body.(planBodyReplan)
-	module.planConnect.Replan(ctx.Id, body.Delay)
+	ctx.res.Replan(ctx.Id, body.Delay)
 }
 func (module *planModule) defaultResponder(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 /* 默认响应器 end */
 
@@ -1749,16 +1755,16 @@ func (module *planModule) defaultResponder(ctx *PlanContext) {
 /* 默认处理器 begin */
 //代码中没有指定相关的处理器，才会执行到默认处理器
 func (module *planModule) foundDefaultHandler(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (module *planModule) errorDefaultHandler(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (module *planModule) failedDefaultHandler(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (module *planModule) deniedDefaultHandler(ctx *PlanContext) {
-	module.planConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 /* 默认处理器 end */
 

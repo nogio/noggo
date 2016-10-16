@@ -14,7 +14,7 @@ import (
 //日志器定义
 type (
 	//驱动
-	DefaultLogger struct {
+	DefaultLoggerDriver struct {
 	}
 	DefaultConnect struct {
 		config Map
@@ -23,15 +23,15 @@ type (
 
 
 //返回驱动
-func Driver() *DefaultLogger {
-	return &DefaultLogger{}
+func Driver() (driver.LoggerDriver) {
+	return &DefaultLoggerDriver{}
 }
 
 
 
 
 //打开日志器
-func (logger *DefaultLogger) Connect(config Map) (driver.LoggerConnect) {
+func (logger *DefaultLoggerDriver) Connect(config Map) (driver.LoggerConnect) {
 	//新建日志器连接
 	return &DefaultConnect{
 		config: config,

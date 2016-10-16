@@ -11,13 +11,7 @@ type (
 		Connect(config Map) (PlanConnect)
 	}
 
-	PlanData struct {
-		Name    string
-		Time    string
-		Value   Map
-	}
-
-	PlanCallback func(string,string,string,Map)
+	PlanAccept func(*PlanRequest, PlanResponse)
 
 	//计划连接
 	PlanConnect interface {
@@ -27,7 +21,7 @@ type (
 		Close() error
 
 		//注册回调
-		Accept(callback PlanCallback) error
+		Accept(PlanAccept) error
 
 		//创建计划
 		Create(name string, time string) error
@@ -38,11 +32,22 @@ type (
 		Start() error
 		//停止计划
 		Stop() error
+	}
 
 
-		//完成计划
+	//计划请求实体
+	PlanRequest struct {
+		Id string
+		Name string
+		Time string
+		Value Map
+	}
+
+	//计划响应接口
+	PlanResponse interface {
+		//完成
 		Finish(id string) error
-		//重开计划
+		//重新开始
 		Replan(id string, delay time.Duration) error
 	}
 )

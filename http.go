@@ -515,8 +515,8 @@ type (
 		next int				//下一个索引
 
 
-		Req	*http.Request
-		Res	http.ResponseWriter
+		req	*http.Request
+		res	http.ResponseWriter
 
 		//基础
 		Id	string			//Session Id  会话时使用
@@ -1101,7 +1101,7 @@ func newHttpModule(node *Noggo) (*httpModule) {
 
 
 //创建Http上下文
-func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Request) (*HttpContext) {
+func (module *httpModule) newHttpContext(req *http.Request, res http.ResponseWriter) (*HttpContext) {
 	method := strings.ToLower(req.Method)
 	host := req.URL.Host
 	path := req.URL.Path
@@ -1111,7 +1111,7 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 		Node: module.node, Module: module,
 		next: -1, nexts: []HttpFunc{},
 
-		Res: res, Req: req,
+		req: req, res: res,
 
 		Method: method, Host: host, Path: path,
 		Ajax: false, Lang: "default",
@@ -1128,8 +1128,8 @@ func (module *httpModule) newHttpContext(res http.ResponseWriter, req *http.Requ
 
 
 //HTTPHttp  请求开始
-func (module *httpModule) serveHttp(res http.ResponseWriter, req *http.Request) {
-	ctx := module.newHttpContext(res, req)
+func (module *httpModule) serveHttp(req *http.Request, res http.ResponseWriter) {
+	ctx := module.newHttpContext(req, res)
 
 	//请求处理
 	ctx.handler(module.contextRoute)
@@ -1258,7 +1258,7 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 func (module *httpModule) contextRequest(ctx *HttpContext) {
 
 	//会话处理相关
-	cookie, err := ctx.Req.Cookie(Config.Http.Cookie)
+	cookie, err := ctx.req.Cookie(Config.Http.Cookie)
 	if err != nil || cookie.Value == "" {
 		ctx.Id = NewMd5Id()
 		err,m := module.sessionConnect.Query(ctx.Id, module.sessionConfig.Expiry)
@@ -1278,7 +1278,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 		if Config.Http.Domain != "" {
 			cookie.Domain = Config.Http.Domain
 		}
-		http.SetCookie(ctx.Res, &cookie)
+		http.SetCookie(ctx.res, &cookie)
 	} else {
 		ctx.Id, _ = url.QueryUnescape(cookie.Value)
 
@@ -1296,7 +1296,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	//如 query form
 
 	//处理Query，不管任何method都要处理
-	if querys, err := url.ParseQuery(ctx.Req.URL.RawQuery); err == nil {
+	if querys, err := url.ParseQuery(ctx.req.URL.RawQuery); err == nil {
 		for k,v := range querys {
 			if len(v) > 1 {
 				ctx.Query[k] = v
@@ -2027,7 +2027,7 @@ func (module *httpModule) deniedDefaultHandler(ctx *HttpContext) {
 /* 响应器 begin */
 func (module *httpModule) gotoResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyGoto)
-	http.Redirect(ctx.Res, ctx.Req, body.Url, http.StatusFound)
+	http.Redirect(ctx.res, ctx.req, body.Url, http.StatusFound)
 }
 func (module *httpModule) textResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyText)
@@ -2036,9 +2036,9 @@ func (module *httpModule) textResponder(ctx *HttpContext) {
 		ctx.Type = "text"
 	}
 
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, body.Text)
+	ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.res.WriteHeader(ctx.Code)
+	fmt.Fprint(ctx.res, body.Text)
 }
 func (module *httpModule) htmlResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyHtml)
@@ -2047,9 +2047,9 @@ func (module *httpModule) htmlResponder(ctx *HttpContext) {
 		ctx.Type = "html"
 	}
 
-	ctx.Res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, body.Html)
+	ctx.res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.res.WriteHeader(ctx.Code)
+	fmt.Fprint(ctx.res, body.Html)
 }
 func (module *httpModule) scriptResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyScript)
@@ -2059,9 +2059,9 @@ func (module *httpModule) scriptResponder(ctx *HttpContext) {
 	}
 
 
-	ctx.Res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, body.Script)
+	ctx.res.Header().Add("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.res.WriteHeader(ctx.Code)
+	fmt.Fprint(ctx.res, body.Script)
 }
 func (module *httpModule) jsonResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyJson)
@@ -2074,7 +2074,7 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 		//又会走到这里，在response中。 继续把response加入调用列表吧。这样保险
 		//这里应该转到error上下文处理
 		//待修改
-		http.Error(ctx.Res, err.Error(), 500)
+		http.Error(ctx.res, err.Error(), 500)
 
 
 	} else {
@@ -2083,9 +2083,9 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 			ctx.Type = "json"
 		}
 
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-		ctx.Res.WriteHeader(ctx.Code)
-		fmt.Fprint(ctx.Res, string(bytes))
+		ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.res.WriteHeader(ctx.Code)
+		fmt.Fprint(ctx.res, string(bytes))
 	}
 }
 func (module *httpModule) xmlResponder(ctx *HttpContext) {
@@ -2095,7 +2095,7 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 	if err != nil {
 		//这里应该转到error上下文处理
 		//待修改
-		http.Error(ctx.Res, err.Error(), 500)
+		http.Error(ctx.res, err.Error(), 500)
 
 	} else {
 
@@ -2103,9 +2103,9 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 			ctx.Type = "xml"
 		}
 
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-		ctx.Res.WriteHeader(ctx.Code)
-		fmt.Fprint(ctx.Res, string(bytes))
+		ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.res.WriteHeader(ctx.Code)
+		fmt.Fprint(ctx.res, string(bytes))
 	}
 }
 func (module *httpModule) fileResponder(ctx *HttpContext) {
@@ -2113,9 +2113,9 @@ func (module *httpModule) fileResponder(ctx *HttpContext) {
 
 	//加入自定义文件名
 	if body.Name != "" {
-		ctx.Res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
+		ctx.res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
 	}
-	http.ServeFile(ctx.Res, ctx.Req, body.File)
+	http.ServeFile(ctx.res, ctx.req, body.File)
 }
 func (module *httpModule) downResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
@@ -2124,13 +2124,13 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 
 	body := ctx.Body.(httpBodyDown)
 
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 	//加入自定义文件名
 	if body.Name != "" {
-		ctx.Res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
+		ctx.res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
 	}
-	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, body.Body)
+	ctx.res.WriteHeader(ctx.Code)
+	fmt.Fprint(ctx.res, body.Body)
 }
 func (module *httpModule) viewResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
@@ -2160,12 +2160,12 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 
 		//这里应该转到error上下文处理
 		//待修改
-		http.Error(ctx.Res, err.Error(), 500)
+		http.Error(ctx.res, err.Error(), 500)
 
 	} else {
-		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-		ctx.Res.WriteHeader(ctx.Code)
-		fmt.Fprint(ctx.Res, html)
+		ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.res.WriteHeader(ctx.Code)
+		fmt.Fprint(ctx.res, html)
 	}
 
 }
@@ -2174,9 +2174,9 @@ func (module *httpModule) defaultResponder(ctx *HttpContext) {
 		ctx.Type = "down"
 	}
 
-	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
-	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, ctx.Body)
+	ctx.res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	ctx.res.WriteHeader(ctx.Code)
+	fmt.Fprint(ctx.res, ctx.Body)
 }
 /* 响应器 end */
 
@@ -2378,14 +2378,14 @@ func (ctx *HttpContext) View(view string, models ...Map) {
 func (ctx *HttpContext) Ip() string {
 	ip := "127.0.0.1"
 
-	if realIp := ctx.Req.Header.Get("X-Real-IP"); realIp != "" {
+	if realIp := ctx.req.Header.Get("X-Real-IP"); realIp != "" {
 		ip = realIp
-	} else if forwarded := ctx.Req.Header.Get("x-forwarded-for"); forwarded != "" {
+	} else if forwarded := ctx.req.Header.Get("x-forwarded-for"); forwarded != "" {
 		ip = forwarded
 	} else {
 		//GO默认带端口,要去掉端口
 		//如果是IPV6,应该不要去,这个以后要判断处理
-		ip := ctx.Req.RemoteAddr
+		ip := ctx.req.RemoteAddr
 		pos := strings.Index(ip, ":")
 		if (pos >= 0) {
 			ip = ip[0:pos]
@@ -2428,7 +2428,7 @@ func (module *httpModule) Use(call HttpFunc) {
 
 
 //注册all方法
-func (module *httpModule) All(path string, call HttpFunc) {
+func (module *httpModule) Any(path string, call HttpFunc) {
 	module.Route(NewMd5Id(), Map{
 		"uri": path,
 		"route": Map{

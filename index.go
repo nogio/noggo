@@ -200,3 +200,36 @@ func readJsonFile(filename string) (error,Map) {
 	}
 	return errors.New("读取失败"), nil
 }
+
+
+
+
+
+
+
+//-------------------------------- 语法糖 ----------------------------------------
+
+
+//---------------------------------------------------------- 语法糖 begin ----------------------------------------------------------
+
+
+//注册驱动
+//方便注册各种驱动
+func Driver(name string, drv Any) {
+	switch v := drv.(type) {
+	case driver.LoggerDriver:
+		Logger.Driver(name, v)
+	case driver.SessionDriver:
+		Session.Driver(name, v)
+	case driver.TaskDriver:
+		Task.Driver(name, v)
+	case driver.PlanDriver:
+		Plan.Driver(name, v)
+	case driver.HttpDriver:
+		Http.Driver(name, v)
+	case driver.ViewDriver:
+		View.Driver(name, v)
+	default:
+		panic("未支持的驱动")
+	}
+}

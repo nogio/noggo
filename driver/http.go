@@ -12,7 +12,7 @@ type (
 		Connect(config Map) (HttpConnect)
 	}
 
-	HttpAcceptCall func(res http.ResponseWriter, req *http.Request)
+	HttpAccept func(req *http.Request, res http.ResponseWriter)
 
 	//HTTP连接
 	HttpConnect interface {
@@ -22,7 +22,7 @@ type (
 		Close() error
 
 		//注册回调
-		Accept(call HttpAcceptCall) error
+		Accept(call HttpAccept) error
 
 		//开始
 		Start(addr string) error

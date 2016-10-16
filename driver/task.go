@@ -11,13 +11,8 @@ type (
 		Connect(config Map) (TaskConnect)
 	}
 
-	TaskCallback func(string,string,time.Duration,Map)
-
-	TaskData struct {
-		Name    string
-		Delay   time.Duration
-		Value   Map
-	}
+	//回调函数
+	TaskAccept func(*TaskRequest, TaskResponse)
 
 	//任务连接
 	TaskConnect interface {
@@ -28,7 +23,7 @@ type (
 
 
 		//注册回调
-		Accept(callback TaskCallback) error
+		Accept(TaskAccept) error
 
 
 		//开始任务
@@ -39,7 +34,18 @@ type (
 
 		//触发任务
 		After(name string, delay time.Duration, value Map) error
+	}
 
+	//任务请求实体
+	TaskRequest struct {
+		Id string
+		Name string
+		Delay time.Duration
+		Value Map
+	}
+
+	//任务响应接口
+	TaskResponse interface {
 		//完成任务
 		Finish(id string) error
 		//重新开始任务

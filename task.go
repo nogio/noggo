@@ -102,6 +102,9 @@ type (
 		nexts []TaskFunc		//方法列表
 		next int				//下一个索引
 
+		req *driver.TaskRequest
+		res driver.TaskResponse
+
 		//基础
 		Id	string			//Session Id  会话时使用
 		Session Map			//存储Session值
@@ -443,22 +446,25 @@ func (global *taskGlobal) DeniedHandler(name string, call TaskFunc) {
 
 
 //创建Task上下文
-func (global *taskGlobal) newTaskContext(id string, name string, delay time.Duration, value Map) (*TaskContext) {
+//func (global *taskGlobal) newTaskContext(id string, name string, delay time.Duration, value Map) (*TaskContext) {
+func (global *taskGlobal) newTaskContext(req *driver.TaskRequest, res driver.TaskResponse) (*TaskContext) {
 	return &TaskContext{
 		Global: global,
 		next: -1, nexts: []TaskFunc{},
 
-		Id: id, Name: name, Config: nil, Branchs:nil,
+		req: req, res: res,
 
-		Delay: delay, Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
+		Id: req.Id, Name: req.Name, Config: nil, Branchs:nil,
+		Delay: req.Delay, Value: Map{}, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
 	}
 }
 
 
 
 //任务Task  请求开始
-func (global *taskGlobal) serveTask(id string, name string, delay time.Duration, value Map) {
-	ctx := global.newTaskContext(id, name, delay, value)
+//func (global *taskGlobal) serveTask(id string, name string, delay time.Duration, value Map) {
+func (global *taskGlobal) serveTask(req *driver.TaskRequest, res driver.TaskResponse) {
+	ctx := global.newTaskContext(req, res)
 
 	//请求处理
 	ctx.handler(global.contextRequest)
@@ -1205,7 +1211,7 @@ func (global *taskGlobal) contextResponder(ctx *TaskContext) {
 /* 默认响应器 begin */
 func (global *taskGlobal) finishResponder(ctx *TaskContext) {
 	//通知驱动，任务完成
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 
 //目前直接调度，可调整，以后做到task中统一调整
@@ -1214,11 +1220,11 @@ func (global *taskGlobal) finishResponder(ctx *TaskContext) {
 func (global *taskGlobal) retaskResponder(ctx *TaskContext) {
 	body := ctx.Body.(taskBodyRetask)
 	//重新处理任务
-	global.taskConnect.Retask(ctx.Id, body.Delay)
+	ctx.res.Retask(ctx.Id, body.Delay)
 }
 func (global *taskGlobal) defaultResponder(ctx *TaskContext) {
 	//默认处理器， 一般执行不到。 默认完成吧
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 /* 默认响应器 end */
 
@@ -1229,19 +1235,19 @@ func (global *taskGlobal) defaultResponder(ctx *TaskContext) {
 //代码中没有指定相关的处理器，才会执行到默认处理器
 func (global *taskGlobal) foundDefaultHandler(ctx *TaskContext) {
 	//当找不到任务时，应当通知驱动，完成此任务，以免重复调用
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (global *taskGlobal) errorDefaultHandler(ctx *TaskContext) {
 	//出错，此任务就完成了
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (global *taskGlobal) failedDefaultHandler(ctx *TaskContext) {
 	//出错，此任务就完成了
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 func (global *taskGlobal) deniedDefaultHandler(ctx *TaskContext) {
 	//出错，此任务就完成了
-	global.taskConnect.Finish(ctx.Id)
+	ctx.res.Finish(ctx.Id)
 }
 /* 默认处理器 end */
 

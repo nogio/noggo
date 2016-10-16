@@ -6,35 +6,42 @@ import (
 	"github.com/nogio/noggo/driver"
 	"time"
 	"errors"
-	"github.com/anacrolix/sync"
+	"sync"
 )
 
 
 
 
 type (
-	//会话驱动
+	//驱动
 	DefaultTaskDriver struct {}
-	//会话连接
+	//连接
 	DefaultTaskConnect struct {
 		mutex   sync.Mutex
 		config      Map
-		callback    driver.TaskCallback
-		datas       map[string]driver.TaskData
+		callback    driver.TaskAccept
+
+		datas       map[string]TaskData
+	}
+	//响应对象
+	DefaultTaskResponse struct {
+		connect *DefaultTaskConnect
+	}
+
+
+	TaskData struct{
+		Name    string
+		Delay   time.Duration
+		Value   Map
 	}
 )
 
 
 
 //返回驱动
-func Driver() *DefaultTaskDriver {
+func Driver() (driver.TaskDriver) {
 	return &DefaultTaskDriver{}
 }
-
-
-
-
-
 
 
 
@@ -44,19 +51,9 @@ func Driver() *DefaultTaskDriver {
 //连接任务驱动
 func (session *DefaultTaskDriver) Connect(config Map) (driver.TaskConnect) {
 	return  &DefaultTaskConnect{
-		config: config, datas: map[string]driver.TaskData{},
+		config: config, datas: map[string]TaskData{},
 	}
 }
-
-
-
-
-
-
-
-
-
-
 
 
 //打开连接
@@ -70,15 +67,11 @@ func (connect *DefaultTaskConnect) Close() error {
 }
 
 
-
-
 //注册回调
-func (connect *DefaultTaskConnect) Accept(callback driver.TaskCallback) error {
+func (connect *DefaultTaskConnect) Accept(callback driver.TaskAccept) error {
 	connect.callback = callback
 	return nil
 }
-
-
 
 //开始
 func (connect *DefaultTaskConnect) Start() error {
@@ -101,21 +94,21 @@ func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value
 		return errors.New("未注册回调")
 	}
 
-	connect.mutex.Lock()
-	defer connect.mutex.Unlock()
 
 	//新建任务
 	id := NewMd5Id()
-	task := driver.TaskData{
+	task := TaskData{
 		Name: name, Delay: delay, Value: value,
 	}
 
 	//保存任务
+	connect.mutex.Lock()
 	connect.datas[id] = task
+	connect.mutex.Unlock()
 
 	//直接回调
 	time.AfterFunc(delay, func() {
-		connect.callback(id,task.Name, task.Delay, task.Value)
+		connect.execute(id, task.Name, task.Delay, task.Value)
 	})
 
 	return nil
@@ -123,32 +116,78 @@ func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value
 
 
 
+//执行统一到这里
+func (connect *DefaultTaskConnect) execute(id string, name string, delay time.Duration, value Map) {
+	req := &driver.TaskRequest{ Id: id, Name: name, Delay: delay, Value: value }
+	res := &DefaultTaskResponse{ connect }
+	connect.callback(req, res)
+}
+
+
+
+
 
 
 //完成任务，从列表中清理
-func (connect *DefaultTaskConnect) Finish(id string) error {
+func (connect *DefaultTaskConnect) finish(id string) error {
+	//从数据中删除
 	connect.mutex.Lock()
-	defer connect.mutex.Unlock()
-
-	//从列表中删除
-	//三方驱动， 应该做一些持久化的处理
-	//更新掉此任务已经完成
 	delete(connect.datas, id)
+	connect.mutex.Unlock()
 
 	return nil
 }
 //重开任务
-func (connect *DefaultTaskConnect) Retask(id string, delay time.Duration) error {
+func (connect *DefaultTaskConnect) retask(id string, delay time.Duration) error {
 	if task,ok := connect.datas[id]; ok {
 
 		//更新一下任务信息
+		connect.mutex.Lock()
 		task.Delay = delay
 		connect.datas[id] = task
+		connect.mutex.Unlock()
 
 		time.AfterFunc(delay, func() {
-			connect.callback(id, task.Name, task.Delay, task.Value)
+			connect.execute(id, task.Name, task.Delay, task.Value)
 		})
 	}
 
 	return errors.New("任务不存在")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//完成任务，从列表中清理
+func (res *DefaultTaskResponse) Finish(id string) error {
+	return res.connect.finish(id)
+}
+//重开任务
+func (res *DefaultTaskResponse) Retask(id string, delay time.Duration) error {
+	return res.connect.retask(id, delay)
 }

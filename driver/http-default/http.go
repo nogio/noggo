@@ -14,14 +14,14 @@ type (
 	//连接
 	DefaultHttpConnect struct {
 		config Map
-		execute driver.HttpAcceptCall    //func(res http.ResponseWriter, req *http.Request)
+		execute driver.HttpAccept    //func(req *http.Request, res http.ResponseWriter)
 		server *http.Server
 	}
 )
 
 
 //返回驱动
-func Driver() *DefaultHttpDriver {
+func Driver() (driver.HttpDriver) {
 	return &DefaultHttpDriver{}
 }
 
@@ -30,7 +30,7 @@ func Driver() *DefaultHttpDriver {
 
 
 //连接
-func (driver *DefaultHttpDriver) Connect(config Map) (driver.HttpConnect) {
+func (drv *DefaultHttpDriver) Connect(config Map) (driver.HttpConnect) {
 	//新建连接
 	return &DefaultHttpConnect{
 		config: config,
@@ -64,7 +64,7 @@ func (connect *DefaultHttpConnect) Close() error {
 
 
 //监听
-func (connect *DefaultHttpConnect) Accept(execute driver.HttpAcceptCall) error {
+func (connect *DefaultHttpConnect) Accept(execute driver.HttpAccept) error {
 	connect.execute = execute
 	return nil
 }
@@ -105,6 +105,6 @@ func (connect *DefaultHttpConnect) ServeHTTP(res http.ResponseWriter, req *http.
 	if connect.execute == nil {
 		panic("未监听http请求")
 	}
-	connect.execute(res, req)
+	connect.execute(req, res)
 }
 

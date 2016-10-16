@@ -37,7 +37,7 @@ type (
 
 
 //返回驱动
-func Driver() *DefaultDriver {
+func Driver() (driver.SessionDriver) {
 	return &DefaultDriver{}
 }
 

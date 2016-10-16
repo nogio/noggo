@@ -24,7 +24,7 @@ type (
 
 
 //返回驱动
-func Driver(roots ...string) *DefaultViewDriver {
+func Driver(roots ...string) (driver.ViewDriver) {
 	root := "views"
 	if len(roots) > 0 {
 		root = roots[0]
@@ -45,7 +45,7 @@ func Driver(roots ...string) *DefaultViewDriver {
 
 
 
-//连接会话驱动
+//连接驱动
 func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect) {
 	return  &DefaultViewConnect{
 		config: config, root: driver.root,
