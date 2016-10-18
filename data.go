@@ -11,10 +11,22 @@ type (
 		mutex       sync.Mutex
 		drivers     map[string]driver.DataDriver
 
+		//数据连接
+		connects    map[string]driver.DataConnect
+
 		models      map[string]map[string]Map
 	}
 )
 
+
+//连接驱动
+func (global *dataGlobal) connect(config *dataConfig) (error,driver.DataConnect) {
+	if dataDriver,ok := global.drivers[config.Driver]; ok {
+		return dataDriver.Connect(config.Config)
+	} else {
+		panic("数据：不支持的驱动 " + config.Driver)
+	}
+}
 
 
 //注册数据驱动
@@ -31,14 +43,68 @@ func (global *dataGlobal) Driver(name string, config driver.DataDriver) {
 }
 
 
-//连接驱动
-func (global *dataGlobal) connect(config *dataConfig) (error,driver.DataConnect) {
-	if dataDriver,ok := global.drivers[config.Driver]; ok {
-		return dataDriver.Connect(config.Config)
-	} else {
-		panic("数据：不支持的驱动 " + config.Driver)
+
+
+
+
+
+
+
+
+//数据初始化
+func (global *dataGlobal) init() {
+	global.initData()
+}
+func (global *dataGlobal) initData() {
+
+	//遍历数据配置
+	for name,config := range Config.Data {
+		err,conn := global.connect(config)
+		if err != nil {
+			panic("数据：连接失败：" + err.Error())
+		} else {
+			err := conn.Open()
+			if err != nil {
+				panic("数据：打开连接失败：" + err.Error())
+			} else {
+
+				//保存连接
+				global.connects[name] = conn
+
+			}
+		}
 	}
 }
+
+//数据退出
+func (global *dataGlobal) exit() {
+	global.exitData()
+}
+func (global *dataGlobal) exitData() {
+	for _,conn := range global.connects {
+		conn.Close()
+	}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -20,9 +20,9 @@ func (drv *PgsqlDriver) Connect(config Map) (error,driver.DataConnect) {
 		return errors.New("配置不可为空"),nil
 	}
 
-	if url,ok := config["url"]; ok {
+	if url,ok := config["url"].(string); ok {
 
-		return &PgsqlConnect{
+		return nil,&PgsqlConnect{
 			config: config, url: url,
 		}
 

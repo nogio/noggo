@@ -29,5 +29,5 @@ func (db *PgsqlModel) Remove(Map) (error) {
 
 //查询对象
 func (db *PgsqlModel) Entity(key Any) (error,Map) {
-	return nil
+	return nil,Map{}
 }

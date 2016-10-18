@@ -140,9 +140,9 @@ type (
 	configConfig struct {
 		Debug	bool			`json:"debug"`
 
-		Lang	map[string]langConfig	`json:"lang"`
-		Node	map[string]nodeConfig	`json:"node"`
-		Data	map[string]dataConfig	`json:"data"`
+		Lang	map[string]*langConfig	`json:"lang"`
+		Node	map[string]*nodeConfig	`json:"node"`
+		Data	map[string]*dataConfig	`json:"data"`
 
 
 		//日志配置

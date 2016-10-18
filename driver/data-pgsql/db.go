@@ -2,7 +2,6 @@ package data_pgsql
 
 
 import (
-	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
 	"database/sql"
 )

@@ -13,7 +13,7 @@ type (
 		Id		string
 		Name	string
 		Port	string
-		Config	nodeConfig
+		Config	*nodeConfig
 
 		Plan	*planModule
 		Http	*httpModule

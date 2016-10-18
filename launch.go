@@ -21,6 +21,9 @@ func Init() {
 		Plan.init()
 		Http.init()
 		View.init()
+
+		Data.init()
+
 		Logger.Info("noggo is initiating...")
 
 		initialized = true
@@ -36,6 +39,8 @@ func Exit() {
 	for _,node := range nodes {
 		node.End()
 	}
+
+	Data.exit()
 
 	View.exit()
 	Http.exit()

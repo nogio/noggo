@@ -78,8 +78,9 @@ func init() {
 	//设置一个默认的配置
 	Config = &configConfig{
 		Debug: true,
-		Lang: map[string]langConfig{},
-		Node: map[string]nodeConfig{},
+		Lang: map[string]*langConfig{},
+		Node: map[string]*nodeConfig{},
+		Data: map[string]*dataConfig{},
 
 		Logger: &loggerConfig{ Driver: "default", Config: Map{} },
 		Session: &sessionConfig{ Driver: "default", Config: Map{} },
@@ -135,7 +136,10 @@ func init() {
 
 
 	//数据
-	Data = &dataGlobal{}
+	Data = &dataGlobal{
+		drivers: map[string]driver.DataDriver{},
+		connects: map[string]driver.DataConnect{},
+	}
 
 	loadConfig()
 	loadLang()
