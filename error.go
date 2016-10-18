@@ -28,3 +28,8 @@ func NewTypeError(tttt string, text string) (*Error) {
 func NewTypeCodeError(tttt string, code int, text string) (*Error) {
 	return &Error{ tttt, 0, text }
 }
+
+
+func (err Error) Error() (string) {
+	return err.Text
+}

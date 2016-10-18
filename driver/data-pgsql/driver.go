@@ -23,7 +23,7 @@ func (drv *PgsqlDriver) Connect(config Map) (error,driver.DataConnect) {
 	if url,ok := config["url"].(string); ok {
 
 		return nil,&PgsqlConnect{
-			config: config, url: url,
+			config: config, url: url, models: map[string]Map{},
 		}
 
 	} else {

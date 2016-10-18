@@ -18,12 +18,14 @@ type (
 		Open() (error)
 		//关闭数据库连接
 		Close() (error)
+		//注册模型
+		Model(string,Map)
 		//获取数据库对象
-		DB(string) (error,DataDB)
+		Base(string) (error,DataBase)
 	}
 
 	//数据库接口
-	DataDB interface {
+	DataBase interface {
 		Model(name string) (DataModel)
 		Close()
 		Begin() (error,*sql.Tx)

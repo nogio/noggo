@@ -2,11 +2,43 @@ package main
 
 import (
 	"github.com/nogio/noggo"
+	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/middler"
 	"time"
+	_ "github.com/lib/pq"
+	"github.com/nogio/noggo/driver/data-pgsql"
 )
 
 func init() {
+	noggo.Data.Driver("pgsql", data_pgsql.Driver())
+
+
+	noggo.Const.Regular(Map{
+		"string": `^[\S]+$`,
+	})
+
+
+	noggo.Data.Register("test", Map{
+		"name": "测试", "text": "测试表",
+		"schema": "public", "table": "test", "key": "id",   //这行配置可选
+		"fields": Map{
+			"id": Map{
+				"type": "int", "must": false, "name": "编号", "text": "编号",
+			},
+			"title": Map{
+				"type": "string", "must": true, "name": "标题", "text": "标题",
+			},
+			"content": Map{
+				"type": "string", "must": false, "name": "内容", "text": "内容",
+			},
+			"changed": Map{
+				"type": "datetime", "must": true, "auto": time.Now, "name": "修改时间", "text": "修改时间",
+			},
+			"created": Map{
+				"type": "datetime", "must": true, "auto": time.Now, "name": "创建时间", "text": "创建时间",
+			},
+		},
+	})
 
 }
 
@@ -32,11 +64,19 @@ func main() {
 
 	//Get请求首页
 	nog.Get("/", func(ctx *noggo.HttpContext) {
-		ctx.Data["msg"] = "这是什么消息"
-		ctx.View("index")
+
+
+		db := noggo.Data.Base("main")
+		err,item := db.Model("test").Create(Map{
+			"title": "标题哦", "content": "内容哦",
+		})
+
+		noggo.Logger.Debug("data", err, item)
+
+		ctx.Json(item)
 
 		//3秒后开始一个任务
-		noggo.Task.After("test", time.Second*3)
+		//noggo.Task.After("test", time.Second*3)
 
 		//返回一段文本给客户端
 		//ctx.Text("hello noggo")

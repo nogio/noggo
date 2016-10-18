@@ -68,6 +68,17 @@ func (global *dataGlobal) initData() {
 				panic("数据：打开连接失败：" + err.Error())
 			} else {
 
+				//注册模型
+				//先全局
+				for k,v := range global.models[ConstNodeGlobal] {
+					conn.Model(k, v)
+				}
+				//再库
+				for k,v := range global.models[name] {
+					conn.Model(k, v)
+				}
+
+
 				//保存连接
 				global.connects[name] = conn
 
@@ -137,6 +148,16 @@ func (global *dataGlobal) Register(name string, config Map) {
 
 
 //返回DB对象
-func (global *dataGlobal) DB(name string) (driver.DataDB) {
-	return nil
+func (global *dataGlobal) Base(name string) (driver.DataBase) {
+	if conn,ok := global.connects[name]; ok {
+		err,db := conn.Base(name)
+		if err != nil {
+			panic("数据：打开DB失败：" + err.Error())
+		} else {
+			//返回
+			return db
+		}
+	} else {
+		panic("数据：未定义的数据库")
+	}
 }

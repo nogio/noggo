@@ -16,6 +16,8 @@ type (
 		db  *sql.DB
 		//连接串
 		url string
+		//模型
+		models  map[string]Map
 	}
 )
 
@@ -40,6 +42,12 @@ func (conn *PgsqlConnect) Close() error {
 }
 
 
-func (conn *PgsqlConnect) DB(name string) (error,driver.DataDB) {
-	return nil,nil
+//注册模型
+func (conn *PgsqlConnect) Model(name string, config Map) {
+	conn.models[name] = config
+}
+
+
+func (conn *PgsqlConnect) Base(name string) (error,driver.DataBase) {
+	return nil,&PgsqlBase{name, conn, conn.models, conn.db, nil}
 }
