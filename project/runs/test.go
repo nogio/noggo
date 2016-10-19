@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/nogio/noggo"
+	_ "github.com/nogio/noggo/library"
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/middler"
 	"time"
@@ -10,14 +11,10 @@ import (
 )
 
 func init() {
+	//注册pgsql数据驱动
 	noggo.Data.Driver("pgsql", data_pgsql.Driver())
 
-
-	noggo.Const.Regular(Map{
-		"string": `^[\S]+$`,
-	})
-
-
+	//注册数据模型
 	noggo.Data.Register("test", Map{
 		"name": "测试", "text": "测试表",
 		"schema": "public", "table": "test", "key": "id",   //这行配置可选
@@ -66,13 +63,14 @@ func main() {
 	nog.Get("/", func(ctx *noggo.HttpContext) {
 
 
-		db := noggo.Data.Base("main")
-		err,item := db.Model("test").Create(Map{
+		db := noggo.Data.Base("main"); defer db.Close()
+		_,item := db.Model("test").Create(Map{
 			"title": "标题哦", "content": "内容哦",
 		})
 
-		noggo.Logger.Debug("data", err, item)
-
+		_,item = db.Model("test").Change(item, Map{
+			"title": "改过的标题算么", "changed": time.Now(),
+		})
 		ctx.Json(item)
 
 		//3秒后开始一个任务

@@ -157,12 +157,12 @@ func loadLang() {
 	//加载多语言
 	err, cfg := readJsonFile(fmt.Sprintf("langs/%v.json", ConstLangDefault))
 	if err == nil {
-		Const.Lang(ConstLangDefault, cfg)
+		Const.Langs(ConstLangDefault, cfg)
 	}
 	for k,_ := range Config.Lang {
 		err, cfg := readJsonFile(fmt.Sprintf("langs/%v.json", k))
 		if err == nil {
-			Const.Lang(k, cfg)
+			Const.Langs(k, cfg)
 		}
 	}
 }

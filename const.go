@@ -15,8 +15,6 @@ const (
 	ConstNodeGlobal		= "$global$"
 
 
-
-
 	KeySign				= "noggo.sign."
 	KeySignId			= "id"
 	KeySignName			= "name"
@@ -68,16 +66,38 @@ type (
 
 
 //注册mime
-func (global *constGlobal) Mime(mimes Map) {
+func (global *constGlobal) Mime(name string, values ...string) (string) {
 	if global.mimes == nil {
 		global.mimes = map[string]string{}
 	}
-	for k,v := range mimes {
-		switch vvvv := v.(type) {
-		case string:
-			global.mimes[k] = vvvv
+
+	if len(values) > 0 {
+		global.mimes[name] = values[0]
+		return values[0]
+	} else {
+
+		if v,ok := global.mimes[name]; ok {
+			return v
+		} else {
+			return ""
 		}
 	}
+}
+func (global *constGlobal) Mimes(args ...Map) (map[string]string) {
+	if global.mimes == nil {
+		global.mimes = map[string]string{}
+	}
+
+	if len(args) > 0 {
+		for k,v := range args[0] {
+			switch vvvv := v.(type) {
+			case string:
+				global.mimes[k] = vvvv
+			}
+		}
+	}
+
+	return global.mimes
 }
 //获取mimetype
 func (global *constGlobal) MimeType(name string) string {
@@ -90,17 +110,42 @@ func (global *constGlobal) MimeType(name string) string {
 
 
 //注册State
-func (global *constGlobal) State(states Map) {
+func (global *constGlobal) State(name string, codes ...int) (int) {
 	if global.states == nil {
 		global.states = map[string]int{}
 	}
-	for k,v := range states {
-		switch vvvv := v.(type) {
-		case int:
-			global.states[k] = vvvv
+
+
+	if len(codes) > 0 {
+		global.states[name] = codes[0]
+		return codes[0]
+	} else {
+
+		if v,ok := global.states[name]; ok {
+			return v
+		} else {
+			return 0
 		}
 	}
 }
+
+func (global *constGlobal) States(args ...Map) (map[string]int) {
+	if global.states == nil {
+		global.states = map[string]int{}
+	}
+
+	if len(args) > 0 {
+		for k,v := range args[0] {
+			switch vvvv := v.(type) {
+			case int:
+				global.states[k] = vvvv
+			}
+		}
+	}
+
+	return global.states
+}
+
 //获取获取码
 func (global *constGlobal) StateCode(name string) int {
 	if v,ok := global.states[name]; ok {
@@ -111,7 +156,19 @@ func (global *constGlobal) StateCode(name string) int {
 }
 
 //注册Regular
-func (global *constGlobal) Regular(regulars Map) {
+func (global *constGlobal) Regular(name string, value Any) {
+	if global.regulars == nil {
+		global.regulars = map[string][]string{}
+	}
+	switch vvvv := value.(type) {
+	case string:
+		global.regulars[name] = []string{ vvvv }
+	case []string:
+		global.regulars[name] = vvvv
+	}
+}
+//注册Regular
+func (global *constGlobal) Regulars(regulars Map) {
 	if global.regulars == nil {
 		global.regulars = map[string][]string{}
 	}
@@ -124,6 +181,7 @@ func (global *constGlobal) Regular(regulars Map) {
 		}
 	}
 }
+
 //获取正则的值
 func (global *constGlobal) RegularExp(name string) []string {
 	if v,ok := global.regulars[name]; ok {
@@ -136,8 +194,8 @@ func (global *constGlobal) RegularExp(name string) []string {
 
 
 
-//注册String
-func (global *constGlobal) Lang(lang string, strings Map) {
+//注册Lang
+func (global *constGlobal) Lang(lang string, name string, values ...string) (string) {
 	if global.langs == nil {
 		global.langs = map[string]map[string]string{}
 	}
@@ -146,14 +204,43 @@ func (global *constGlobal) Lang(lang string, strings Map) {
 	}
 
 
-	for k,v := range strings {
-		switch vvvv := v.(type) {
-		case string:
-			global.langs[lang][k] = vvvv
+	if len(values) > 0 {
+		global.langs[lang][name] = values[0]
+		return values[0]
+	} else {
+		if v,ok := global.langs[lang][name]; ok {
+			return v
+		} else {
+			return ""
 		}
 	}
 }
+func (global *constGlobal) Langs(lang string, args ...Map) (map[string]string) {
+	if global.langs == nil {
+		global.langs = map[string]map[string]string{}
+	}
+	if global.langs[lang] == nil {
+		global.langs[lang] = map[string]string{}
+	}
+
+	if len(args) > 0 {
+		for k,v := range args[0] {
+			switch vvvv := v.(type) {
+			case string:
+				global.langs[lang][k] = vvvv
+			}
+		}
+	}
+
+	return global.langs[lang]
+}
+
+
+
+
+
 //获取语言字串
+//(key, lang)
 func (global *constGlobal) LangString(name string, langs ...string) string {
 	lang := ConstLangDefault
 	if len(langs) > 0 {
