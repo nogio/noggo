@@ -35,13 +35,6 @@ type (
 		middlers    map[string]TriggerFunc
 		middlerNames []string
 
-
-
-		//会话配置与连接
-		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
-
-
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
@@ -53,6 +46,12 @@ type (
 		//处理器们
 		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TriggerFunc
 		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+
+
+
+		//会话配置与连接
+		sessionConfig   *sessionConfig
+		sessionConnect	driver.SessionConnect
 	}
 
 	//触发器上下文
@@ -124,29 +123,9 @@ func (global *triggerGlobal) init() {
 
 //初始化会话驱动
 func (global *triggerGlobal) initSession() {
-	if Config.Trigger.Session != nil {
-		//使用自定的
-		global.sessionConfig = Config.Trigger.Session
-	} else {
-		//如果触发器中会话配置为空，使用默认的会话配置
-		global.sessionConfig = Config.Session
-	}
-
-	//连接会话
-	err,conn := Session.connect(global.sessionConfig)
-
-	if err !=nil {
-		panic("触发器：连接会话失败：" + err.Error())
-	} else {
-
-		global.sessionConnect = conn
-
-		//打开会话连接
-		err := global.sessionConnect.Open()
-		if err != nil {
-			panic("触发器：打开会话失败 " + err.Error())
-		}
-	}
+	//直接使用全局的会话了
+	global.sessionConfig = Session.sessionConfig
+	global.sessionConnect = Session.sessionConnect
 }
 
 
@@ -158,11 +137,7 @@ func (global *triggerGlobal) exit() {
 }
 //触发器退出，会话
 func (global *triggerGlobal) exitSession() {
-	//关闭会话
-	if global.sessionConnect != nil {
-		global.sessionConnect.Close()
-		global.sessionConnect = nil
-	}
+	//全局会话退出时候会退出，这里不需要
 }
 
 
@@ -460,8 +435,8 @@ func (global *triggerGlobal) contextRequest(ctx *TriggerContext) {
 	ctx.Id = ctx.Name	//使用name做为id，以便在同一个触发器之下共享session
 
 	//会话处理
-	err,m := global.sessionConnect.Query(ctx.Id, global.sessionConfig.Expiry)
-	if err == nil {
+	m,e := global.sessionConnect.Entity(ctx.Id, global.sessionConfig.Expiry)
+	if e == nil {
 		ctx.Session = m
 	} else {
 		ctx.Session = Map{}

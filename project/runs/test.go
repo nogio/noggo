@@ -1,13 +1,12 @@
 package main
 
 import (
-	"github.com/nogio/noggo"
-	_ "github.com/nogio/noggo/library"
 	. "github.com/nogio/noggo/base"
+	_ "github.com/nogio/noggo/native"
+	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/middler"
-	"time"
-	_ "github.com/lib/pq"
 	"github.com/nogio/noggo/driver/data-pgsql"
+	"time"
 )
 
 func init() {
@@ -64,13 +63,17 @@ func main() {
 
 
 		db := noggo.Data.Base("main"); defer db.Close()
-		_,item := db.Model("test").Create(Map{
+
+		item,_ := db.Model("test").Create(Map{
 			"title": "标题哦", "content": "内容哦",
 		})
 
-		_,item = db.Model("test").Change(item, Map{
+		item,_ = db.Model("test").Change(item, Map{
 			"title": "改过的标题算么", "changed": time.Now(),
 		})
+
+		noggo.Event.Publish("test")
+
 		ctx.Json(item)
 
 		//3秒后开始一个任务
@@ -94,6 +97,11 @@ func main() {
 	})
 
 
+	//添加一个事件
+	nog.Add("test", func(ctx *noggo.EventContext) {
+		noggo.Logger.Debug("test事件发生")
+		ctx.Finish()
+	})
 
 	nog.Run(":8080")
 }

@@ -48,6 +48,6 @@ func (conn *PgsqlConnect) Model(name string, config Map) {
 }
 
 
-func (conn *PgsqlConnect) Base(name string) (error,driver.DataBase) {
-	return nil,&PgsqlBase{name, conn, conn.models, conn.db, nil}
+func (conn *PgsqlConnect) Base(name string) (driver.DataBase,error) {
+	return &PgsqlBase{name, conn, conn.models, conn.db, nil, false},nil
 }

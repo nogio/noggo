@@ -2,10 +2,10 @@ package main
 
 import (
 	"github.com/nogio/noggo"
+	_ "github.com/nogio/noggo/native"
 	_ "../bases"
+	_ "../cases"
 	_ "../datas"
-	_ "../globals"
-	_ "../modules"
 	_ "../nodes"
 	"os"
 )

@@ -104,7 +104,7 @@ func (model *PgsqlModel) packing(value Map) Map {
 
 
 //创建对象
-func (model *PgsqlModel) Create(data Map) (error,Map) {
+func (model *PgsqlModel) Create(data Map) (Map,error) {
 
 	//按字段生成值
 	value := Map{}
@@ -112,7 +112,7 @@ func (model *PgsqlModel) Create(data Map) (error,Map) {
 	noggo.Logger.Debug("create", model.fields, data)
 
 	if err != nil {
-		return err,nil
+		return nil,err
 	} else {
 
 		//对拿到的值进行包装，以适合pgsql
@@ -135,47 +135,45 @@ func (model *PgsqlModel) Create(data Map) (error,Map) {
 			i++
 		}
 
-		err,tx := model.base.Begin()
+		err,tx := model.base.begin()
 		if err != nil {
-			return err,nil
+			return nil,err
 		} else {
 
 			sql := fmt.Sprintf(`INSERT INTO "%s"."%s" ("%s") VALUES (%s) RETURNING "id";`, model.schema, model.table, strings.Join(keys, `","`), strings.Join(tags, `,`))
 			row := tx.QueryRow(sql, vals...)
 			if row == nil {
-				return errors.New("数据：插入：无返回行"),nil
+				return nil,errors.New("数据：插入：无返回行")
 			} else {
 
 				id := int64(0)
 				err := row.Scan(&id)
 				if err != nil {
 					//扫描新ID失败
-					return err,nil
+					return nil,err
 				} else {
 					value["id"] = id
 
 					//提交事务
 					err := model.base.Submit()
 					if err != nil {
-						return err,nil
+						return nil,err
 					} else {
 
 						//这里应该有触发器
 
 						//成功了
-						return nil,value
+						return value,nil
 
 					}
 				}
 			}
 		}
 	}
-
-	return errors.New("数据：创建失败"),nil
 }
 
 //修改对象
-func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
+func (model *PgsqlModel) Change(item Map, data Map) (Map,error) {
 
 
 	//按字段生成值
@@ -184,7 +182,7 @@ func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
 	noggo.Logger.Debug("change", "mapping", err)
 
 	if err != nil {
-		return err,nil
+		return nil,err
 	} else {
 
 		//包装值，因为golang本身数据类型和数据库的不一定对版
@@ -208,9 +206,9 @@ func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
 		vals = append(vals, item[model.key])
 
 		//开启事务
-		err, tx := model.base.Begin()
+		err, tx := model.base.begin()
 		if err != nil {
-			return err,nil
+			return nil,err
 		} else {
 
 			//更新数据库
@@ -218,7 +216,7 @@ func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
 			_, err := tx.Exec(sql, vals...)
 			noggo.Logger.Debug("change", "exec", err)
 			if err != nil {
-				return err,nil
+				return nil,err
 			} else {
 
 				// 不改item
@@ -231,13 +229,13 @@ func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
 				//提交事务
 				err := model.base.Submit()
 				if err != nil {
-					return err,nil
+					return nil,err
 				} else {
 
 					//这里应该有触发器
 
 					//成功了
-					return nil,newItem
+					return newItem,nil
 
 				}
 
@@ -245,8 +243,6 @@ func (model *PgsqlModel) Change(item Map, data Map) (error,Map) {
 			}
 		}
 	}
-
-	return errors.New("数据：修改失败"), nil
 }
 
 //删除对象
@@ -255,7 +251,7 @@ func (model *PgsqlModel) Remove(item Map) (error) {
 	if key,ok := item[model.key]; ok {
 
 		//开启事务
-		err, tx := model.base.Begin()
+		err, tx := model.base.begin()
 		if err != nil {
 			return err
 		} else {
@@ -287,15 +283,14 @@ func (model *PgsqlModel) Remove(item Map) (error) {
 }
 
 //查询唯一对象
-func (model *PgsqlModel) Entity(id Any) (error,Map) {
+func (model *PgsqlModel) Entity(id Any) (Map,error) {
 
 	//开启事务
-	err, tx := model.base.Begin()
+	err, tx := model.base.begin()
 	noggo.Logger.Debug("data", "entity", "begin", err)
 	if err != nil {
-		return err,nil
+		return nil,err
 	} else {
-
 
 		//先拿字段列表
 		//不能用*，必须指定字段列表
@@ -308,7 +303,7 @@ func (model *PgsqlModel) Entity(id Any) (error,Map) {
 		sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE "id"=$1`, strings.Join(keys, `","`), model.schema, model.table)
 		row := tx.QueryRow(sql, id)
 		if row == nil {
-			return errors.New("数据：查询失败"),nil
+			return nil,errors.New("数据：查询失败")
 		} else {
 
 			//扫描数据
@@ -321,7 +316,7 @@ func (model *PgsqlModel) Entity(id Any) (error,Map) {
 			err := row.Scan(pValues...)
 			noggo.Logger.Debug("data", "entity", err, sql)
 			if err != nil {
-				return errors.New("数据：查询时扫描失败 " + err.Error()),nil
+				return nil,errors.New("数据：查询时扫描失败 " + err.Error())
 			} else {
 				m := Map{}
 				for i,n := range keys {
@@ -332,9 +327,6 @@ func (model *PgsqlModel) Entity(id Any) (error,Map) {
 					default:
 						m[n] = v
 					}
-
-					//来调用type来处理值
-					//m[n] = model.fielding(m[n], model.field[n].(Map))
 				}
 
 				//返回前使用代码生成
@@ -343,11 +335,11 @@ func (model *PgsqlModel) Entity(id Any) (error,Map) {
 				err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
 				noggo.Logger.Debug("data", "entity", "mapping", err)
 				if err == nil {
-					return nil,item
+					return item,nil
 				} else {
 					//如果生成失败,还是返回原始返回值
 					//要不然,存在的也显示为不存在
-					return nil,m
+					return m,nil
 				}
 			}
 		}

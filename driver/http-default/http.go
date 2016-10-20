@@ -30,10 +30,10 @@ func Driver() (driver.HttpDriver) {
 
 
 //连接
-func (drv *DefaultHttpDriver) Connect(config Map) (error,driver.HttpConnect) {
-	return nil,&DefaultHttpConnect{
+func (drv *DefaultHttpDriver) Connect(config Map) (driver.HttpConnect,error) {
+	return &DefaultHttpConnect{
 		config: config,
-	}
+	},nil
 }
 
 

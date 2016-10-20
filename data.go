@@ -20,7 +20,7 @@ type (
 
 
 //连接驱动
-func (global *dataGlobal) connect(config *dataConfig) (error,driver.DataConnect) {
+func (global *dataGlobal) connect(config *dataConfig) (driver.DataConnect,error) {
 	if dataDriver,ok := global.drivers[config.Driver]; ok {
 		return dataDriver.Connect(config.Config)
 	} else {
@@ -59,7 +59,7 @@ func (global *dataGlobal) initData() {
 
 	//遍历数据配置
 	for name,config := range Config.Data {
-		err,conn := global.connect(config)
+		conn,err := global.connect(config)
 		if err != nil {
 			panic("数据：连接失败：" + err.Error())
 		} else {
@@ -150,7 +150,7 @@ func (global *dataGlobal) Register(name string, config Map) {
 //返回DB对象
 func (global *dataGlobal) Base(name string) (driver.DataBase) {
 	if conn,ok := global.connects[name]; ok {
-		err,db := conn.Base(name)
+		db,err := conn.Base(name)
 		if err != nil {
 			panic("数据：打开DB失败：" + err.Error())
 		} else {

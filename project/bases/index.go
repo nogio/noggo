@@ -9,7 +9,5 @@ package bases
 import (
 	_ "./consts"
 	_ "./cryptos"
-	_ "./drivers"
-	_ "./middlers"
 	_ "./types"
 )

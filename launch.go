@@ -19,6 +19,8 @@ func Init() {
 		Task.init()
 
 		Plan.init()
+		Event.init()
+		Queue.init()
 		Http.init()
 		View.init()
 
@@ -44,6 +46,8 @@ func Exit() {
 
 	View.exit()
 	Http.exit()
+	Queue.exit()
+	Event.exit()
 	Plan.exit()
 	Task.exit()
 	Trigger.exit()

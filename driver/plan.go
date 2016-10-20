@@ -8,7 +8,7 @@ import (
 type (
 	//计划驱动
 	PlanDriver interface {
-		Connect(config Map) (error,PlanConnect)
+		Connect(config Map) (PlanConnect,error)
 	}
 
 	PlanAccept func(*PlanRequest, PlanResponse)

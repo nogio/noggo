@@ -11,11 +11,6 @@ import (
 )
 
 
-//有BUG一枚~~~
-//Create如果加了同步锁， 会一直被锁着， 要考虑处理一下
-
-
-
 type (
 	//驱动
 	DefaultPlanDriver struct {
@@ -55,10 +50,10 @@ func Driver() (driver.PlanDriver) {
 
 
 //连接
-func (drv *DefaultPlanDriver) Connect(config Map) (error,driver.PlanConnect) {
-	return nil,&DefaultPlanConnect{
+func (drv *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect,error) {
+	return &DefaultPlanConnect{
 		config: config, datas: map[string]PlanData{},
-	}
+	}, nil
 }
 
 
@@ -102,7 +97,10 @@ func (connect *DefaultPlanConnect) Create(name, time string) error {
 			Name: name, Time: time, Value: Map{},
 		}
 		//保存计划
+		connect.mutex.Lock()
 		connect.datas[id] = plan
+		connect.mutex.Unlock()
+
 		//调用计划
 		connect.execute(id, plan.Name, plan.Time, plan.Value)
 

@@ -69,7 +69,7 @@ type (
 )
 
 //计划：连接驱动
-func (module *planGlobal) connect(config *planConfig) (error,driver.PlanConnect) {
+func (module *planGlobal) connect(config *planConfig) (driver.PlanConnect,error) {
 	if planDriver,ok := module.drivers[config.Driver]; ok {
 		return planDriver.Connect(config.Config)
 	} else {
@@ -562,61 +562,44 @@ func (module *planModule) run() {
 	module.runPlan()
 }
 func (module *planModule) runSession() {
-	if Config.Plan.Session != nil {
-		//使用计划中的会话配置
-		module.sessionConfig = Config.Plan.Session
-	} else {
-		//使用默认的会话配置
-		module.sessionConfig = Config.Session
-	}
-
-	//连接会话
-	err,conn := Session.connect(module.sessionConfig)
-
-	if err != nil {
-		panic("节点计划：连接会话失败：" + err.Error())
-	} else {
-
-		module.sessionConnect = conn
-
-		//打开会话连接
-		err := module.sessionConnect.Open()
-		if err != nil {
-			panic("节点计划：打开会话失败 " + err.Error())
-		}
-	}
+	//使用节点的会话了
+	module.sessionConnect = module.node.session.sessionConnect
 }
 func (module *planModule) runPlan() {
 
 	module.planConfig = Config.Plan
-	err,con := Plan.connect(module.planConfig)
+	con,err := Plan.connect(module.planConfig)
 
 
 	if err != nil {
 		panic("节点计划：连接失败：" + err.Error())
 	} else {
 
-		module.planConnect = con
-
 		//打开会话连接
-		err := module.planConnect.Open()
+		err := con.Open()
 		if err != nil {
 			panic("节点计划：打开失败 " + err.Error())
+		} else {
+
+
+			//注册回调
+			con.Accept(module.servePlan)
+
+
+			//创建计划
+			for name,time := range module.routeTimes {
+				con.Create(name, time)
+			}
+
+			//开始计划
+			con.Start()
+
+
+			//保存
+			module.planConnect = con
+
 		}
 	}
-
-
-	//注册回调
-	module.planConnect.Accept(module.servePlan)
-
-
-	//创建计划
-	for name,time := range module.routeTimes {
-		module.planConnect.Create(name, time)
-	}
-
-	//开始计划
-	module.planConnect.Start()
 }
 
 
@@ -627,10 +610,7 @@ func (module *planModule) end() {
 }
 //退出SESSION
 func (module *planModule) endSession() {
-	if module.sessionConnect != nil {
-		module.sessionConnect.Close()
-		module.sessionConnect = nil
-	}
+	//使用节点的会话，此处无需处理
 }
 //退出计划本身
 func (module *planModule) endPlan() {
@@ -1104,7 +1084,7 @@ func (module *planModule) contextRequest(ctx *PlanContext) {
 
 
 	//会话处理
-	err,m := module.sessionConnect.Query(ctx.Id, module.sessionConfig.Expiry)
+	m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
 	if err == nil {
 		ctx.Session = m
 	} else {

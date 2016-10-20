@@ -18,37 +18,6 @@ import (
 
 
 type (
-	/*
-	//任务驱动
-	TaskDriver interface {
-		Connect(config Map) (TaskConnect)
-	}
-	TaskAcceptFunc func(string,string,time.Duration,Map)
-	//任务连接
-	TaskConnect interface {
-		//打开连接
-		Open() error
-		//关闭连接
-		Close() error
-
-		//注册任务
-		Accept(name string, call TaskAcceptFunc) error
-
-
-		//打开连接
-		Start() error
-		//关闭连接
-		Stop() error
-
-
-		//触发任务
-		Touch(id string, name string, delay time.Duration, value Map) error
-
-		//完成任务
-		Finish(id string) error
-	}
-	*/
-
 	//任务函数
 	TaskFunc func(*TaskContext)
 
@@ -71,16 +40,6 @@ type (
 		middlers    map[string]TaskFunc
 		middlerNames []string
 
-
-		//日志配置，日志连接
-		taskConfig *taskConfig
-		taskConnect driver.TaskConnect
-
-		//会话配置与连接
-		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
-
-
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
@@ -92,6 +51,13 @@ type (
 		//处理器们
 		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TaskFunc
 		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+
+		//会话配置与连接
+		sessionConfig   *sessionConfig
+		sessionConnect	driver.SessionConnect
+		//日志配置，日志连接
+		taskConfig  *taskConfig
+		taskConnect driver.TaskConnect
 	}
 
 	//任务上下文
@@ -138,7 +104,7 @@ type (
 
 
 //连接驱动
-func (global *taskGlobal) connect(config *taskConfig) (error,driver.TaskConnect) {
+func (global *taskGlobal) connect(config *taskConfig) (driver.TaskConnect,error) {
 	if taskDriver,ok := global.drivers[config.Driver]; ok {
 		return taskDriver.Connect(config.Config)
 	} else {
@@ -184,62 +150,45 @@ func (global *taskGlobal) init() {
 
 //初始化会话驱动
 func (global *taskGlobal) initSession() {
-	if Config.Task.Session != nil {
-		//使用自定的
-		global.sessionConfig = Config.Task.Session
-	} else {
-		//如果任务中会话配置为空，使用默认的会话配置
-		global.sessionConfig = Config.Session
-	}
-
-	//连接会话
-	err,conn := Session.connect(global.sessionConfig)
-
-	if err != nil {
-		panic("任务：连接会话失败：" + err.Error())
-	} else {
-
-		global.sessionConnect = conn
-
-		//打开会话连接
-		err := global.sessionConnect.Open()
-		if err != nil {
-			panic("任务：打开会话失败 " + err.Error())
-		}
-	}
+	//现在直接使用全局的会话连接
+	global.sessionConfig = Session.sessionConfig
+	global.sessionConnect = Session.sessionConnect
 }
 
 //初始化驱动
 func (global *taskGlobal) initTask() {
 
 	//先拿到默认的配置
-	global.taskConfig = Config.Task
-	err,con := global.connect(global.taskConfig)
+	con,err := global.connect(Config.Task)
 
 	if err != nil {
 		panic("任务：连接失败：" + err.Error())
 	} else {
 
-		global.taskConnect = con
-
-		err := global.taskConnect.Open()
+		err := con.Open()
 		if err != nil {
 			panic("任务：打开失败 " + err.Error())
 		}
+
+
+
+		//注册回调
+		con.Accept(global.serveTask)
+
+		//注册任务
+		//貌似不需要注册了，因为只要注册一个NAME。 貌似没意义
+		/*
+		for _,name := range global.routeNames {
+			global.taskConnect.Accept(name, global.serveTask)
+		}
+		*/
+		//开始任务
+		con.Start();
+
+
+		//保存连接
+		global.taskConnect = con
 	}
-
-	//注册回调
-	global.taskConnect.Accept(global.serveTask)
-
-	//注册任务
-	//貌似不需要注册了，因为只要注册一个NAME。 貌似没意义
-	/*
-	for _,name := range global.routeNames {
-		global.taskConnect.Accept(name, global.serveTask)
-	}
-	*/
-
-	global.taskConnect.Start();
 }
 
 
@@ -252,11 +201,7 @@ func (global *taskGlobal) exit() {
 }
 //任务退出，会话
 func (global *taskGlobal) exitSession() {
-	//关闭会话
-	if global.sessionConnect != nil {
-		global.sessionConnect.Close()
-		global.sessionConnect = nil
-	}
+	//使用全局会话，不需要在这里关闭了
 }
 //任务退出
 func (global *taskGlobal) exitTask() {
@@ -264,7 +209,6 @@ func (global *taskGlobal) exitTask() {
 	if global.taskConnect != nil {
 		global.taskConnect.Stop();
 		global.taskConnect.Close()
-		global.taskConnect = nil
 	}
 }
 
@@ -568,8 +512,8 @@ func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 
 
 	//会话处理
-	err,m := global.sessionConnect.Query(ctx.Id, global.sessionConfig.Expiry)
-	if err == nil {
+	m,e := global.sessionConnect.Entity(ctx.Id, global.sessionConfig.Expiry)
+	if e == nil {
 		ctx.Session = m
 	} else {
 		ctx.Session = Map{}

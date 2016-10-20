@@ -9,7 +9,7 @@ type (
 
 	//HTTP驱动
 	HttpDriver interface {
-		Connect(config Map) (error,HttpConnect)
+		Connect(config Map) (HttpConnect,error)
 	}
 
 	HttpAccept func(req *http.Request, res http.ResponseWriter)

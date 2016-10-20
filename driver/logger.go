@@ -7,7 +7,7 @@ import (
 type (
 	//日志驱动
 	LoggerDriver interface {
-		Connect(config Map) (error,LoggerConnect)
+		Connect(config Map) (LoggerConnect,error)
 	}
 	//日志连接
 	LoggerConnect interface {

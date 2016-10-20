@@ -7,12 +7,6 @@ import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
 	"errors"
-	"github.com/nogio/noggo/driver/http-default"
-	"github.com/nogio/noggo/driver/plan-default"
-	"github.com/nogio/noggo/driver/task-default"
-	"github.com/nogio/noggo/driver/session-default"
-	"github.com/nogio/noggo/driver/logger-default"
-	"github.com/nogio/noggo/driver/view-default"
 )
 
 var (
@@ -53,6 +47,12 @@ var (
 	//计划模块
 	Plan *planGlobal
 
+	//事件模块
+	Event *eventGlobal
+
+	//队列模块
+	Queue *queueGlobal
+
 	//http模块
 	Http *httpGlobal
 
@@ -89,6 +89,8 @@ func init() {
 		Task: &taskConfig{ Driver: "default", Config: Map{} },
 
 		Plan: &planConfig{ Driver: "default", Config: Map{} },
+		Event: &eventConfig{ Driver: "default", Prefix: "", Config: Map{} },
+		Queue: map[string]*queueConfig{ "default": &queueConfig{ Driver: "default", Prefix: "", Config: Map{} } },
 		Http: &httpConfig{ Driver: "default", Config: Map{}, Charset:"", Cookie:"noggo", Domain:"" },
 		View: &viewConfig{ Driver: "default", Config: Map{} },
 	}
@@ -124,6 +126,16 @@ func init() {
 		drivers: map[string]driver.PlanDriver{}, middlers: map[string]PlanFunc{},
 	}
 
+	//事件模块
+	Event = &eventGlobal{
+		drivers: map[string]driver.EventDriver{}, middlers: map[string]EventFunc{},
+	}
+
+	//队列模块
+	Queue = &queueGlobal{
+		drivers: map[string]driver.QueueDriver{}, middlers: map[string]QueueFunc{},
+		queueConnects: map[string]driver.QueueConnect{},
+	}
 	//HTTP模块
 	Http = &httpGlobal{
 		drivers: map[string]driver.HttpDriver{}, middlers:map[string]HttpFunc{},
@@ -143,7 +155,6 @@ func init() {
 
 	loadConfig()
 	loadLang()
-	loadDriver()
 }
 
 //读取配置文件
@@ -166,21 +177,6 @@ func loadLang() {
 		}
 	}
 }
-//加载默认驱动
-func loadDriver() {
-	Logger.Driver(ConstDriverDefault, logger_default.Driver())
-	Session.Driver(ConstDriverDefault, session_default.Driver())
-
-	Task.Driver(ConstDriverDefault, task_default.Driver())
-
-	Plan.Driver(ConstDriverDefault, plan_default.Driver())
-	Http.Driver(ConstDriverDefault, http_default.Driver())
-	View.Driver(ConstDriverDefault, view_default.Driver())
-}
-
-
-
-
 
 
 
@@ -231,14 +227,22 @@ func Driver(name string, drv Any) {
 	switch v := drv.(type) {
 	case driver.LoggerDriver:
 		Logger.Driver(name, v)
+
 	case driver.SessionDriver:
 		Session.Driver(name, v)
+
 	case driver.TaskDriver:
 		Task.Driver(name, v)
+
 	case driver.PlanDriver:
 		Plan.Driver(name, v)
+
+	case driver.EventDriver:
+		Event.Driver(name, v)
+
 	case driver.HttpDriver:
 		Http.Driver(name, v)
+
 	case driver.ViewDriver:
 		View.Driver(name, v)
 	default:
@@ -261,6 +265,7 @@ func Middler(call Any) {
 	case func(*TaskContext):
 		Task.Middler(NewMd5Id(), v)
 
+
 	case HttpFunc:
 		Http.Middler(NewMd5Id(), v)
 	case func(*HttpContext):
@@ -270,6 +275,12 @@ func Middler(call Any) {
 		Plan.Middler(NewMd5Id(), v)
 	case func(*PlanContext):
 		Plan.Middler(NewMd5Id(), v)
+
+
+	case EventFunc:
+		Event.Middler(NewMd5Id(), v)
+	case func(*EventContext):
+		Event.Middler(NewMd5Id(), v)
 
 	default:
 		panic("未支持的中间件")

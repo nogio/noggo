@@ -31,10 +31,10 @@ func Driver() (driver.LoggerDriver) {
 
 
 //连接驱动
-func (logger *DefaultLoggerDriver) Connect(config Map) (error,driver.LoggerConnect) {
-	return nil,&DefaultConnect{
+func (logger *DefaultLoggerDriver) Connect(config Map) (driver.LoggerConnect,error) {
+	return &DefaultConnect{
 		config: config,
-	}
+	},nil
 }
 
 

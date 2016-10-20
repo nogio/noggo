@@ -143,7 +143,7 @@ func newDefaultView(root string, parse *driver.ViewParse) (*DefaultView) {
 				}
 			}
 
-			e,s := view.Render(name, args...)
+			s,e := view.Render(name, args...)
 			if e == nil {
 				return template.HTML(s)
 			} else {
@@ -517,7 +517,7 @@ func newDefaultView(root string, parse *driver.ViewParse) (*DefaultView) {
 }
 
 
-func (view *DefaultView) Parse() (error,string) {
+func (view *DefaultView) Parse() (string,error) {
 	view.title = ""
 
 	view.engine = template.New("default").Delims("<%", "%>").Funcs(view.helper)
@@ -529,17 +529,17 @@ func (view *DefaultView) Parse() (error,string) {
 //这里实际是在解析layout
 //注意，这里的name,model是body的
 //layout的name,model要在 layout方法中调用， 记录到  view对象中的 layout, model
-func (view *DefaultView) Layout(name string, model Map) (error,string) {
+func (view *DefaultView) Layout(name string, model Map) (string,error) {
 
-	bodyError,bodyText := view.Body(name, model)
+	bodyText,bodyError := view.Body(name, model)
 	if bodyError != nil {
-		return bodyError,""
+		return "",bodyError
 	} else {
 
 
 		if view.layout == "" {
 			//没有使用布局，直接返回BODY
-			return nil, bodyText
+			return bodyText,nil
 		} else {
 
 			//body赋值
@@ -567,14 +567,14 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 
 			//如果view不存在
 			if viewname == "" {
-				return errors.New(fmt.Sprintf("view %s not exist", name)),""
+				return "",errors.New(fmt.Sprintf("view %s not exist", name))
 			} else {
 
 				//不直接使用 view.engine 来new,而是克隆一份
 				engine,_ := view.engine.Clone()
 				t,e := engine.New(filepath.Base(viewname)).ParseFiles(viewname)
 				if e != nil {
-					return errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e)),""
+					return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
 				} else {
 
 					//缓冲
@@ -585,9 +585,9 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 						"model": view.model,
 					})
 					if e != nil {
-						return errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e)),""
+						return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
 					} else {
-						return nil,buf.String()
+						return buf.String(),nil
 					}
 				}
 			}
@@ -598,7 +598,7 @@ func (view *DefaultView) Layout(name string, model Map) (error,string) {
 
 
 /* 返回view */
-func (view *DefaultView) Body(name string, args ...Map) (error,string) {
+func (view *DefaultView) Body(name string, args ...Map) (string,error) {
 	bodyModel := Map{}
 	if len(args) > 0 {
 		bodyModel = args[0]
@@ -629,14 +629,14 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 
 	//如果view不存在
 	if viewname == "" {
-		return errors.New(fmt.Sprintf("view %s not exist", name)),""
+		return "",errors.New(fmt.Sprintf("view %s not exist", name))
 	} else {
 
 		//不直接使用 view.engine 来new,而是克隆一份
 		engine,_ := view.engine.Clone()
 		t,e := engine.New(filepath.Base(viewname)).ParseFiles(viewname)
 		if e != nil {
-			return errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e)),""
+			return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
 		} else {
 
 			//缓冲
@@ -647,9 +647,9 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 				"model": bodyModel,
 			})
 			if e != nil {
-				return errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e)),""
+				return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
 			} else {
-				return nil,buf.String()
+				return buf.String(),nil
 			}
 		}
 	}
@@ -657,7 +657,7 @@ func (view *DefaultView) Body(name string, args ...Map) (error,string) {
 }
 
 /* 返回view */
-func (view *DefaultView) Render(name string, args ...Map) (error,string) {
+func (view *DefaultView) Render(name string, args ...Map) (string,error) {
 
 	renderModel := Map{}
 	if len(args) > 0 {
@@ -686,7 +686,7 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 
 	//如果view不存在
 	if viewname == "" {
-		return errors.New(fmt.Sprintf("render %s not exist", name)), ""
+		return "",errors.New(fmt.Sprintf("render %s not exist", name))
 	} else {
 
 		//不直接使用 view.engine 来new,而是克隆一份
@@ -705,7 +705,7 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 
 			newT,e := engine.New(n).ParseFiles(viewname)
 			if e != nil {
-				return errors.New(fmt.Sprintf("render %s parse error: %v", name, e.Error())), ""
+				return "",errors.New(fmt.Sprintf("render %s parse error: %v", name, e.Error()))
 			} else {
 				t = newT
 			}
@@ -720,9 +720,9 @@ func (view *DefaultView) Render(name string, args ...Map) (error,string) {
 			"model": renderModel,
 		})
 		if e != nil {
-			return errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e)),""
+			return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
 		} else {
-			return nil,buf.String()
+			return buf.String(),nil
 		}
 
 	}

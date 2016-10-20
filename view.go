@@ -58,7 +58,7 @@ type (
 
 
 //连接驱动
-func (global *viewGlobal) connect(config *viewConfig) (error,driver.ViewConnect) {
+func (global *viewGlobal) connect(config *viewConfig) (driver.ViewConnect,error) {
 	if viewDriver,ok := global.drivers[config.Driver]; ok {
 		return viewDriver.Connect(config.Config)
 	} else {

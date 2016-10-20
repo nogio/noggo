@@ -12,8 +12,25 @@ func init() {
 		"route": Map{
 			"name": "首页", "text": "首页",
 			"action": func(ctx *noggo.HttpContext) {
+
+				//noggo.Event.Publish("test")
+				noggo.Queue.Publish("test")
+
 				ctx.Data["msg"] = "消息来自路由"
 				ctx.View("index")
+			},
+		},
+	})
+
+
+	noggo.Http.Route("test", Map{
+		"uri": "/test",
+		"route": Map{
+			"name": "test", "text": "test",
+			"action": func(ctx *noggo.HttpContext) {
+				ctx.Return(Map{
+					"msg": "hahaha",
+				})
 			},
 		},
 	})

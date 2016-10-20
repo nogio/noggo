@@ -2,7 +2,6 @@ package driver
 
 import (
 	. "github.com/nogio/noggo/base"
-	"database/sql"
 )
 
 type (
@@ -11,7 +10,7 @@ type (
 		//应该做如下工作：
 		//1. 检查config合法性
 		//2. 初始化连接相关对象
-		Connect(config Map) (error,DataConnect)
+		Connect(config Map) (DataConnect,error)
 	}
 	DataConnect interface {
 		//打开数据库连接
@@ -21,23 +20,23 @@ type (
 		//注册模型
 		Model(string,Map)
 		//获取数据库对象
-		Base(string) (error,DataBase)
+		Base(string) (DataBase,error)
 	}
 
 	//数据库接口
 	DataBase interface {
-		Model(name string) (DataModel)
 		Close()
-		Begin() (error,*sql.Tx)
+		Model(name string) (DataModel)
 		Submit() (error)
 		Cancel() (error)
+
 	}
 	//数据模型接口
 	DataModel interface {
-		Create(Map) (error,Map)
-		Change(Map,Map) (error,Map)
+		Create(Map) (Map,error)
+		Change(Map,Map) (Map,error)
 		Remove(Map) (error)
-		Entity(Any) (error,Map)
+		Entity(Any) (Map,error)
 	}
 
 

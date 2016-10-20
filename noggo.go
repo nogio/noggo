@@ -15,7 +15,11 @@ type (
 		Port	string
 		Config	*nodeConfig
 
+		session *sessionModule
+
 		Plan	*planModule
+		Event   *eventModule
+		Queue   *queueModule
 		Http	*httpModule
 	}
 )
@@ -50,8 +54,11 @@ func New(names ...string) (*Noggo) {
 		node.Port = ":8080"
 	}
 
-	//计划
+	//模块们
+	node.session = newSessionModule(node)
 	node.Plan = newPlanModule(node)
+	node.Event = newEventModule(node)
+	node.Queue = newQueueModule(node)
 	node.Http = newHttpModule(node)
 
 
@@ -81,7 +88,10 @@ func (node *Noggo) Run(ports ...string) {
 
 	if node.running == false {
 
+		node.session.run()
 		node.Plan.run()
+		node.Event.run()
+		node.Queue.run()
 		node.Http.run()
 
 		node.running = true
@@ -105,7 +115,10 @@ func (node *Noggo) End() {
 	}
 
 	node.Http.end()
+	node.Queue.end()
+	node.Event.end()
 	node.Plan.end()
+	node.session.end()
 }
 
 
@@ -126,11 +139,18 @@ func (node *Noggo) Use(call Any) {
 		node.Http.Use(v)
 	case func(*HttpContext):
 		node.Http.Use(v)
+
 	case PlanFunc:
 		node.Plan.Use(v)
 	case func(*PlanContext):
 		node.Plan.Use(v)
+
+	case EventFunc:
+		node.Event.Use(v)
+	case func(*EventContext):
+		node.Event.Use(v)
 	}
+
 }
 
 
@@ -144,19 +164,28 @@ func (node *Noggo) Add(name string, call Any) {
 		Trigger.Add(name, v)
 	case func(*TriggerContext):
 		Trigger.Add(name, v)
+
 	case TaskFunc:
 		Task.Add(name, v)
 	case func(*TaskContext):
 		Task.Add(name, v)
 
+
+
 	case HttpFunc:
 		node.Http.Any(name, v)
 	case func(*HttpContext):
 		node.Http.Any(name, v)
+
 	case PlanFunc:
 		node.Plan.Add(name, v)
 	case func(*PlanContext):
 		node.Plan.Add(name, v)
+
+	case EventFunc:
+		node.Event.Add(name, v)
+	case func(*EventContext):
+		node.Event.Add(name, v)
 	}
 }
 

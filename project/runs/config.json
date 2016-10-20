@@ -25,7 +25,6 @@
   },
 
 
-
   "data": {
     "main": {
       "driver": "pgsql",
@@ -40,6 +39,32 @@
       }
     }
   },
+
+  "cache": {
+    "main": {
+      "driver": "default",
+      "config": { }
+    }
+  },
+
+
+  "event": {
+    "driver": "default",
+    "prefix": "",
+    "config": { }
+  },
+
+
+  "queue": {
+    "default": {
+      "driver": "default",
+      "prefix": "",
+      "config": { }
+    }
+  },
+
+
+
 
 
 
@@ -63,13 +88,9 @@
   },
   "task": {
     "driver": "default",
-    "config": {},
-
-    "session": {
-      "driver": "default", "expiry": 3600,
-      "config": {}
-    }
+    "config": {}
   },
+
 
 
 
@@ -87,25 +108,19 @@
 
   "plan": {
     "driver": "default",
-    "config": {},
-
-    "session": {
-      "driver": "default", "expiry": 3600,
-      "config": {}
-    }
+    "config": {}
   },
+
+
+
 
 
   "http": {
     "driver": "default",
     "config": {},
 
-    "session": {
-      "driver": "default", "expiry": 3600,
-      "config": {}
-    },
-
-    "charset": "utf-8", "cookie": "nog", "domain": ""
+    "charset": "utf-8", "cookie": "nog", "domain": "",
+     "static": "statics", "view": "views"
   },
 
 

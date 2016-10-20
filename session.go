@@ -1,6 +1,11 @@
 /*
 	session 会话模块
 	会话模块，是一个通用模块
+
+	session运行方式：
+	sessionGlobal会建立一个全局的会话连接，用于全局的Trigger, Task
+	另外每个节点都会建立一个节点的会话连接，用于节点的Plan,Event,Queue,Http
+
 */
 
 
@@ -13,43 +18,13 @@ import (
 )
 
 type (
-
-	/*
-	//会话值
-	SessionValue struct {
-		Value	Map
-		Expiry	time.Time
-	}
-
-	//会话驱动
-	SessionDriver interface {
-		Connect(config Map) (SessionConnect)
-	}
-	//会话连接
-	SessionConnect interface {
-		//打开连接
-		Open() error
-		//关闭连接
-		Close() error
-
-
-		//查询会话，不存在就创建新的返回
-		Query(id string, expiry int64) (error,Map)
-		//更新会话数据，不存在则创建，存在就更新
-		Update(id string, value Map, expiry int64) error
-		//删除会话
-		Remove(id string) error
-		//回收会话，系统会每一段时间自动调用此方法
-		Recycle(expiry int64) error
-	}
-	*/
-
-	//会话模块
+	//会话全局
 	sessionGlobal struct {
 		mutex sync.Mutex
+		drivers         map[string]driver.SessionDriver
 
-		//会话驱动们
-		drivers map[string]driver.SessionDriver
+		sessionConfig   *sessionConfig
+		sessionConnect  driver.SessionConnect
 	}
 )
 
@@ -77,7 +52,7 @@ func (global *sessionGlobal) Driver(name string, config driver.SessionDriver) {
 
 
 //连接驱动
-func (global *sessionGlobal) connect(config *sessionConfig) (error,driver.SessionConnect) {
+func (global *sessionGlobal) connect(config *sessionConfig) (driver.SessionConnect,error) {
 	if sessionDriver,ok := global.drivers[config.Driver]; ok {
 		return sessionDriver.Connect(config.Config)
 	} else {
@@ -87,12 +62,110 @@ func (global *sessionGlobal) connect(config *sessionConfig) (error,driver.Sessio
 
 //会话初始化
 func (global *sessionGlobal) init() {
-	//会话全局容器，不需要处理任何东西
+	global.initSession()
 }
 
+//初始化会话驱动
+func (global *sessionGlobal) initSession() {
+
+	//连接会话
+	global.sessionConfig = Config.Session
+	con,err := Session.connect(global.sessionConfig)
+
+	if err != nil {
+		panic("会话：连接失败 " + err.Error())
+	} else {
+
+		//打开会话连接
+		err := con.Open()
+		if err != nil {
+			panic("会话：打开失败 " + err.Error())
+		}
+
+		//保存连接
+		global.sessionConnect = con
+
+	}
+}
 //会话退出
 func (global *sessionGlobal) exit() {
-	//会话全局容器，不需要处理任何东西
+	global.exitSession()
+}
+//任务退出，会话
+func (global *sessionGlobal) exitSession() {
+	if global.sessionConnect != nil {
+		global.sessionConnect.Close()
+	}
 }
 
 
+
+
+
+//-------------------------------------------------------------------------
+
+type (
+	//会话模块
+	sessionModule struct {
+		node	*Noggo
+		sessionConfig   *sessionConfig
+		sessionConnect  driver.SessionConnect
+	}
+)
+
+
+
+
+
+//会话模块初始化
+func (module *sessionModule) run() {
+	module.runSession()
+}
+func (module *sessionModule) runSession() {
+	if module.node.Config.Session != nil {
+		//使用节点的会话配置
+		module.sessionConfig = module.node.Config.Session
+	} else {
+		//使用默认的会话配置
+		module.sessionConfig = Config.Session
+	}
+
+	//连接会话
+	con,err := Session.connect(module.sessionConfig)
+
+	if err != nil {
+		panic("节点会话：连接失败：" + err.Error())
+	} else {
+
+		//打开会话连接
+		err := con.Open()
+		if err != nil {
+			panic("节点会话：打开失败 " + err.Error())
+		}
+
+		//保存连接
+		module.sessionConnect = con
+	}
+}
+
+
+//会话模块退出
+func (module *sessionModule) end() {
+	module.endSession()
+}
+//退出SESSION
+func (module *sessionModule) endSession() {
+	if module.sessionConnect != nil {
+		module.sessionConnect.Close()
+	}
+}
+
+
+
+
+
+
+//新建SESSION模块
+func newSessionModule(node *Noggo) (*sessionModule) {
+	return &sessionModule{ node: node }
+}

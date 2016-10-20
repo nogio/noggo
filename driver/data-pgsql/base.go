@@ -16,6 +16,10 @@ type (
 
 		db      *sql.DB
 		tx      *sql.Tx
+
+		//是否手动提交事务，否则为自动
+		//当调用begin时， 自动变成手动提交事务
+		manual    bool
 	}
 )
 
@@ -59,8 +63,8 @@ func (base *PgsqlBase) Model(name string) (driver.DataModel) {
 
 
 
-//开启事务
-func (base *PgsqlBase) Begin() (error, *sql.Tx) {
+//注意，此方法为实际开始事务
+func (base *PgsqlBase) begin() (error, *sql.Tx) {
 
 	if base.tx == nil {
 		tx,err := base.db.Begin()
@@ -71,6 +75,14 @@ func (base *PgsqlBase) Begin() (error, *sql.Tx) {
 	}
 	return nil, base.tx
 }
+
+
+//开启手动模式
+func (base *PgsqlBase) Manual() (driver.DataBase) {
+	base.manual = true
+	return base
+}
+
 
 //提交事务
 func (base *PgsqlBase) Submit() (error) {
@@ -87,13 +99,6 @@ func (base *PgsqlBase) Submit() (error) {
 	//提交后,要清掉事务
 	base.tx = nil
 
-	//提交事务后,要把触发器都发掉
-	/*
-	for _,trigger := range base.triggers {
-		Trigger.Touch(trigger.name, trigger.value)
-	}
-	*/
-
 	return nil
 }
 
@@ -109,7 +114,7 @@ func (base *PgsqlBase) Cancel() (error) {
 		return err
 	}
 
-	//取消后,要清掉事务
+	//提交后,要清掉事务
 	base.tx = nil
 
 	return nil

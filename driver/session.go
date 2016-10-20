@@ -7,7 +7,7 @@ import (
 type (
 	//会话驱动
 	SessionDriver interface {
-		Connect(config Map) (error,SessionConnect)
+		Connect(config Map) (SessionConnect,error)
 	}
 	//会话连接
 	SessionConnect interface {
@@ -18,7 +18,7 @@ type (
 
 
 		//查询会话，不存在就创建新的返回
-		Query(id string, expiry int64) (error,Map)
+		Entity(id string, expiry int64) (Map,error)
 		//更新会话数据，不存在则创建，存在就更新
 		Update(id string, value Map, expiry int64) error
 		//删除会话

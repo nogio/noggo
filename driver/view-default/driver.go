@@ -46,10 +46,10 @@ func Driver(roots ...string) (driver.ViewDriver) {
 
 
 //连接驱动
-func (driver *DefaultViewDriver) Connect(config Map) (error,driver.ViewConnect) {
-	return nil,&DefaultViewConnect{
+func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect,error) {
+	return &DefaultViewConnect{
 		config: config, root: driver.root,
-	}
+	},nil
 }
 
 
@@ -78,7 +78,7 @@ func (connect *DefaultViewConnect) Close() error {
 
 //解析VIEW
 //func (connect *DefaultViewConnect) Parse(node string, helpers Map, data Map, name string, model Map) (error,string) {
-func (connect *DefaultViewConnect) Parse(parse *driver.ViewParse) (error,string) {
+func (connect *DefaultViewConnect) Parse(parse *driver.ViewParse) (string,error) {
 	view := newDefaultView(connect.root, parse)
 	return view.Parse()
 }

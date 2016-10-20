@@ -22,6 +22,11 @@ type (
 		Url string	`json:"url"`
 		Name string	`json:"name"`
 		Text string	`json:"text"`
+
+		Crypto string `json:"crypto"`
+
+		//节点指定SESSION
+		Session *sessionConfig `json:"session"`
 	}
 
 	//data配置
@@ -53,10 +58,7 @@ type (
 	}
 	//触发器配置
 	triggerConfig struct {
-		//会话配置
-		Session	*sessionConfig	`json:"session"`
-		//路由器配置
-		Router	*routerConfig	`json:"router"`
+
 	}
 
 	//任务配置
@@ -65,9 +67,6 @@ type (
 		Driver	string	`json:"driver"`
 		//任务驱动配置
 		Config	Map		`json:"config"`
-
-		//任务会话配置
-		Session	*sessionConfig	`json:"session"`
 	}
 
 
@@ -82,24 +81,33 @@ type (
 		Driver	string	`json:"driver"`
 		//计划驱动配置
 		Config	Map		`json:"config"`
-
-		//计划会话配置
-		Session	*sessionConfig	`json:"session"`
 	}
 
 
 
-
-
-
-
-	//路由器配置
-	routerConfig struct {
+	//事件配置
+	eventConfig struct {
 		//驱动
 		Driver	string	`json:"driver"`
-		//自定义配置
+		//前缀
+		Prefix	string	`json:"prefix"`
+		//驱动配置
 		Config	Map		`json:"config"`
 	}
+
+
+	//queue配置
+	queueConfig struct {
+		//驱动
+		Driver	string	`json:"driver"`
+		//前缀
+		Prefix	string	`json:"prefix"`
+		//驱动配置
+		Config	Map		`json:"config"`
+	}
+
+
+
 
 	//http配置
 	httpConfig struct {
@@ -108,15 +116,15 @@ type (
 		//http驱动配置
 		Config	Map		`json:"config"`
 
-		//http会话配置
-		Session	*sessionConfig	`json:"session"`
-		//http路由器配置
-		Router	*routerConfig	`json:"router"`
-
-		Port	string	`json:"port"`
-
 		//字符集
 		Charset	string	`json:"charset"`
+
+		//静态目录
+		Static	string	`json:"static"`
+
+		//视图目录
+		View	string	`json:"view"`
+
 		//Session使用的cookie name
 		Cookie	string	`json:"cookie"`
 		//Session使用的domain
@@ -143,6 +151,7 @@ type (
 		Lang	map[string]*langConfig	`json:"lang"`
 		Node	map[string]*nodeConfig	`json:"node"`
 		Data	map[string]*dataConfig	`json:"data"`
+		Queue	map[string]*queueConfig	`json:"queue"`
 
 
 		//日志配置
@@ -158,6 +167,11 @@ type (
 
 		//计划配置
 		Plan *planConfig		`json:"plan"`
+		//事件配置
+		Event *eventConfig		`json:"event"`
+
+
+
 		//http配置
 		Http *httpConfig		`json:"http"`
 

@@ -14,19 +14,18 @@ type (
 )
 
 //驱动连接
-func (drv *PgsqlDriver) Connect(config Map) (error,driver.DataConnect) {
+func (drv *PgsqlDriver) Connect(config Map) (driver.DataConnect,error) {
 
 	if config == nil {
-		return errors.New("配置不可为空"),nil
+		return nil,errors.New("配置不可为空")
 	}
 
 	if url,ok := config["url"].(string); ok {
-
-		return nil,&PgsqlConnect{
+		return &PgsqlConnect{
 			config: config, url: url, models: map[string]Map{},
-		}
+		},nil
 
 	} else {
-		return errors.New("配置缺少[url]信息"),nil
+		return nil,errors.New("配置缺少[url]信息")
 	}
 }

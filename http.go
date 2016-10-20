@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"encoding/xml"
 	"github.com/nogio/noggo/driver"
+	"time"
 )
 
 
@@ -72,7 +73,7 @@ type (
 )
 
 //HTTP：连接驱动
-func (module *httpGlobal) connect(config *httpConfig) (error,driver.HttpConnect) {
+func (module *httpGlobal) connect(config *httpConfig) (driver.HttpConnect,error) {
 	if httpDriver,ok := module.drivers[config.Driver]; ok {
 		return httpDriver.Connect(config.Config)
 	} else {
@@ -618,74 +619,63 @@ func (module *httpModule) run() {
 	module.runHttp()
 }
 func (module *httpModule) runSession() {
-	if Config.Http.Session != nil {
-		//使用HTTP中的会话配置
-		module.sessionConfig = Config.Http.Session
-	} else {
-		//使用默认的会话配置
-		module.sessionConfig = Config.Session
-	}
-
-	//连接会话
-	err,conn := Session.connect(module.sessionConfig)
-
-	if err != nil {
-		panic("节点HTTP：连接会话失败：" + err.Error())
-	} else {
-
-		module.sessionConnect = conn
-
-		//打开会话连接
-		err := module.sessionConnect.Open()
-		if err != nil {
-			panic("节点HTTP：打开会话失败 " + err.Error())
-		}
-	}
+	//使用节点会话
+	module.sessionConfig = module.node.session.sessionConfig
+	module.sessionConnect = module.node.session.sessionConnect
 }
 
 func (module *httpModule) runView() {
 
 	module.viewConfig = Config.View
-	err,con := View.connect(module.viewConfig)
+	con,err := View.connect(module.viewConfig)
 
 	if err != nil {
 		panic("节点HTTP：连接View失败：" + err.Error())
 	} else {
 
-		module.viewConnect = con
-
-		//打开会话连接
-		err := module.viewConnect.Open()
+		//打开连接
+		err := con.Open()
 		if err != nil {
 			panic("节点HTTP：打开View失败 " + err.Error())
+		} else {
+
+			//保存
+			module.viewConnect = con
+
 		}
+
 	}
+
 }
 func (module *httpModule) runHttp() {
 
 	module.httpConfig = Config.Http
-	err,con := Http.connect(module.httpConfig)
+	con,err := Http.connect(module.httpConfig)
 
 	if err != nil {
 		panic("节点HTTP：连接失败：" + err.Error())
 	} else {
 
-		module.httpConnect = con
-
 		//打开会话连接
-		err := module.httpConnect.Open()
+		err := con.Open()
 		if err != nil {
 			panic("节点HTTP：打开失败 " + err.Error())
 		}
+
+		//监听
+		con.Accept(module.serveHttp)
+
+		//开始HTTP
+		//这里要判断是否SSL，如果是应该开始SSL
+		//注意，connect.Start不应该阻塞线程
+		con.Start(module.node.Port)
+
+
+		//保存连接
+		module.httpConnect = con
+
 	}
 
-	//监听
-	module.httpConnect.Accept(module.serveHttp)
-
-	//开始HTTP
-	//这里要判断是否SSL，如果是应该开始SSL
-	//注意，connect.Start不应该阻塞线程
-	module.httpConnect.Start(module.node.Port)
 
 }
 
@@ -698,10 +688,7 @@ func (module *httpModule) end() {
 }
 //退出SESSION
 func (module *httpModule) endSession() {
-	if module.sessionConnect != nil {
-		module.sessionConnect.Close()
-		module.sessionConnect = nil
-	}
+	//使用点节会话，这里不用处理
 }
 //退出view
 func (module *httpModule) endView() {
@@ -1270,7 +1257,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	cookie, err := ctx.req.Cookie(Config.Http.Cookie)
 	if err != nil || cookie.Value == "" {
 		ctx.Id = NewMd5Id()
-		err,m := module.sessionConnect.Query(ctx.Id, module.sessionConfig.Expiry)
+		m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
 		if err == nil {
 			ctx.Session = m
 		} else {
@@ -1291,7 +1278,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	} else {
 		ctx.Id, _ = url.QueryUnescape(cookie.Value)
 
-		err,m := module.sessionConnect.Query(ctx.Id, module.sessionConfig.Expiry)
+		m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
 		if err == nil {
 			ctx.Session = m
 		} else {
@@ -2164,7 +2151,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 		parse.Helpers[k] = v
 	}
 
-	err,html := module.viewConnect.Parse(parse)
+	html,err := module.viewConnect.Parse(parse)
 	if err != nil {
 
 		//这里应该转到error上下文处理
@@ -2364,6 +2351,175 @@ func (ctx *HttpContext) View(view string, models ...Map) {
 	ctx.Body = httpBodyView{view, model}
 }
 /* 上下文响应器 end */
+
+
+
+
+
+
+
+
+
+
+
+//专为接口准备的方法
+
+//返回一个状态，表示失败, 无data节点
+func (ctx *HttpContext) State(state string, args ...interface{}) {
+	e := Const.NewLangStateError(ctx.Lang, state, args...)
+	m := Map{
+		"code": e.Code,
+		"text": e.Text,
+		"time": time.Now().Unix(),
+	}
+	ctx.Json(m, 500)
+}
+
+
+//返回操作结果，表示成功
+//比如，登录，修改密码，等操作类的接口， 成功的时候，使用这个，
+//args表示返回给客户端的data
+func (ctx *HttpContext) Result(state string, args ...interface{}) {
+	e := Const.NewLangStateError(ctx.Lang, state, args...)
+	m := Map{
+		"code": 0,
+		"text": e.Text,
+		"time": time.Now().Unix(),
+	}
+	if len(args) > 0 {
+		//这里要对返回的内容对处理
+		data := args[0]
+
+		//如果需要对结果进行处理
+		c,cok := ctx.Config["data"].(Map);
+		d,dok := data.(Map);
+
+		if cok && dok {
+
+			//处理,需不需要整个data节点全加密
+			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+
+
+				newConfig := Map{
+					"data": Map{
+						"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
+						"json": c,
+					},
+				}
+				newData := Map{
+					"data": d,
+				}
+
+
+				v := Map{}
+
+				e := Mapping.Parse([]string{}, newConfig, newData, v)
+				if e != nil {
+					//出错了
+					ctx.Failed(e)
+					return
+				} else {
+					//处理后的data
+					m["data"] = v["data"]
+				}
+
+
+			} else {
+
+				v := Map{}
+
+				e := Mapping.Parse([]string{}, c, d, v)
+				if e != nil {
+					//出错了
+					ctx.Failed(e)
+					return
+				} else {
+					//处理后的data
+					m["data"] = v
+				}
+
+			}
+
+		} else {
+			//不需要包装值
+			m["data"] = data
+		}
+
+	}
+
+	ctx.Json(m, 200)
+}
+
+
+//返回数据，表示成功
+func (ctx *HttpContext) Return(data Any) {
+	m := Map{
+		"code": 0,
+		"time": time.Now().Unix(),
+	}
+
+	//如果需要对结果进行处理
+	c,cok := ctx.Config["data"].(Map);
+	d,dok := data.(Map);
+
+	if cok && dok {
+
+		//处理,需不需要整个data节点全加密
+		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+
+
+			newConfig := Map{
+				"data": Map{
+					"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
+					"json": c,
+				},
+			}
+			newData := Map{
+				"data": d,
+			}
+
+
+			v := Map{}
+
+			e := Mapping.Parse([]string{}, newConfig, newData, v)
+			if e != nil {
+				//出错了
+				ctx.Failed(e)
+				return
+			} else {
+				//处理后的data
+				m["data"] = v["data"]
+			}
+
+
+		} else {
+
+			v := Map{}
+
+			e := Mapping.Parse([]string{}, c, d, v)
+			if e != nil {
+				//出错了
+				ctx.Failed(e)
+				return
+			} else {
+				//处理后的data
+				m["data"] = v
+			}
+
+		}
+
+	} else {
+		//不需要包装值
+		m["data"] = data
+	}
+
+
+	ctx.Json(m, 200)
+}
+
+
+
+
 
 
 

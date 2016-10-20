@@ -72,7 +72,7 @@ func (global *loggerGlobal) Driver(name string, config driver.LoggerDriver) {
 
 
 //连接驱动
-func (global *loggerGlobal) connect(config *loggerConfig) (error,driver.LoggerConnect) {
+func (global *loggerGlobal) connect(config *loggerConfig) (driver.LoggerConnect,error) {
 	if loggerDriver,ok := global.drivers[config.Driver]; ok {
 		return loggerDriver.Connect(config.Config)
 	} else {
@@ -85,7 +85,7 @@ func (global *loggerGlobal) init() {
 
 	//先拿到默认的配置
 	global.loggerConfig = Config.Logger
-	err,con := global.connect(global.loggerConfig)
+	con,err := global.connect(global.loggerConfig)
 
 	if err != nil {
 		panic("日志：连接失败：" + err.Error())

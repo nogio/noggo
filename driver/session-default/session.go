@@ -52,10 +52,10 @@ func Driver() (driver.SessionDriver) {
 
 
 //连接
-func (session *DefaultDriver) Connect(config Map) (error,driver.SessionConnect) {
-	return nil,&DefaultConnect{
+func (session *DefaultDriver) Connect(config Map) (driver.SessionConnect,error) {
+	return &DefaultConnect{
 		config: config, sessions: map[string]DefaultSessionValue{},
-	}
+	},nil
 }
 
 
@@ -83,18 +83,23 @@ func (session *DefaultConnect) Close() error {
 
 
 //查询会话，
-func (session *DefaultConnect) Query(id string, expiry int64) (error,Map) {
+func (session *DefaultConnect) Entity(id string, expiry int64) (Map,error) {
 	session.sessionsMutex.Lock()
 	defer session.sessionsMutex.Unlock()
 
 	if v,ok := session.sessions[id]; ok {
-		return nil, v.Value
+		//简单复制一份
+		m := Map{}
+		for k,v := range v.Value {
+			m[k] = v
+		}
+		return m,nil
 	} else {
 		v := DefaultSessionValue{
 			Value: Map{}, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 		}
 		session.sessions[id] = v
-		return nil, v.Value
+		return v.Value,nil
 	}
 }
 

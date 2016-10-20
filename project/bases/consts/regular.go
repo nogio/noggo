@@ -8,7 +8,7 @@ import (
 func init() {
 
 	//注册一些正则表达式
-	noggo.Const.Regular(Map{
+	noggo.Const.Regulars(Map{
 
 		"password": `^[0-9A-Fa-f]{32}$`,
 

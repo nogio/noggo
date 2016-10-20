@@ -8,7 +8,7 @@ import (
 func init() {
 
 	//注册默认的语言配置
-	noggo.Const.Lang("default", Map{
+	noggo.Const.Langs("default", Map{
 
 		"ok":	"成功",
 		"no":	"失败",
