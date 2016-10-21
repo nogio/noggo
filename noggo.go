@@ -52,6 +52,7 @@ func New(names ...string) (*Noggo) {
 		node.Id = name
 		node.Name = name
 		node.Port = ":8080"
+		node.Config = &nodeConfig{}
 	}
 
 	//模块们
@@ -78,13 +79,10 @@ func (node *Noggo) Run(ports ...string) {
 	}
 
 
-
 	//如果还没初妈化， 先初始化
 	if initialized == false {
 		Init()
 	}
-
-
 
 	if node.running == false {
 

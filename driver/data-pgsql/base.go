@@ -6,6 +6,10 @@ import (
 	"github.com/nogio/noggo/driver"
 	"database/sql"
 	"errors"
+	"fmt"
+	"strings"
+	"encoding/json"
+	"strconv"
 )
 
 type (
@@ -13,6 +17,7 @@ type (
 		name    string
 		conn    *PgsqlConnect
 		models  map[string]Map
+		views  map[string]Map
 
 		db      *sql.DB
 		tx      *sql.Tx
@@ -55,25 +60,56 @@ func (base *PgsqlBase) Model(name string) (driver.DataModel) {
 			fields = n
 		}
 
-		return &PgsqlModel{ base, name, schema, table, key, fields }
+		//return &PgsqlModel{ base, name, schema, table, key, fields }
+		return &PgsqlModel{
+			PgsqlView{ base, name, schema, table, key, fields },
+		}
 	} else {
 		panic("数据：模型不存在")
 	}
 }
 
 
+//获取模型对象
+func (base *PgsqlBase) View(name string) (driver.DataView) {
+	if config,ok := base.views[name]; ok {
+
+		//模式，表名
+		schema, table, key, fields := "public", name, "id", Map{}
+		if n,ok := config["schema"].(string); ok {
+			schema = n
+		}
+		if n,ok := config["table"].(string); ok {
+			table = n
+		}
+		if n,ok := config["key"].(string); ok {
+			key = n
+		}
+		if n,ok := config["fields"].(Map); ok {
+			fields = n
+		}
+
+		return &PgsqlView{ base, name, schema, table, key, fields }
+	} else {
+		panic("数据：视图不存在")
+	}
+}
+
+
+
+
 
 //注意，此方法为实际开始事务
-func (base *PgsqlBase) begin() (error, *sql.Tx) {
+func (base *PgsqlBase) begin() (*sql.Tx,error) {
 
 	if base.tx == nil {
 		tx,err := base.db.Begin()
 		if err != nil {
-			return err, nil
+			return nil,err
 		}
 		base.tx = tx
 	}
-	return nil, base.tx
+	return base.tx,nil
 }
 
 
@@ -118,4 +154,139 @@ func (base *PgsqlBase) Cancel() (error) {
 	base.tx = nil
 
 	return nil
+}
+
+
+
+
+
+
+
+
+
+//创建的时候,也需要对值来处理,
+//数组要转成{a,b,c}格式,要不然不支持
+//json可能要转成字串才支持
+func (base *PgsqlBase) packing(value Map) (Map) {
+
+	newValue := Map{}
+
+	for k,v := range value {
+		switch t := v.(type) {
+		case []string: {
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(t, ","))
+		}
+		case []int: {
+			arr := []string{}
+			for _,v := range t {
+				arr = append(arr, strconv.Itoa(v))
+			}
+
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
+		}
+		case []int8: {
+			arr := []string{}
+			for _,v := range t {
+				arr = append(arr, fmt.Sprintf("%v", v))
+			}
+
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
+		}
+		case []int16: {
+			arr := []string{}
+			for _,v := range t {
+				arr = append(arr, fmt.Sprintf("%v", v))
+			}
+
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
+		}
+		case []int32: {
+			arr := []string{}
+			for _,v := range t {
+				arr = append(arr, fmt.Sprintf("%v", v))
+			}
+
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
+		}
+		case []int64: {
+			arr := []string{}
+			for _,v := range t {
+				arr = append(arr, fmt.Sprintf("%v", v))
+			}
+
+			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
+		}
+		case Map: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "{}"
+			}
+		}
+		case map[string]interface{}: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "{}"
+			}
+		}
+		default:
+			newValue[k] = t
+		}
+	}
+	return newValue
+}
+
+
+
+
+
+
+
+//把MAP编译成sql查询条件
+func (base *PgsqlBase) building(i int,args ...Map) (string,[]interface{},error) {
+
+	if len(args) > 0 {
+		querys := []string{}
+		values := make([]interface{}, 0)
+
+		//否则是多个map,单个为 与, 多个为 或
+		for _,m := range args {
+			ands := []string{}
+			for k,v := range m {
+
+				//v要处理一下如果是map要特别处理
+				//key做为操作符，比如 > < >= 等
+				//而且多个条件是and，比如 views > 1 AND views < 100
+				if opMap, opOK := v.(Map); opOK {
+
+					opAnds := []string{}
+					for opKey,opVal := range opMap {
+						opAnds = append(opAnds, fmt.Sprintf(`"%s" %s $%d`, k, opKey, i))
+						values = append(values, opVal)
+						i++
+					}
+					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
+
+				} else {
+
+					if v == nil {
+						ands = append(ands, fmt.Sprintf(`"%s" IS NULL`, k))
+					} else {
+						ands = append(ands, fmt.Sprintf(`"%s" = $%d`, k, i))
+						values = append(values, v)
+						i++
+					}
+				}
+
+			}
+			querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
+		}
+
+		return strings.Join(querys, " OR "), values, nil
+	} else {
+		return "1=1",[]interface{}{},nil
+	}
 }

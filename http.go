@@ -2286,12 +2286,12 @@ func (ctx *HttpContext) Denied(err *Error) {
 func (ctx *HttpContext) Goto(url string) {
 	ctx.Body = httpBodyGoto{url}
 }
-func (ctx *HttpContext) Text(text string, codes ...int) {
+func (ctx *HttpContext) Text(text Any, codes ...int) {
 	if len(codes) > 0 {
 		ctx.Code = codes[0]
 	}
 	ctx.Type = "text"
-	ctx.Body = httpBodyText{text}
+	ctx.Body = httpBodyText{fmt.Sprintf("%v", text)}
 }
 func (ctx *HttpContext) Html(html string, codes ...int) {
 	if len(codes) > 0 {
@@ -2450,7 +2450,6 @@ func (ctx *HttpContext) Result(state string, args ...interface{}) {
 				newConfig := Map{
 					"data": Map{
 						"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
-						"json": c,
 					},
 				}
 				newData := Map{
@@ -2545,16 +2544,18 @@ func (ctx *HttpContext) Return(data Any) {
 		//处理,需不需要整个data节点全加密
 		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
 
-
 			newConfig := Map{
 				"data": Map{
 					"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
-					"json": c,
 				},
 			}
 			newData := Map{
 				"data": d,
 			}
+
+
+
+			Logger.Debug("dddd", newData)
 
 
 			v := Map{}
@@ -2572,11 +2573,9 @@ func (ctx *HttpContext) Return(data Any) {
 
 		} else {
 
-
 			//不需要包装值
 			m["data"] = data
 		}
-
 
 	}
 

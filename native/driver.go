@@ -21,5 +21,4 @@ func init() {
 	noggo.Queue.Driver(noggo.ConstDriverDefault, queue_default.Driver())
 	noggo.Http.Driver(noggo.ConstDriverDefault, http_default.Driver())
 	noggo.View.Driver(noggo.ConstDriverDefault, view_default.Driver())
-
 }

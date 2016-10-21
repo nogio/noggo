@@ -605,6 +605,7 @@ func (module *eventModule) run() {
 }
 func (module *eventModule) runSession() {
 	//使用节点会话
+	module.sessionConfig = module.node.session.sessionConfig
 	module.sessionConnect = module.node.session.sessionConnect
 }
 func (module *eventModule) runEvent() {

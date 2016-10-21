@@ -10,6 +10,9 @@ import (
 
 const (
 
+	ASC     = "$$$asc$$$"
+	DESC    = "$$$desc$$$"
+
 	ConstDriverDefault  = "default"
 	ConstLangDefault	= "default"
 	ConstNodeGlobal		= "$global$"
@@ -172,6 +175,7 @@ func (global *constGlobal) Regulars(regulars Map) {
 	if global.regulars == nil {
 		global.regulars = map[string][]string{}
 	}
+
 	for k,v := range regulars {
 		switch vvvv := v.(type) {
 		case string:

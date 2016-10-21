@@ -15,6 +15,7 @@ func main() {
 	noggo.Init()
 
 
+
 	//可以用命令行运行多个节点在同一进程
 	//noggo				运行所有节点
 	//noggo	*			运行所有节点

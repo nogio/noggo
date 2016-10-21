@@ -563,6 +563,7 @@ func (module *planModule) run() {
 }
 func (module *planModule) runSession() {
 	//使用节点的会话了
+	module.sessionConfig = module.node.session.sessionConfig
 	module.sessionConnect = module.node.session.sessionConnect
 }
 func (module *planModule) runPlan() {
@@ -1081,7 +1082,6 @@ func (module *planModule) contextRequest(ctx *PlanContext) {
 
 	//请求处理
 	//Id已经有了
-
 
 	//会话处理
 	m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)

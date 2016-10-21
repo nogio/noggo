@@ -12,13 +12,6 @@ func init() {
 		"route": Map{
 			"name": "首页", "text": "首页",
 			"action": func(ctx *noggo.HttpContext) {
-
-				//noggo.Event.Publish("test")
-				for i:=0;i<10;i++ {
-					noggo.Queue.Publish("test")
-				}
-
-				ctx.Data["msg"] = "消息来自路由"
 				ctx.View("index")
 			},
 		},
@@ -30,9 +23,17 @@ func init() {
 		"route": Map{
 			"name": "test", "text": "test",
 			"action": func(ctx *noggo.HttpContext) {
-				ctx.Return(Map{
-					"msg": "hahaha",
+
+				db := noggo.Data.Base("main"); defer db.Close()
+				items,err := db.Model("test").Update(Map{
+					"title": "jorise",
+				}, Map{
+					"id": Map{ ">" : 5000 },
 				})
+
+				noggo.Logger.Debug("limit", err)
+
+				ctx.Text(items)
 			},
 		},
 	})

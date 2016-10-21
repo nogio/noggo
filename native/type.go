@@ -445,7 +445,7 @@ func init() {
 	})
 
 
-	noggo.Mapping.Type("json.array", Map{
+	noggo.Mapping.Type("[json]", Map{
 		"name": "JSON数组", "text": "JSON数组",
 		"type": []string{ "[json]" },
 		"valid": func(value Any, config Map) bool {
@@ -541,7 +541,7 @@ func init() {
 	})
 
 
-	noggo.Mapping.Type("int.array", Map{
+	noggo.Mapping.Type("[int]", Map{
 		"name": "整型数组", "text": "整型数组",
 		"type": []string{ "[int]", "[number]" },
 		"valid": func(value Any, config Map) bool {
@@ -773,7 +773,7 @@ func init() {
 	})
 
 
-	noggo.Mapping.Type("string.array", Map{
+	noggo.Mapping.Type("[string]", Map{
 		"name": "字符数组", "text": "字符数组",
 		"type": []string{ "[string]" },
 		"valid": func(value Any, config Map) bool {
@@ -874,7 +874,7 @@ func init() {
 		},
 	})
 
-	noggo.Mapping.Type("timestamp.array", Map{
+	noggo.Mapping.Type("[timestamp]", Map{
 		"name": "时间戳数组", "text": "时间戳数组",
 		"type": []string{ "[timestamp]" },
 		"valid": func(value Any, config Map) bool {

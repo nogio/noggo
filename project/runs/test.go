@@ -14,7 +14,7 @@ func init() {
 	noggo.Data.Driver("pgsql", data_pgsql.Driver())
 
 	//注册数据模型
-	noggo.Data.Register("test", Map{
+	noggo.Data.Model("test", Map{
 		"name": "测试", "text": "测试表",
 		"schema": "public", "table": "test", "key": "id",   //这行配置可选
 		"fields": Map{
@@ -35,6 +35,7 @@ func init() {
 			},
 		},
 	})
+
 
 }
 
@@ -105,3 +106,4 @@ func main() {
 
 	nog.Run(":8080")
 }
+

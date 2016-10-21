@@ -7,99 +7,14 @@ import (
 	"fmt"
 	"strings"
 	"github.com/nogio/noggo"
-	"encoding/json"
-	"strconv"
 	"errors"
 )
 
 type (
 	PgsqlModel struct {
-		base    *PgsqlBase
-		name    string  //模型名称
-		schema  string  //架构名
-		table   string  //表名
-		key     string  //主键
-		fields  Map     //字段定义
+		PgsqlView
 	}
 )
-
-
-
-//创建的时候,也需要对值来处理,
-//数组要转成{a,b,c}格式,要不然不支持
-//json可能要转成字串才支持
-func (model *PgsqlModel) packing(value Map) Map {
-
-	newValue := Map{}
-
-	for k,v := range value {
-		switch t := v.(type) {
-		case []string: {
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(t, ","))
-		}
-		case []int: {
-			arr := []string{}
-			for _,v := range t {
-				arr = append(arr, strconv.Itoa(v))
-			}
-
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
-		}
-		case []int8: {
-			arr := []string{}
-			for _,v := range t {
-				arr = append(arr, fmt.Sprintf("%v", v))
-			}
-
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
-		}
-		case []int16: {
-			arr := []string{}
-			for _,v := range t {
-				arr = append(arr, fmt.Sprintf("%v", v))
-			}
-
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
-		}
-		case []int32: {
-			arr := []string{}
-			for _,v := range t {
-				arr = append(arr, fmt.Sprintf("%v", v))
-			}
-
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
-		}
-		case []int64: {
-			arr := []string{}
-			for _,v := range t {
-				arr = append(arr, fmt.Sprintf("%v", v))
-			}
-
-			newValue[k] = fmt.Sprintf("{%s}", strings.Join(arr, ","))
-		}
-		case Map: {
-			b,e := json.Marshal(t);
-			if e == nil {
-				newValue[k] = string(b)
-			} else {
-				newValue[k] = "{}"
-			}
-		}
-		case map[string]interface{}: {
-			b,e := json.Marshal(t);
-			if e == nil {
-				newValue[k] = string(b)
-			} else {
-				newValue[k] = "{}"
-			}
-		}
-		default:
-			newValue[k] = t
-		}
-	}
-	return newValue
-}
-
 
 
 
@@ -116,7 +31,7 @@ func (model *PgsqlModel) Create(data Map) (Map,error) {
 	} else {
 
 		//对拿到的值进行包装，以适合pgsql
-		newValue := model.packing(value)
+		newValue := model.base.packing(value)
 
 		//先拿字段列表
 		keys, tags, vals := []string{}, []string{}, make([]interface{},0)
@@ -135,7 +50,7 @@ func (model *PgsqlModel) Create(data Map) (Map,error) {
 			i++
 		}
 
-		err,tx := model.base.begin()
+		tx,err := model.base.begin()
 		if err != nil {
 			return nil,err
 		} else {
@@ -187,7 +102,7 @@ func (model *PgsqlModel) Change(item Map, data Map) (Map,error) {
 
 		//包装值，因为golang本身数据类型和数据库的不一定对版
 		//需要预处理一下
-		newValue := model.packing(value)
+		newValue := model.base.packing(value)
 
 		//先拿字段列表
 		sets, vals := []string{}, make([]interface{}, 0)
@@ -206,7 +121,7 @@ func (model *PgsqlModel) Change(item Map, data Map) (Map,error) {
 		vals = append(vals, item[model.key])
 
 		//开启事务
-		err, tx := model.base.begin()
+		tx,err := model.base.begin()
 		if err != nil {
 			return nil,err
 		} else {
@@ -251,7 +166,7 @@ func (model *PgsqlModel) Remove(item Map) (error) {
 	if key,ok := item[model.key]; ok {
 
 		//开启事务
-		err, tx := model.base.begin()
+		tx,err := model.base.begin()
 		if err != nil {
 			return err
 		} else {
@@ -286,7 +201,7 @@ func (model *PgsqlModel) Remove(item Map) (error) {
 func (model *PgsqlModel) Entity(id Any) (Map,error) {
 
 	//开启事务
-	err, tx := model.base.begin()
+	tx,err := model.base.begin()
 	noggo.Logger.Debug("data", "entity", "begin", err)
 	if err != nil {
 		return nil,err
@@ -346,4 +261,124 @@ func (model *PgsqlModel) Entity(id Any) (Map,error) {
 
 
 	}
+}
+
+
+
+
+
+
+//批量删除
+func (model *PgsqlModel) Delete(args ...Map) (int64,error) {
+
+	//生成条件
+	where,builds,err := model.base.building(1,args...)
+	if err != nil {
+		return int64(0),err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "count", "begin", err)
+		if err != nil {
+			return int64(0),err
+		} else {
+
+			sql := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE %s`, model.schema, model.table, where)
+			result,err := tx.Exec(sql, builds...)
+			if err != nil {
+				return int64(0),err
+			} else {
+
+				//提交事务
+				err := model.base.Submit()
+				if err != nil {
+					return int64(0),err
+				} else {
+
+					return result.RowsAffected()
+
+				}
+			}
+		}
+	}
+}
+
+
+//批量更新
+func (model *PgsqlModel) Update(args ...Map) (int64,error) {
+
+	//注意，args[0]为更新的内容，之后的为查询条件
+	data := args[0]
+	args = args[1:]
+
+
+	//按字段生成值
+	value := Map{}
+	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, true);
+	noggo.Logger.Debug("data", "update", "mapping", err)
+
+	if err != nil {
+		return int64(0),err
+	} else {
+
+		//包装值，因为golang本身数据类型和数据库的不一定对版
+		//需要预处理一下
+		newValue := model.base.packing(value)
+
+		//先拿字段列表
+		sets, vals := []string{}, make([]interface{}, 0)
+		i := 1
+		for k, v := range newValue {
+			//主值不在修改之中
+			if k == model.key {
+				continue
+			}
+			//keys = append(keys, k)
+			vals = append(vals, v)
+			sets = append(sets, fmt.Sprintf(`"%s"=$%d`, k, i))
+			i++
+		}
+
+		//生成条件
+		where,builds,err := model.base.building(i, args...)
+		if err != nil {
+			return int64(0),err
+		} else {
+
+			//把builds的args加到vals中
+			for _,v := range builds {
+				vals = append(vals, v)
+			}
+
+			//开启事务
+			tx, err := model.base.begin()
+			if err != nil {
+				return int64(0),err
+			} else {
+
+				//更新数据库
+				sql := fmt.Sprintf(`UPDATE "%s"."%s" SET %s WHERE %s`, model.schema, model.table, strings.Join(sets, `,`), where)
+				result, err := tx.Exec(sql, vals...)
+				noggo.Logger.Debug("data", "update", "exec", err)
+				if err != nil {
+					return int64(0),err
+				} else {
+
+
+					//提交事务
+					err := model.base.Submit()
+					if err != nil {
+						return int64(0),err
+					} else {
+
+						return result.RowsAffected()
+
+					}
+
+				}
+			}
+		}
+	}
+
 }
