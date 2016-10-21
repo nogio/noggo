@@ -14,7 +14,9 @@ func init() {
 			"action": func(ctx *noggo.HttpContext) {
 
 				//noggo.Event.Publish("test")
-				noggo.Queue.Publish("test")
+				for i:=0;i<10;i++ {
+					noggo.Queue.Publish("test")
+				}
 
 				ctx.Data["msg"] = "消息来自路由"
 				ctx.View("index")

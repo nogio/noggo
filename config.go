@@ -177,6 +177,10 @@ type (
 
 		//view
 		View *viewConfig		`json:"view"`
+
+
+		//自定义配置
+		Custom Map		`json:"custom"`
 	}
 
 )

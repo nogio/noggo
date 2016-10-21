@@ -2441,8 +2441,39 @@ func (ctx *HttpContext) Result(state string, args ...interface{}) {
 			}
 
 		} else {
-			//不需要包装值
-			m["data"] = data
+			//不需要包装值，但是有加密的需求
+
+			//处理,需不需要整个data节点全加密
+			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+
+
+				newConfig := Map{
+					"data": Map{
+						"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
+						"json": c,
+					},
+				}
+				newData := Map{
+					"data": d,
+				}
+
+
+				v := Map{}
+
+				e := Mapping.Parse([]string{}, newConfig, newData, v)
+				if e != nil {
+					//出错了
+					ctx.Failed(e)
+					return
+				} else {
+					//处理后的data
+					m["data"] = v["data"]
+				}
+
+
+			} else {
+				m["data"] = data
+			}
 		}
 
 	}
@@ -2509,8 +2540,44 @@ func (ctx *HttpContext) Return(data Any) {
 		}
 
 	} else {
-		//不需要包装值
-		m["data"] = data
+		//不需要包装值，但是有加密的需求
+
+		//处理,需不需要整个data节点全加密
+		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+
+
+			newConfig := Map{
+				"data": Map{
+					"type": "json", "must": true, "encode": ctx.Node.Config.Crypto,
+					"json": c,
+				},
+			}
+			newData := Map{
+				"data": d,
+			}
+
+
+			v := Map{}
+
+			e := Mapping.Parse([]string{}, newConfig, newData, v)
+			if e != nil {
+				//出错了
+				ctx.Failed(e)
+				return
+			} else {
+				//处理后的data
+				m["data"] = v["data"]
+			}
+
+
+		} else {
+
+
+			//不需要包装值
+			m["data"] = data
+		}
+
+
 	}
 
 

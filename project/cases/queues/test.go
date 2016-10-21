@@ -8,7 +8,7 @@ import (
 func init() {
 
 	noggo.Queue.Route("test", Map{
-		"line": 2,
+		"line": 1,  //line表示，此队列同时可以有2个线程跑
 		"route": Map{
 			"name": "测试队列", "text": "测试队列",
 			"action": func(ctx *noggo.QueueContext) {
@@ -17,7 +17,5 @@ func init() {
 			},
 		},
 	})
-
-
 
 }

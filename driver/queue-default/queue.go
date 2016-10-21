@@ -26,7 +26,7 @@ type (
 		handler     driver.QueueHandler
 
 		mutex       sync.Mutex
-		names       []string
+		names       map[string]int  //map[name]line
 		datas      map[string]QueueData
 	}
 
@@ -49,7 +49,7 @@ var (
 )
 
 func init() {
-	msg = &Msg{ subs: map[string][]MsgFunc{} }
+	msg = &Msg{ subs: map[string]chan Map{} }
 }
 
 
@@ -68,7 +68,7 @@ func Driver() (driver.QueueDriver) {
 //连接
 func (drv *DefaultQueueDriver) Connect(config Map) (driver.QueueConnect,error) {
 	return &DefaultQueueConnect{
-		config: config, names: []string{}, datas: map[string]QueueData{},
+		config: config, names: map[string]int{}, datas: map[string]QueueData{},
 	}, nil
 }
 
@@ -76,11 +76,11 @@ func (drv *DefaultQueueDriver) Connect(config Map) (driver.QueueConnect,error) {
 
 
 //打开连接
-func (drv *DefaultQueueConnect) Open() error {
+func (con *DefaultQueueConnect) Open() error {
 	return nil
 }
 //关闭连接
-func (drv *DefaultQueueConnect) Close() error {
+func (con *DefaultQueueConnect) Close() error {
 	return nil
 }
 
@@ -90,12 +90,13 @@ func (drv *DefaultQueueConnect) Close() error {
 
 
 //订阅者注册队列
-func (con *DefaultQueueConnect) Accept(name string) error {
+func (con *DefaultQueueConnect) Accept(name string, line int) error {
 	con.mutex.Lock()
 	defer con.mutex.Unlock()
 
 	//注意，这里应该处理唯一的问题，如果已经存在某name，就跳过了得
-	con.names = append(con.names, name)
+	//con.names = append(con.names, name)
+	con.names[name] = line
 
 	return nil
 }
@@ -115,32 +116,51 @@ func (con *DefaultQueueConnect) Publish(name string, value Map) error {
 
 
 //开始订阅者
+func (con *DefaultQueueConnect) subscriber(name string) {
+
+	cc := msg.Sub(name)
+	for {
+		v := <- cc
+
+		//新建队列
+		id := NewMd5Id()
+		queue := QueueData{
+			Name: name, Value: v,
+		}
+
+		//保存队列
+		con.mutex.Lock()
+		con.datas[id] = queue
+		con.mutex.Unlock()
+
+		//调用队列
+		con.execute(id, queue.Name, queue.Value)
+
+	}
+}
+
+
+//开始订阅者
 func (con *DefaultQueueConnect) Subscriber(handler driver.QueueHandler) error {
 	con.handler = handler
 
 	//订阅消息
-	for _,name := range con.names {
-		msg.Sub(name, func(value Map) {
-
-			//新建计划
-			id := NewMd5Id()
-			queue := QueueData{
-				Name: name, Value: Map{},
-			}
-
-			//保存计划
-			con.mutex.Lock()
-			con.datas[id] = queue
-			con.mutex.Unlock()
-
-			//调用队列
-			con.execute(id, queue.Name, queue.Value)
-		})
+	for name,line := range con.names {
+		for i:=0;i<line;i++ {
+			go con.subscriber(name)
+		}
 	}
-
 	
 	return nil
 }
+
+
+
+
+
+
+
+
 //开始发布者
 func (con *DefaultQueueConnect) Publisher() error {
 

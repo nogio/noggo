@@ -496,6 +496,21 @@ func (global *queueGlobal) Publish(name string, args ...Map) (error) {
 	return errors.New("队列未连接")
 }
 
+//发布消息到指定的队列
+func (global *queueGlobal) PublishTo(key string, name string, args ...Map) (error) {
+
+	value := Map{}
+	if len(args) > 0 {
+		value = args[0]
+	}
+
+	if cc,ok := global.queueConnects[key]; ok {
+		return cc.Publish(name, value)
+	}
+
+	return errors.New("队列连接不存在")
+}
+
 /*
 	任务模块方法  end
 */
@@ -552,6 +567,7 @@ type (
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
+		routeLines	map[string]int				//路由名称和线程对应
 
 		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]QueueFunc
@@ -635,8 +651,8 @@ func (module *queueModule) runQueue() {
 
 
 				//注册队列
-				for _,name := range module.routeNames {
-					con.Accept(name)
+				for name,line := range module.routeLines {
+					con.Accept(name, line)
 				}
 
 				//开始订阅者
@@ -696,6 +712,21 @@ func (module *queueModule) Route(name string, config Map) {
 	//可以后注册重写原有路由配置，所以直接保存
 	module.routes[name] = config
 
+
+	if module.routeLines == nil {
+		module.routeLines = map[string]int{}
+	}
+
+
+	//处理time
+	if v,ok := config[KeyMapLine]; ok {
+		switch ttt := v.(type) {
+		case int:
+			module.routeLines[name] = ttt
+		default:
+			module.routeLines[name] = 1
+		}
+	}
 }
 
 

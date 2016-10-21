@@ -7,26 +7,26 @@ import (
 type (
 	Msg struct {
 		mutex   sync.Mutex
-		subs    map[string][]MsgFunc
+		subs    map[string]chan Map
 	}
 	MsgFunc func(Map)
 )
 
 
 //订阅消息
-func (msg *Msg) Sub(name string, call MsgFunc) error {
+func (msg *Msg) Sub(name string) (chan Map) {
 	msg.mutex.Lock()
 	defer msg.mutex.Unlock()
 
-	if _,ok := msg.subs[name]; ok == false {
-		msg.subs[name] = []MsgFunc{}
+	if cc,ok := msg.subs[name]; ok {
+		return cc
+	} else {
+
+		cc := make(chan Map)
+		msg.subs[name] = cc
+
+		return cc
 	}
-
-	//加入调用列表
-	msg.subs[name] = append(msg.subs[name], call)
-
-
-	return nil
 }
 
 //发布消息
@@ -34,10 +34,8 @@ func (msg *Msg) Pub(name string, value Map) error {
 	msg.mutex.Lock()
 	defer msg.mutex.Unlock()
 
-	if calls,ok := msg.subs[name]; ok {
-		for _,call := range calls {
-			go call(value)
-		}
+	if cc,ok := msg.subs[name]; ok {
+		cc <- value
 	}
 
 	return nil

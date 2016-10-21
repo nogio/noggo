@@ -21,7 +21,7 @@ type (
 		Close() error
 
 		//订阅者注册队列
-		Accept(name string) error
+		Accept(name string, line int) error
 
 		//发布消息
 		Publish(name string, value Map) error
