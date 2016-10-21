@@ -3,6 +3,7 @@ package https
 import (
 	"github.com/nogio/noggo"
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 )
 
 func init() {
@@ -25,13 +26,13 @@ func init() {
 			"action": func(ctx *noggo.HttpContext) {
 
 				db := noggo.Data.Base("main"); defer db.Close()
-				items,err := db.Model("test").Update(Map{
-					"title": "jorise",
-				}, Map{
+
+				items,_ := db.Model("test").Limit(0, 20, Map{
 					"id": Map{ ">" : 5000 },
+				}, Map{
+					"id": driver.DESC, "created": driver.ASC,
 				})
 
-				noggo.Logger.Debug("limit", err)
 
 				ctx.Text(items)
 			},

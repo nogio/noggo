@@ -4,17 +4,25 @@ package data_pgsql
 import (
 	. "github.com/nogio/noggo/base"
 	//"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"fmt"
 	"strings"
-	"github.com/nogio/noggo"
 	"errors"
 )
 
 type (
 	PgsqlModel struct {
-		PgsqlView
+		base    *PgsqlBase
+		name    string  //模型名称
+		schema  string  //架构名
+		object   string  //这里可能是表名，视图名，或是集合名（mongodb)
+		key     string  //主键
+		fields  Map     //字段定义
 	}
 )
+
+
+
 
 
 
@@ -55,7 +63,7 @@ func (model *PgsqlModel) Create(data Map) (Map,error) {
 			return nil,err
 		} else {
 
-			sql := fmt.Sprintf(`INSERT INTO "%s"."%s" ("%s") VALUES (%s) RETURNING "id";`, model.schema, model.table, strings.Join(keys, `","`), strings.Join(tags, `,`))
+			sql := fmt.Sprintf(`INSERT INTO "%s"."%s" ("%s") VALUES (%s) RETURNING "id";`, model.schema, model.object, strings.Join(keys, `","`), strings.Join(tags, `,`))
 			row := tx.QueryRow(sql, vals...)
 			if row == nil {
 				return nil,errors.New("数据：插入：无返回行")
@@ -69,18 +77,34 @@ func (model *PgsqlModel) Create(data Map) (Map,error) {
 				} else {
 					value["id"] = id
 
-					//提交事务
-					err := model.base.Submit()
-					if err != nil {
-						return nil,err
-					} else {
 
-						//这里应该有触发器
+					//注意这里，如果手动提交事务， 那这里直接返回，是不需要提交的
+					if model.base.manual {
 
-						//成功了
+						//这里应该保存触发器
+
+						//成功了，但是没有提交事务
 						return value,nil
 
+					} else {
+
+
+						//提交事务
+						err := model.base.Submit()
+						if err != nil {
+							return nil,err
+						} else {
+
+							//这里应该有触发器
+
+							//成功了
+							return value,nil
+
+						}
+
 					}
+
+
 				}
 			}
 		}
@@ -127,7 +151,7 @@ func (model *PgsqlModel) Change(item Map, data Map) (Map,error) {
 		} else {
 
 			//更新数据库
-			sql := fmt.Sprintf(`UPDATE "%s"."%s" SET %s WHERE "id"=$%d`, model.schema, model.table, strings.Join(sets, `,`), i)
+			sql := fmt.Sprintf(`UPDATE "%s"."%s" SET %s WHERE "id"=$%d`, model.schema, model.object, strings.Join(sets, `,`), i)
 			_, err := tx.Exec(sql, vals...)
 			noggo.Logger.Debug("change", "exec", err)
 			if err != nil {
@@ -140,18 +164,28 @@ func (model *PgsqlModel) Change(item Map, data Map) (Map,error) {
 				for k, v := range item { newItem[k] = v }
 				for k, v := range value { newItem[k] = v }
 
+				//注意这里，如果手动提交事务， 那这里直接返回，是不需要提交的
+				if model.base.manual {
 
-				//提交事务
-				err := model.base.Submit()
-				if err != nil {
-					return nil,err
+					//这里应该保存触发器
+
+					//成功了，但是没有提交事务
+					return newItem, nil
+
 				} else {
 
-					//这里应该有触发器
+					//提交事务
+					err := model.base.Submit()
+					if err != nil {
+						return nil, err
+					} else {
 
-					//成功了
-					return newItem,nil
+						//这里应该有触发器
 
+						//成功了
+						return newItem, nil
+
+					}
 				}
 
 
@@ -172,22 +206,34 @@ func (model *PgsqlModel) Remove(item Map) (error) {
 		} else {
 
 			//更新数据库
-			sql := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE "id"=$%d`, model.schema, model.table)
+			sql := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE "id"=$%d`, model.schema, model.object)
 			_, err := tx.Exec(sql, key)
 			noggo.Logger.Debug("change", "remove", err)
 			if err != nil {
 				return err
 			} else {
 
-				//提交事务
-				err := model.base.Submit()
-				if err != nil {
-					return err
-				} else {
-					//这里应该有触发器
+				//注意这里，如果手动提交事务， 那这里直接返回，是不需要提交的
+				if model.base.manual {
 
-					//成功了
+					//这里应该保存触发器
+
+					//成功了，但是没有提交事务
 					return nil
+
+				} else {
+
+					//提交事务
+					err := model.base.Submit()
+					if err != nil {
+						return err
+					} else {
+						//这里应该有触发器
+
+
+						//成功了
+						return nil
+					}
 				}
 			}
 		}
@@ -215,7 +261,7 @@ func (model *PgsqlModel) Entity(id Any) (Map,error) {
 			keys = append(keys, k)
 		}
 
-		sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE "id"=$1`, strings.Join(keys, `","`), model.schema, model.table)
+		sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE "id"=$1`, strings.Join(keys, `","`), model.schema, model.object)
 		row := tx.QueryRow(sql, id)
 		if row == nil {
 			return nil,errors.New("数据：查询失败")
@@ -272,7 +318,7 @@ func (model *PgsqlModel) Entity(id Any) (Map,error) {
 func (model *PgsqlModel) Delete(args ...Map) (int64,error) {
 
 	//生成条件
-	where,builds,err := model.base.building(1,args...)
+	where,builds,_,err := model.base.building(1,args...)
 	if err != nil {
 		return int64(0),err
 	} else {
@@ -284,20 +330,30 @@ func (model *PgsqlModel) Delete(args ...Map) (int64,error) {
 			return int64(0),err
 		} else {
 
-			sql := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE %s`, model.schema, model.table, where)
+			sql := fmt.Sprintf(`DELETE FROM "%s"."%s" WHERE %s`, model.schema, model.object, where)
 			result,err := tx.Exec(sql, builds...)
 			if err != nil {
 				return int64(0),err
 			} else {
 
-				//提交事务
-				err := model.base.Submit()
-				if err != nil {
-					return int64(0),err
-				} else {
 
+				//注意这里，如果手动提交事务， 那这里直接返回，是不需要提交的
+				if model.base.manual {
+
+					//成功了，但是没有提交事务
 					return result.RowsAffected()
 
+				} else {
+
+					//提交事务
+					err := model.base.Submit()
+					if err != nil {
+						return int64(0), err
+					} else {
+
+						return result.RowsAffected()
+
+					}
 				}
 			}
 		}
@@ -341,7 +397,7 @@ func (model *PgsqlModel) Update(args ...Map) (int64,error) {
 		}
 
 		//生成条件
-		where,builds,err := model.base.building(i, args...)
+		where,builds,_,err := model.base.building(i, args...)
 		if err != nil {
 			return int64(0),err
 		} else {
@@ -358,22 +414,31 @@ func (model *PgsqlModel) Update(args ...Map) (int64,error) {
 			} else {
 
 				//更新数据库
-				sql := fmt.Sprintf(`UPDATE "%s"."%s" SET %s WHERE %s`, model.schema, model.table, strings.Join(sets, `,`), where)
+				sql := fmt.Sprintf(`UPDATE "%s"."%s" SET %s WHERE %s`, model.schema, model.object, strings.Join(sets, `,`), where)
 				result, err := tx.Exec(sql, vals...)
 				noggo.Logger.Debug("data", "update", "exec", err)
 				if err != nil {
 					return int64(0),err
 				} else {
 
+					//注意这里，如果手动提交事务， 那这里直接返回，是不需要提交的
+					if model.base.manual {
 
-					//提交事务
-					err := model.base.Submit()
-					if err != nil {
-						return int64(0),err
-					} else {
-
+						//成功了，但是没有提交事务
 						return result.RowsAffected()
 
+					} else {
+
+						//提交事务
+						err := model.base.Submit()
+						if err != nil {
+							return int64(0), err
+						} else {
+
+							//这是真成功了
+							return result.RowsAffected()
+
+						}
 					}
 
 				}
@@ -381,4 +446,275 @@ func (model *PgsqlModel) Update(args ...Map) (int64,error) {
 		}
 	}
 
+}
+
+
+
+
+
+
+
+
+//统计数量
+func (model *PgsqlModel) Count(args ...Map) (int64,error) {
+
+	//生成查询条件
+	where,builds,_,err := model.base.building(1,args...)
+	if err != nil {
+		return int64(0),err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "count", "begin", err)
+		if err != nil {
+			return int64(0),err
+		} else {
+
+			sql := fmt.Sprintf(`SELECT COUNT(*) FROM "%s"."%s" WHERE %s`, model.schema, model.object, where)
+			row := tx.QueryRow(sql, builds...)
+			if row == nil {
+				return int64(0),errors.New("数据：查询失败")
+			} else {
+
+				count := int64(0)
+
+				err := row.Scan(&count)
+				noggo.Logger.Debug("data", "count", err, sql)
+				if err != nil {
+					return count,errors.New("数据：查询时扫描失败 " + err.Error())
+				} else {
+					return count,nil
+				}
+			}
+		}
+	}
+}
+
+
+//查询单条
+func (model *PgsqlModel) Single(args ...Map) (Map,error) {
+
+	//生成查询条件
+	where,builds,orderby,err := model.base.building(1,args...)
+	if err != nil {
+		return nil,err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "single", "begin", err)
+		if err != nil {
+			return nil,err
+		} else {
+
+			//先拿字段列表
+			//不能用*，必须指定字段列表
+			//要不然下拉scan的时候，数据库返回的字段和顺序不一定对
+			keys := []string{}
+			for k,_ := range model.fields {
+				keys = append(keys, k)
+			}
+
+			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s`, strings.Join(keys, `","`), model.schema, model.object, where, orderby)
+			row := tx.QueryRow(sql, builds...)
+			if row == nil {
+				return nil,errors.New("数据：查询失败")
+			} else {
+
+				//扫描数据
+				values := make([]interface{}, len(keys))	//真正的值
+				pValues := make([]interface{}, len(keys))	//指针，指向值
+				for i := range values {
+					pValues[i] = &values[i]
+				}
+
+				err := row.Scan(pValues...)
+				noggo.Logger.Debug("data", "single", err, sql)
+				if err != nil {
+					return nil,errors.New("数据：查询时扫描失败 " + err.Error())
+				} else {
+					m := Map{}
+					for i,n := range keys {
+						switch v := values[i].(type) {
+						case []byte: {
+							m[n] = string(v)
+						}
+						default:
+							m[n] = v
+						}
+					}
+
+					//返回前使用代码生成
+					//有必要的, 按模型拿到数据
+					item := Map{}
+					err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
+					noggo.Logger.Debug("data", "single", "mapping", err)
+					if err == nil {
+						return item,nil
+					} else {
+						//如果生成失败,还是返回原始返回值
+						//要不然,存在的也显示为不存在
+						return m,nil
+					}
+				}
+			}
+		}
+	}
+}
+//查询列表
+func (model *PgsqlModel) Query(args ...Map) ([]Map,error) {
+	//生成查询条件
+	where,builds,orderby,err := model.base.building(1,args...)
+	if err != nil {
+		return nil,err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "query", "begin", err)
+		if err != nil {
+			return nil,err
+		} else {
+
+			//先拿字段列表
+			//不能用*，必须指定字段列表
+			//要不然下拉scan的时候，数据库返回的字段和顺序不一定对
+			keys := []string{}
+			for k,_ := range model.fields {
+				keys = append(keys, k)
+			}
+
+			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s`, strings.Join(keys, `","`), model.schema, model.object, where, orderby)
+			rows,err := tx.Query(sql, builds...)
+			noggo.Logger.Debug("data", "query", err, sql)
+			if err != nil {
+				return nil,err
+			} else {
+				defer rows.Close()
+
+				//返回结果在这
+				items := []Map{}
+
+				//遍历结果
+				for rows.Next() {
+					//扫描数据
+					values := make([]interface{}, len(keys))    //真正的值
+					pValues := make([]interface{}, len(keys))    //指针，指向值
+					for i := range values {
+						pValues[i] = &values[i]
+					}
+					err := rows.Scan(pValues...)
+
+					if err != nil {
+						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+					} else {
+						m := Map{}
+						for i, n := range keys {
+							switch v := values[i].(type) {
+							case []byte: {
+								m[n] = string(v)
+							}
+							default:
+								m[n] = v
+							}
+						}
+
+						//返回前使用代码生成
+						//有必要的, 按模型拿到数据
+						item := Map{}
+						err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
+						if err == nil {
+							items = append(items, item)
+						} else {
+							//如果生成失败,还是返回原始返回值
+							//要不然,存在的也显示为不存在
+							items = append(items, m)
+						}
+					}
+				}
+
+				return items,nil
+			}
+		}
+	}
+}
+
+
+//分页查询
+func (model *PgsqlModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
+	//生成查询条件
+	where,builds,orderby,err := model.base.building(1,args...)
+	if err != nil {
+		return nil,err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "limit", "begin", err)
+		if err != nil {
+			return nil,err
+		} else {
+
+			//先拿字段列表
+			//不能用*，必须指定字段列表
+			//要不然下拉scan的时候，数据库返回的字段和顺序不一定对
+			keys := []string{}
+			for k,_ := range model.fields {
+				keys = append(keys, k)
+			}
+
+			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s OFFSET %d LIMIT %d`, strings.Join(keys, `","`), model.schema, model.object, where, orderby, offset, limit)
+			rows,err := tx.Query(sql, builds...)
+			noggo.Logger.Debug("data", "limit", err, sql)
+			if err != nil {
+				return nil,err
+			} else {
+				defer rows.Close()
+
+				//返回结果在这
+				items := []Map{}
+
+				//遍历结果
+				for rows.Next() {
+					//扫描数据
+					values := make([]interface{}, len(keys))    //真正的值
+					pValues := make([]interface{}, len(keys))    //指针，指向值
+					for i := range values {
+						pValues[i] = &values[i]
+					}
+					err := rows.Scan(pValues...)
+
+					if err != nil {
+						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+					} else {
+						m := Map{}
+						for i, n := range keys {
+							switch v := values[i].(type) {
+							case []byte: {
+								m[n] = string(v)
+							}
+							default:
+								m[n] = v
+							}
+						}
+
+						//返回前使用代码生成
+						//有必要的, 按模型拿到数据
+						item := Map{}
+						err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
+						if err == nil {
+							items = append(items, item)
+						} else {
+							//如果生成失败,还是返回原始返回值
+							//要不然,存在的也显示为不存在
+							items = append(items, m)
+						}
+					}
+				}
+
+				return items,nil
+			}
+		}
+	}
 }

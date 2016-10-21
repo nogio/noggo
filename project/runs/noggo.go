@@ -8,7 +8,12 @@ import (
 	_ "../datas"
 	_ "../nodes"
 	"os"
+	"github.com/nogio/noggo/driver/data-pgsql"
 )
+
+func init() {
+	noggo.Data.Driver("pgsql", data_pgsql.Driver())
+}
 
 func main() {
 	//框架初始化

@@ -15,7 +15,6 @@ type (
 		connects    map[string]driver.DataConnect
 
 		models      map[string]map[string]Map
-		views      map[string]map[string]Map
 	}
 )
 
@@ -78,20 +77,6 @@ func (global *dataGlobal) initData() {
 				for k,v := range global.models[name] {
 					conn.Model(k, v)
 				}
-
-
-				//注册讽图
-				//先全局
-				for k,v := range global.views[ConstNodeGlobal] {
-					conn.View(k, v)
-				}
-				//再库
-				for k,v := range global.views[name] {
-					conn.View(k, v)
-				}
-
-
-
 
 				//保存连接
 				global.connects[name] = conn
@@ -158,35 +143,6 @@ func (global *dataGlobal) Model(name string, config Map) {
 	//可以后注册重写原有路由配置，所以直接保存
 	global.models[nodeName][name] = config
 }
-
-
-
-//注册视图
-func (global *dataGlobal) View(name string, config Map) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.views == nil {
-		global.views = map[string]map[string]Map{}
-	}
-
-	//节点
-	nodeName := ConstNodeGlobal
-	if Current != "" {
-		nodeName = Current
-	}
-
-	//如果节点配置不存在，创建
-	if global.views[nodeName] == nil {
-		global.views[nodeName] = map[string]Map{}
-	}
-
-
-	//可以后注册重写原有配置，所以直接保存
-	global.views[nodeName][name] = config
-}
-
-
 
 
 

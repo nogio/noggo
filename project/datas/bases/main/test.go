@@ -10,7 +10,7 @@ func init() {
 
 	noggo.Data.Model("test", Map{
 		"name": "测试", "text": "测试表",
-		"schema": "public", "table": "test", "key": "id",   //这行配置可选
+		"schema": "public", "object": "test", "key": "id",   //这行配置可选
 		"fields": Map{
 			"id": Map{
 				"type": "int", "must": false, "name": "编号", "text": "编号",

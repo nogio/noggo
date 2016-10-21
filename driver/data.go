@@ -24,9 +24,6 @@ type (
 		Close() (error)
 		//注册模型
 		Model(string,Map)
-		//注册视图
-		View(string,Map)
-
 		//获取数据库对象
 		Base(string) (DataBase,error)
 	}
@@ -35,7 +32,10 @@ type (
 	DataBase interface {
 		Close()
 		Model(name string) (DataModel)
-		View(name string) (DataView)
+
+
+		//开启手动提交事务模式
+		Begin() (DataBase)
 		Submit() (error)
 		Cancel() (error)
 	}
@@ -51,14 +51,6 @@ type (
 		Update(args ...Map) (int64,error)
 		Delete(args ...Map) (int64,error)
 
-		Count(...Map) (int64,error)
-		Single(...Map) (Map,error)
-		Query(...Map) ([]Map,error)
-		Limit(Any,Any,...Map) ([]Map,error)
-	}
-
-	//数据视图接口
-	DataView interface {
 		Count(...Map) (int64,error)
 		Single(...Map) (Map,error)
 		Query(...Map) ([]Map,error)

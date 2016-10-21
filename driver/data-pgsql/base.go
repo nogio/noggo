@@ -17,7 +17,6 @@ type (
 		name    string
 		conn    *PgsqlConnect
 		models  map[string]Map
-		views  map[string]Map
 
 		db      *sql.DB
 		tx      *sql.Tx
@@ -46,12 +45,12 @@ func (base *PgsqlBase) Model(name string) (driver.DataModel) {
 	if config,ok := base.models[name]; ok {
 
 		//模式，表名
-		schema, table, key, fields := "public", name, "id", Map{}
+		schema, object, key, fields := "public", name, "id", Map{}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
-		if n,ok := config["table"].(string); ok {
-			table = n
+		if n,ok := config["object"].(string); ok {
+			object = n
 		}
 		if n,ok := config["key"].(string); ok {
 			key = n
@@ -60,9 +59,8 @@ func (base *PgsqlBase) Model(name string) (driver.DataModel) {
 			fields = n
 		}
 
-		//return &PgsqlModel{ base, name, schema, table, key, fields }
 		return &PgsqlModel{
-			PgsqlView{ base, name, schema, table, key, fields },
+			base, name, schema, object, key, fields,
 		}
 	} else {
 		panic("数据：模型不存在")
@@ -70,32 +68,12 @@ func (base *PgsqlBase) Model(name string) (driver.DataModel) {
 }
 
 
-//获取模型对象
-func (base *PgsqlBase) View(name string) (driver.DataView) {
-	if config,ok := base.views[name]; ok {
 
-		//模式，表名
-		schema, table, key, fields := "public", name, "id", Map{}
-		if n,ok := config["schema"].(string); ok {
-			schema = n
-		}
-		if n,ok := config["table"].(string); ok {
-			table = n
-		}
-		if n,ok := config["key"].(string); ok {
-			key = n
-		}
-		if n,ok := config["fields"].(Map); ok {
-			fields = n
-		}
-
-		return &PgsqlView{ base, name, schema, table, key, fields }
-	} else {
-		panic("数据：视图不存在")
-	}
+//开启手动模式
+func (base *PgsqlBase) Begin() (driver.DataBase) {
+	base.manual = true
+	return base
 }
-
-
 
 
 
@@ -110,13 +88,6 @@ func (base *PgsqlBase) begin() (*sql.Tx,error) {
 		base.tx = tx
 	}
 	return base.tx,nil
-}
-
-
-//开启手动模式
-func (base *PgsqlBase) Manual() (driver.DataBase) {
-	base.manual = true
-	return base
 }
 
 
@@ -246,47 +217,73 @@ func (base *PgsqlBase) packing(value Map) (Map) {
 
 
 //把MAP编译成sql查询条件
-func (base *PgsqlBase) building(i int,args ...Map) (string,[]interface{},error) {
+//加入排序
+//where,args,order,error
+func (base *PgsqlBase) building(i int,args ...Map) (string,[]interface{},string,error) {
 
 	if len(args) > 0 {
 		querys := []string{}
 		values := make([]interface{}, 0)
+		orders := []string{}
 
 		//否则是多个map,单个为 与, 多个为 或
 		for _,m := range args {
-			ands := []string{}
 			for k,v := range m {
 
-				//v要处理一下如果是map要特别处理
-				//key做为操作符，比如 > < >= 等
-				//而且多个条件是and，比如 views > 1 AND views < 100
-				if opMap, opOK := v.(Map); opOK {
 
-					opAnds := []string{}
-					for opKey,opVal := range opMap {
-						opAnds = append(opAnds, fmt.Sprintf(`"%s" %s $%d`, k, opKey, i))
-						values = append(values, opVal)
-						i++
+				//如果值是ASC,DESC，表示是排序
+				if ov,ok := v.(string); ok && (ov==driver.ASC || ov==driver.DESC) {
+
+					if ov == driver.ASC {
+						orders = append(orders, fmt.Sprintf(`"%s" ASC`, k))
+					} else {
+						orders = append(orders, fmt.Sprintf(`"%s" DESC`, k))
 					}
-					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
 
 				} else {
 
-					if v == nil {
-						ands = append(ands, fmt.Sprintf(`"%s" IS NULL`, k))
+
+					ands := []string{}
+
+					//v要处理一下如果是map要特别处理
+					//key做为操作符，比如 > < >= 等
+					//而且多个条件是and，比如 views > 1 AND views < 100
+					if opMap, opOK := v.(Map); opOK {
+
+						opAnds := []string{}
+						for opKey,opVal := range opMap {
+							opAnds = append(opAnds, fmt.Sprintf(`"%s" %s $%d`, k, opKey, i))
+							values = append(values, opVal)
+							i++
+						}
+						ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
+
 					} else {
-						ands = append(ands, fmt.Sprintf(`"%s" = $%d`, k, i))
-						values = append(values, v)
-						i++
+
+						if v == nil {
+							ands = append(ands, fmt.Sprintf(`"%s" IS NULL`, k))
+						} else {
+							ands = append(ands, fmt.Sprintf(`"%s" = $%d`, k, i))
+							values = append(values, v)
+							i++
+						}
 					}
+
+					querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
 				}
 
+
 			}
-			querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
 		}
 
-		return strings.Join(querys, " OR "), values, nil
+		orderStr := ""
+		if len(orders) > 0 {
+			orderStr = fmt.Sprintf("ORDER BY %s", strings.Join(orders, ","))
+		}
+
+		return strings.Join(querys, " OR "), values, orderStr, nil
+
 	} else {
-		return "1=1",[]interface{}{},nil
+		return "1=1",[]interface{}{}, "",nil
 	}
 }
