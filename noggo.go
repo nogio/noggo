@@ -112,10 +112,15 @@ func (node *Noggo) End() {
 		Logger.Info("node", node.Name, node.Id, "is ending")
 	}
 
+	Logger.Info("http exiting")
 	node.Http.end()
+	Logger.Info("queue exiting")
 	node.Queue.end()
+	Logger.Info("event exiting")
 	node.Event.end()
+	Logger.Info("plan exiting")
 	node.Plan.end()
+	Logger.Info("session exiting")
 	node.session.end()
 }
 

@@ -35,7 +35,7 @@ type (
 		//注册模型
 		Model(string,Map)
 		//获取数据库对象
-		Base(string) (DataBase,error)
+		Base(string,CacheBase) (DataBase,error)
 	}
 
 	//数据库接口

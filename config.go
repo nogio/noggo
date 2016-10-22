@@ -35,8 +35,17 @@ type (
 		Driver	string	`json:"driver"`
 		//data驱动配置
 		Config	Map		`json:"config"`
+		//缓存key
+		Cache	string	`json:"cache"`
 	}
 
+	//cache配置
+	cacheConfig struct {
+		//驱动
+		Driver	string	`json:"driver"`
+		//驱动配置
+		Config	Map		`json:"config"`
+	}
 
 
 
@@ -151,6 +160,7 @@ type (
 		Lang	map[string]*langConfig	`json:"lang"`
 		Node	map[string]*nodeConfig	`json:"node"`
 		Data	map[string]*dataConfig	`json:"data"`
+		Cache	map[string]*cacheConfig	`json:"cache"`
 		Queue	map[string]*queueConfig	`json:"queue"`
 
 

@@ -611,7 +611,6 @@ func (module *planModule) endSession() {
 func (module *planModule) endPlan() {
 	if module.planConnect != nil {
 		module.planConnect.Close()
-		module.planConnect = nil
 	}
 }
 

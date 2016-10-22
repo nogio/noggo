@@ -31,13 +31,15 @@
       "driver": "pgsql",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_main?sslmode=disable"
-      }
+      },
+      "cache": "main"
     },
     "temp": {
       "driver": "pgsql",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_temp?sslmode=disable"
-      }
+      },
+      "cache": "main"
     }
   },
 

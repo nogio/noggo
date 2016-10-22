@@ -24,6 +24,7 @@ func Init() {
 		Http.init()
 		View.init()
 
+		Cache.init()
 		Data.init()
 
 		Logger.Info("noggo is initiating...")
@@ -43,6 +44,7 @@ func Exit() {
 	}
 
 	Data.exit()
+	Cache.exit()
 
 	View.exit()
 	Http.exit()

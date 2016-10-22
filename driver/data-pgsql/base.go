@@ -20,6 +20,7 @@ type (
 
 		db      *sql.DB
 		tx      *sql.Tx
+		cache   driver.CacheBase
 
 		//是否手动提交事务，否则为自动
 		//当调用begin时， 自动变成手动提交事务

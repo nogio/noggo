@@ -62,13 +62,13 @@ func (drv *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect,error) {
 
 
 //打开连接
-func (drv *DefaultPlanConnect) Open() error {
-	drv.cron = cron.New()
+func (con *DefaultPlanConnect) Open() error {
+	con.cron = cron.New()
 	return nil
 }
 //关闭连接
-func (drv *DefaultPlanConnect) Close() error {
-	drv.cron.Stop()
+func (con *DefaultPlanConnect) Close() error {
+	con.cron.Stop()
 	return nil
 }
 

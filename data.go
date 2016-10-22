@@ -156,7 +156,17 @@ func (global *dataGlobal) Model(name string, config Map) {
 //返回DB对象
 func (global *dataGlobal) Base(name string) (driver.DataBase) {
 	if conn,ok := global.connects[name]; ok {
-		db,err := conn.Base(name)
+
+		//缓存相关
+		var cb driver.CacheBase = nil
+		if cfg,ok := Config.Data[name]; ok {
+			if cfg.Cache != "" {
+				cb = Cache.Base(cfg.Cache)
+			}
+		}
+
+
+		db,err := conn.Base(name, cb)
 		if err != nil {
 			panic("数据：打开DB失败：" + err.Error())
 		} else {

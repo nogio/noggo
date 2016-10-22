@@ -62,6 +62,9 @@ var (
 
 
 
+	//缓存
+	Cache *cacheGlobal
+
 	//数据
 	Data *dataGlobal
 
@@ -147,6 +150,11 @@ func init() {
 	}
 
 
+	//缓存
+	Cache = &cacheGlobal{
+		drivers: map[string]driver.CacheDriver{},
+		connects: map[string]driver.CacheConnect{},
+	}
 	//数据
 	Data = &dataGlobal{
 		drivers: map[string]driver.DataDriver{},

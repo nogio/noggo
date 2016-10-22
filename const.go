@@ -10,9 +10,6 @@ import (
 
 const (
 
-	ASC     = "$$$asc$$$"
-	DESC    = "$$$desc$$$"
-
 	ConstDriverDefault  = "default"
 	ConstLangDefault	= "default"
 	ConstNodeGlobal		= "$global$"

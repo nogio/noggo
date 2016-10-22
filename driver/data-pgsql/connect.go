@@ -49,6 +49,6 @@ func (conn *PgsqlConnect) Model(name string, config Map) {
 	conn.models[name] = config
 }
 
-func (conn *PgsqlConnect) Base(name string) (driver.DataBase,error) {
-	return &PgsqlBase{name, conn, conn.models, conn.db, nil, false},nil
+func (conn *PgsqlConnect) Base(name string, cache driver.CacheBase) (driver.DataBase,error) {
+	return &PgsqlBase{name, conn, conn.models, conn.db, nil, cache, false},nil
 }

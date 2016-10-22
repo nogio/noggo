@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/nogio/noggo"
-	_ "github.com/nogio/noggo/native"
+	_ "github.com/nogio/noggo/core"
 	_ "../bases"
 	_ "../cases"
 	_ "../datas"
@@ -18,7 +18,6 @@ func init() {
 func main() {
 	//框架初始化
 	noggo.Init()
-
 
 
 	//可以用命令行运行多个节点在同一进程
