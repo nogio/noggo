@@ -1,3 +1,9 @@
+/*
+	接口
+	2016-10-22  不定稿
+*/
+
+
 package driver
 
 import (
@@ -12,7 +18,7 @@ type (
 	}
 
 	//回调函数
-	TaskAccept func(*TaskRequest, TaskResponse)
+	TaskHandler func(*TaskRequest, TaskResponse)
 
 	//任务连接
 	TaskConnect interface {
@@ -22,16 +28,12 @@ type (
 		Close() error
 
 
-		//注册回调
-		Accept(TaskAccept) error
+		//注册任务
+		Accept(string) error
 
 
 		//开始任务
-		Start() error
-		//停止任务
-		Stop() error
-
-
+		Start(TaskHandler) error
 		//触发任务
 		After(name string, delay time.Duration, value Map) error
 	}

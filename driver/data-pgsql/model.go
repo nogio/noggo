@@ -3,7 +3,6 @@ package data_pgsql
 
 import (
 	. "github.com/nogio/noggo/base"
-	//"github.com/nogio/noggo/driver"
 	"github.com/nogio/noggo"
 	"fmt"
 	"strings"
@@ -703,6 +702,82 @@ func (model *PgsqlModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
 						//有必要的, 按模型拿到数据
 						item := Map{}
 						err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
+						if err == nil {
+							items = append(items, item)
+						} else {
+							//如果生成失败,还是返回原始返回值
+							//要不然,存在的也显示为不存在
+							items = append(items, m)
+						}
+					}
+				}
+
+				return items,nil
+			}
+		}
+	}
+}
+
+
+
+//查询列表
+func (model *PgsqlModel) Group(field string, args ...Map) ([]Map,error) {
+	//生成查询条件
+	where,builds,orderby,err := model.base.building(1,args...)
+	if err != nil {
+		return nil,err
+	} else {
+
+		//开启事务
+		tx,err := model.base.begin()
+		noggo.Logger.Debug("data", "group", "begin", err)
+		if err != nil {
+			return nil,err
+		} else {
+
+			//暂时只支持字段本身， 后续支持 count,sum,avg,max,min啥啥的
+			keys := []string{ field }
+
+			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s GROUP BY "%s" %s`, field, model.schema, model.object, where, field, orderby)
+			rows,err := tx.Query(sql, builds...)
+			noggo.Logger.Debug("data", "group", err, sql)
+			if err != nil {
+				return nil,err
+			} else {
+				defer rows.Close()
+
+				//返回结果在这
+				items := []Map{}
+
+				//遍历结果
+				for rows.Next() {
+
+					//扫描数据
+					values := make([]interface{}, len(keys))    //真正的值
+					pValues := make([]interface{}, len(keys))    //指针，指向值
+					for i := range values {
+						pValues[i] = &values[i]
+					}
+					err := rows.Scan(pValues...)
+
+					if err != nil {
+						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+					} else {
+						m := Map{}
+						for i, n := range keys {
+							switch v := values[i].(type) {
+							case []byte: {
+								m[n] = string(v)
+							}
+							default:
+								m[n] = v
+							}
+						}
+
+						//返回前使用代码生成
+						//有必要的, 按模型拿到数据
+						item := Map{}
+						err := noggo.Mapping.Parse([]string{}, model.fields, m, item, true)
 						if err == nil {
 							items = append(items, item)
 						} else {

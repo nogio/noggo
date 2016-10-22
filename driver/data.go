@@ -1,3 +1,8 @@
+/*
+	数据接口
+	2016-10-22  定稿
+*/
+
 package driver
 
 import (
@@ -5,8 +10,13 @@ import (
 )
 
 const (
-	ASC = "$$$AsC$$$"
-	DESC = "$$$dEsC$$$"
+	ASC     = "$$$ASC$$$"
+	DESC    = "$$$DESC$$$"
+	COUNT   = "$$$COUNT$$$"
+	AVG     = "$$$AVG$$$"
+	SUM     = "$$$SUM$$$"
+	MAX     = "$$$MAX$$$"
+	MIN     = "$$$MIN$$$"
 )
 
 type (
@@ -55,6 +65,8 @@ type (
 		Single(...Map) (Map,error)
 		Query(...Map) ([]Map,error)
 		Limit(Any,Any,...Map) ([]Map,error)
+
+		Group(string,...Map) ([]Map,error)
 	}
 
 )

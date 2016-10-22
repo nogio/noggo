@@ -107,6 +107,13 @@ func (con *DefaultQueueConnect) Publish(name string, value Map) error {
 	msg.Pub(name, value)
 	return nil
 }
+//发布者发布延时消息
+func (con *DefaultQueueConnect) DeferredPublish(name string, delay time.Duration, value Map) error {
+	time.AfterFunc(delay, func() {
+		msg.Pub(name, value)
+	})
+	return nil
+}
 
 
 

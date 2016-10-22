@@ -1,3 +1,8 @@
+/*
+	视图接口
+	2016-10-22  定稿
+*/
+
 package driver
 
 import (
@@ -10,11 +15,11 @@ type (
 	ViewDriver interface {
 		Connect(config Map) (ViewConnect,error)
 	}
-	//ViewAcceptFunc func(string,string,time.Duration,Map)
 
 	ViewParse struct {
 		Node    string  //当前节点
 		Lang    string  //当前语言
+		Charset string  //当前字符集
 		Data    Map     //ctx.Data
 		View    string  //视图文件
 		Model   Map     //视图模型

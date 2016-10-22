@@ -1,3 +1,8 @@
+/*
+	事件模块
+	2016-10-22  未定稿
+*/
+
 package driver
 
 import (
@@ -20,16 +25,19 @@ type (
 		//关闭连接
 		Close() error
 
+
+
 		//订阅者注册事件
 		Accept(name string) error
-
-		//发布消息
-		Publish(name string, value Map) error
-
 		//开始订阅者
 		Subscriber(EventHandler) error
+
+
+
 		//开始发布者
 		Publisher() error
+		//发布消息
+		Publish(name string, value Map) error
 	}
 
 

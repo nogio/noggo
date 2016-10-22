@@ -18,9 +18,11 @@ type (
 	//连接
 	DefaultTaskConnect struct {
 		mutex   sync.Mutex
-		config      Map
-		callback    driver.TaskAccept
 
+		config      Map
+		handler    driver.TaskHandler
+
+		names       []string
 		datas       map[string]TaskData
 	}
 	//响应对象
@@ -67,31 +69,32 @@ func (connect *DefaultTaskConnect) Close() error {
 }
 
 
-//注册回调
-func (connect *DefaultTaskConnect) Accept(callback driver.TaskAccept) error {
-	connect.callback = callback
+
+//订阅者注册事件
+func (con *DefaultTaskConnect) Accept(name string) error {
+	con.mutex.Lock()
+	defer con.mutex.Unlock()
+
+	//注意，这里应该处理唯一的问题，如果已经存在某name，就跳过了得
+	con.names = append(con.names, name)
+
 	return nil
 }
+
 
 //开始
-func (connect *DefaultTaskConnect) Start() error {
+func (con *DefaultTaskConnect) Start(handler driver.TaskHandler) error {
+	con.handler = handler
 	return nil
 }
-
-//结束
-func (connect *DefaultTaskConnect) Stop() error {
-	return nil
-}
-
-
 
 
 
 //发起任务
 func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value Map) error {
 
-	if connect.callback == nil {
-		return errors.New("未注册回调")
+	if connect.handler == nil {
+		return errors.New("无任务处理器")
 	}
 
 
@@ -120,7 +123,7 @@ func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value
 func (connect *DefaultTaskConnect) execute(id string, name string, delay time.Duration, value Map) {
 	req := &driver.TaskRequest{ Id: id, Name: name, Delay: delay, Value: value }
 	res := &DefaultTaskResponse{ connect }
-	connect.callback(req, res)
+	connect.handler(req, res)
 }
 
 

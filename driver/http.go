@@ -1,3 +1,9 @@
+/*
+	HTTP接口
+	2016-10-22  未定稿
+*/
+
+
 package driver
 
 import (

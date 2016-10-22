@@ -1,3 +1,9 @@
+/*
+	会话接口
+	2016-10-22  定稿
+*/
+
+
 package driver
 
 import (

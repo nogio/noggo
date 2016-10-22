@@ -1,3 +1,8 @@
+/*
+	计划接口
+	2016-10-22  未定稿
+*/
+
 package driver
 
 import (
@@ -11,7 +16,7 @@ type (
 		Connect(config Map) (PlanConnect,error)
 	}
 
-	PlanAccept func(*PlanRequest, PlanResponse)
+	PlanHandler func(*PlanRequest, PlanResponse)
 
 	//计划连接
 	PlanConnect interface {
@@ -20,18 +25,11 @@ type (
 		//关闭连接
 		Close() error
 
-		//注册回调
-		Accept(PlanAccept) error
-
-		//创建计划
-		Create(name string, time string) error
-		//删除计划
-		Remove(name string) error
+		//注册计划
+		Accept(name string, time string) error
 
 		//开始计划
-		Start() error
-		//停止计划
-		Stop() error
+		Start(PlanHandler) error
 	}
 
 

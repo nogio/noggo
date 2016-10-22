@@ -173,17 +173,15 @@ func (global *taskGlobal) initTask() {
 
 
 		//注册回调
-		con.Accept(global.serveTask)
 
 		//注册任务
 		//貌似不需要注册了，因为只要注册一个NAME。 貌似没意义
-		/*
 		for _,name := range global.routeNames {
-			global.taskConnect.Accept(name, global.serveTask)
+			con.Accept(name)
 		}
-		*/
+
 		//开始任务
-		con.Start();
+		con.Start(global.serveTask);
 
 
 		//保存连接
@@ -207,7 +205,6 @@ func (global *taskGlobal) exitSession() {
 func (global *taskGlobal) exitTask() {
 	//关闭连接
 	if global.taskConnect != nil {
-		global.taskConnect.Stop();
 		global.taskConnect.Close()
 	}
 }

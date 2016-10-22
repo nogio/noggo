@@ -17,13 +17,15 @@ type (
 	}
 	//连接
 	DefaultPlanConnect struct {
-		config Map
-		cron *cron.Cron
-		callback    driver.PlanAccept
-
-		//同步锁
 		mutex   sync.Mutex
+
+		config Map
+		handler    driver.PlanHandler
+
+		cron *cron.Cron
+
 		//计划数据保存，三方驱动可以持久化
+		plans   map[string]string   //map[name]time
 		datas   map[string]PlanData
 	}
 
@@ -52,7 +54,7 @@ func Driver() (driver.PlanDriver) {
 //连接
 func (drv *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect,error) {
 	return &DefaultPlanConnect{
-		config: config, datas: map[string]PlanData{},
+		config: config, plans: map[string]string{}, datas: map[string]PlanData{},
 	}, nil
 }
 
@@ -66,14 +68,7 @@ func (drv *DefaultPlanConnect) Open() error {
 }
 //关闭连接
 func (drv *DefaultPlanConnect) Close() error {
-	return drv.Stop()
-}
-
-
-
-//注册回调
-func (connect *DefaultPlanConnect) Accept(callback driver.PlanAccept) error {
-	connect.callback = callback
+	drv.cron.Stop()
 	return nil
 }
 
@@ -84,62 +79,44 @@ func (connect *DefaultPlanConnect) Accept(callback driver.PlanAccept) error {
 //直接就在这addfunc了。
 //应该在这里保存所有计划
 //然后在Start中运行， 这样科学一些
-func (connect *DefaultPlanConnect) Create(name, time string) error {
-	if connect.cron == nil {
-		return errors.New("plan-default.accept: cron is nil")
-	}
+func (con *DefaultPlanConnect) Accept(name, time string) error {
 
-	connect.cron.AddFunc(time, func() {
-
-		//新建计划
-		id := NewMd5Id()
-		plan := PlanData{
-			Name: name, Time: time, Value: Map{},
-		}
-		//保存计划
-		connect.mutex.Lock()
-		connect.datas[id] = plan
-		connect.mutex.Unlock()
-
-		//调用计划
-		connect.execute(id, plan.Name, plan.Time, plan.Value)
-
-	}, name)
+	//保存计划列表
+	con.plans[name] = time
 
 	return nil
 }
 
-
-
-
-
-//移除监听
-func (connect *DefaultPlanConnect) Remove(name string) error {
-	if connect.cron == nil {
-		return errors.New("plan-default.accept: cron is nil")
-	}
-	connect.cron.RemoveJob(name)
-	return nil
-}
 
 
 
 
 
 //开始
-func (driver *DefaultPlanConnect) Start() error {
-	if driver.cron == nil {
-		return errors.New("plan-default.accept: cron is nil")
+func (con *DefaultPlanConnect) Start(handler driver.PlanHandler) error {
+	con.handler = handler
+
+	for name,time := range con.plans {
+
+		con.cron.AddFunc(time, func() {
+
+			//新建计划
+			id := NewMd5Id()
+			plan := PlanData{
+				Name: name, Time: time, Value: Map{},
+			}
+			//保存计划
+			con.mutex.Lock()
+			con.datas[id] = plan
+			con.mutex.Unlock()
+
+			//调用计划
+			con.execute(id, plan.Name, plan.Time, plan.Value)
+
+		}, name)
+
 	}
-	driver.cron.Start()
-	return nil
-}
-//停止
-func (driver *DefaultPlanConnect) Stop() error {
-	if driver.cron != nil {
-		return errors.New("plan-default.accept: cron is nil")
-	}
-	driver.cron.Stop()
+	con.cron.Start()
 	return nil
 }
 
@@ -149,7 +126,7 @@ func (driver *DefaultPlanConnect) Stop() error {
 func (connect *DefaultPlanConnect) execute(id string, name string, time string, value Map) {
 	req := &driver.PlanRequest{ Id: id, Name: name, Time: time, Value: value }
 	res := &DefaultPlanResponse{ connect }
-	connect.callback(req, res)
+	connect.handler(req, res)
 }
 
 
