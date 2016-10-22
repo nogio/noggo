@@ -4,6 +4,7 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"github.com/nogio/noggo/driver"
+	"errors"
 )
 
 type (
@@ -165,15 +166,77 @@ func (global *dataGlobal) Base(name string) (driver.DataBase) {
 			}
 		}
 
-
 		db,err := conn.Base(name, cb)
-		if err != nil {
-			panic("数据：打开DB失败：" + err.Error())
-		} else {
+		if err == nil {
 			//返回
 			return db
 		}
-	} else {
-		panic("数据：未定义的数据库")
 	}
+
+	return &noDataBase{}
+}
+
+
+
+
+
+//----------------------------------------------------------------------
+
+type (
+	noDataBase struct {}
+	noDataModel struct {}
+)
+func (base *noDataBase) Close() {
+}
+func (base *noDataBase) Model(name string) (driver.DataModel) {
+	return &noDataModel{}
+}
+func (base *noDataBase) Begin() (driver.DataBase) {
+	return base
+}
+func (base *noDataBase) Submit() (error) {
+	return errors.New("无数据")
+}
+func (base *noDataBase) Cancel() (error) {
+	return errors.New("无数据")
+}
+
+
+//-----------
+
+
+
+
+func (model *noDataModel) Create(data Map) (Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Change(item Map, data Map) (Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Remove(item Map) (error) {
+	return nil
+}
+func (model *noDataModel) Entity(id Any) (Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Delete(args ...Map) (int64,error) {
+	return int64(0),errors.New("无数据")
+}
+func (model *noDataModel) Update(args ...Map) (int64,error) {
+	return int64(0),errors.New("无数据")
+}
+func (model *noDataModel) Count(args ...Map) (int64,error) {
+	return int64(0),errors.New("无数据")
+}
+func (model *noDataModel) Single(args ...Map) (Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Query(args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataModel) Group(field string, args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
 }

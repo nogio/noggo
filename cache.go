@@ -1,8 +1,10 @@
 package noggo
 
 import (
+	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
 	"sync"
+	"errors"
 )
 
 type (
@@ -83,20 +85,37 @@ func (global *cacheGlobal) exitCache() {
 
 
 
-//返回DB对象
+//返回缓存Base对象
 func (global *cacheGlobal) Base(name string) (driver.CacheBase) {
 	if conn,ok := global.connects[name]; ok {
 		db,err := conn.Base(name)
-		if err != nil {
-			//panic("缓存：打开DB失败：" + err.Error())
-		} else {
-			//返回
+		if err == nil {
 			return db
 		}
-	} else {
-		//panic("缓存：未定义的缓存库")
 	}
+	return &noCacheBase{}
+}
 
-	//应该做一个 NoCache的驱动，做为无驱动的
-	return nil
+
+
+
+//---------------------------------------------------------------------------------
+
+type (
+	noCacheBase struct {}
+)
+func (base *noCacheBase) Get(key string) (Any,error) {
+	return nil,errors.New("无缓存")
+}
+func (base *noCacheBase) Set(key string, val Any, expiry int64) (error) {
+	return errors.New("无缓存")
+}
+func (base *noCacheBase) Del(key string) (error) {
+	return errors.New("无缓存")
+}
+func (base *noCacheBase) Empty() (error) {
+	return errors.New("无缓存")
+}
+func (base *noCacheBase) Keys(args ...string) ([]string,error) {
+	return []string{},errors.New("无缓存")
 }

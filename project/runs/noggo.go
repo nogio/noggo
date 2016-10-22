@@ -48,7 +48,6 @@ func main() {
 	}
 
 
-
 	//监听退出
 	noggo.Exit()
 }

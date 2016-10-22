@@ -2,7 +2,7 @@ package main
 
 import (
 	. "github.com/nogio/noggo/base"
-	_ "github.com/nogio/noggo/native"
+	_ "github.com/nogio/noggo/core"
 	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/middler"
 	"github.com/nogio/noggo/driver/data-pgsql"
