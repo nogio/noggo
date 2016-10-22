@@ -1,6 +1,6 @@
 /*
 	计划接口
-	2016-10-22  未定稿
+	2016-10-22  定稿
 */
 
 package driver
@@ -25,11 +25,14 @@ type (
 		//关闭连接
 		Close() error
 
+		//注册回调
+		Accept(PlanHandler) error
+
 		//注册计划
-		Accept(name string, time string) error
+		Register(name string, time string) error
 
 		//开始计划
-		Start(PlanHandler) error
+		Start() error
 	}
 
 

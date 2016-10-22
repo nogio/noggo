@@ -1,6 +1,6 @@
 /*
 	接口
-	2016-10-22  不定稿
+	2016-10-22  定稿
 */
 
 
@@ -27,13 +27,15 @@ type (
 		//关闭连接
 		Close() error
 
-
 		//注册任务
-		Accept(string) error
+		Register(string) error
 
+		//注册回调
+		Accept(TaskHandler) error
 
 		//开始任务
-		Start(TaskHandler) error
+		Start() error
+
 		//触发任务
 		After(name string, delay time.Duration, value Map) error
 	}

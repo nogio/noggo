@@ -177,11 +177,11 @@ func (global *taskGlobal) initTask() {
 		//注册任务
 		//貌似不需要注册了，因为只要注册一个NAME。 貌似没意义
 		for _,name := range global.routeNames {
-			con.Accept(name)
+			con.Register(name)
 		}
 
 		//开始任务
-		con.Start(global.serveTask);
+		con.Accept(global.serveTask);
 
 
 		//保存连接

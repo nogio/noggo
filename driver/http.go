@@ -1,6 +1,6 @@
 /*
 	HTTP接口
-	2016-10-22  未定稿
+	2016-10-22  定稿
 */
 
 
@@ -18,7 +18,7 @@ type (
 		Connect(config Map) (HttpConnect,error)
 	}
 
-	HttpAccept func(req *http.Request, res http.ResponseWriter)
+	HttpHandler func(req *http.Request, res http.ResponseWriter)
 
 	//HTTP连接
 	HttpConnect interface {
@@ -27,8 +27,8 @@ type (
 		//关闭驱动连接
 		Close() error
 
-		//注册回调
-		Accept(call HttpAccept) error
+		//注册回调？
+		Accept(HttpHandler) error
 
 		//开始
 		Start(addr string) error

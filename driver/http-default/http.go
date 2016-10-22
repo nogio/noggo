@@ -14,7 +14,7 @@ type (
 	//连接
 	DefaultHttpConnect struct {
 		config Map
-		execute driver.HttpAccept    //func(req *http.Request, res http.ResponseWriter)
+		handler driver.HttpHandler    //func(req *http.Request, res http.ResponseWriter)
 		server *http.Server
 	}
 )
@@ -62,15 +62,11 @@ func (connect *DefaultHttpConnect) Close() error {
 
 
 
-//监听
-func (connect *DefaultHttpConnect) Accept(execute driver.HttpAccept) error {
-	connect.execute = execute
+//Start 应该不要阻塞线程
+func (connect *DefaultHttpConnect) Accept(handler driver.HttpHandler) error {
+	connect.handler = handler
 	return nil
 }
-
-
-
-
 
 
 //Start 应该不要阻塞线程
@@ -87,6 +83,7 @@ func (connect *DefaultHttpConnect) StartTLS(addr string, certFile, keyFile strin
 	if connect.server == nil {
 		panic("请先初始化http server")
 	}
+
 	connect.server.Addr = addr
 	go connect.server.ListenAndServeTLS(certFile, keyFile)
 	return nil
@@ -101,9 +98,9 @@ func (connect *DefaultHttpConnect) StartTLS(addr string, certFile, keyFile strin
 
 //servehttp
 func (connect *DefaultHttpConnect) ServeHTTP(res http.ResponseWriter, req *http.Request) {
-	if connect.execute == nil {
+	if connect.handler == nil {
 		panic("未监听http请求")
 	}
-	connect.execute(req, res)
+	connect.handler(req, res)
 }
 

@@ -115,16 +115,20 @@ func (global *eventGlobal) initEvent() {
 		panic("事件：连接失败：" + err.Error())
 	} else {
 
-		global.eventConnect = con
-
-		err := global.eventConnect.Open()
+		err := con.Open()
 		if err != nil {
 			panic("事件：打开失败 " + err.Error())
+		} else {
+
+			//开始发布者
+			con.StartPublisher()
+
+			//保存连接
+			global.eventConnect = con
+
 		}
 	}
 
-	//开始发布者
-	global.eventConnect.Publisher()
 }
 
 //事件全局退出
@@ -623,14 +627,15 @@ func (module *eventModule) runEvent() {
 			panic("节点事件：打开失败 " + err.Error())
 		} else {
 
+			con.Accept(module.serveEvent)
 
 			//注册事件
 			for _,name := range module.routeNames {
-				con.Accept(name)
+				con.Register(name)
 			}
 
 			//开始订阅者
-			con.Subscriber(module.serveEvent)
+			con.StartSubscriber()
 
 
 			//保存

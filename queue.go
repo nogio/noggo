@@ -120,8 +120,8 @@ func (global *queueGlobal) initQueue() {
 				panic("队列：打开失败 " + err.Error())
 			}
 
-			//开始发布者
-			con.Publisher()
+			//开始生产者
+			con.StartProducer()
 
 			//保存连接
 			global.queueConnects[k] = con
@@ -649,14 +649,16 @@ func (module *queueModule) runQueue() {
 				panic("节点队列：打开失败 " + err.Error())
 			} else {
 
+				//注册回调
+				con.Accept(module.serveQueue)
 
 				//注册队列
 				for name,line := range module.routeLines {
-					con.Accept(name, line)
+					con.Register(name, line)
 				}
 
-				//开始订阅者
-				con.Subscriber(module.serveQueue)
+				//开始消费者
+				con.StartConsumer()
 
 				//保存连接
 				module.queueConnects[k] = con

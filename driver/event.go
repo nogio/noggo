@@ -1,6 +1,6 @@
 /*
 	事件模块
-	2016-10-22  未定稿
+	2016-10-22  定稿
 */
 
 package driver
@@ -28,16 +28,19 @@ type (
 
 
 		//订阅者注册事件
-		Accept(name string) error
+		Accept(EventHandler) error
+		//订阅者注册事件
+		Register(name string) error
 		//开始订阅者
-		Subscriber(EventHandler) error
-
+		StartSubscriber() error
 
 
 		//开始发布者
-		Publisher() error
+		StartPublisher() error
 		//发布消息
 		Publish(name string, value Map) error
+		//发布延时消息
+		DeferredPublish(name string, delay time.Duration, value Map) error
 	}
 
 

@@ -1,6 +1,6 @@
 /*
 	队列接口
-	2016-10-22  未定稿
+	2016-10-22  定稿
 */
 
 
@@ -27,16 +27,19 @@ type (
 		Close() error
 
 
-		//订阅者注册队列
-		Accept(name string, line int) error
-		//开始订阅者
-		Subscriber(QueueHandler) error
+		//注册回调
+		Accept(QueueHandler) error
+		//注册队列
+		Register(name string, line int) error
+		//开始消费者
+		StartConsumer() error
 
 
-		//开始发布者
-		Publisher() error
+		//开始生产者
+		StartProducer() error
 		//发布消息
 		Publish(name string, value Map) error
+		//发布延时消息
 		DeferredPublish(name string, delay time.Duration, value Map) error
 	}
 

@@ -69,9 +69,15 @@ func (connect *DefaultTaskConnect) Close() error {
 }
 
 
+//开始干活
+func (con *DefaultTaskConnect) Accept(handler driver.TaskHandler) error {
+	con.handler = handler
+	return nil
+}
+
 
 //订阅者注册事件
-func (con *DefaultTaskConnect) Accept(name string) error {
+func (con *DefaultTaskConnect) Register(name string) error {
 	con.mutex.Lock()
 	defer con.mutex.Unlock()
 
@@ -82,9 +88,11 @@ func (con *DefaultTaskConnect) Accept(name string) error {
 }
 
 
-//开始
-func (con *DefaultTaskConnect) Start(handler driver.TaskHandler) error {
-	con.handler = handler
+//开始干活
+func (con *DefaultTaskConnect) Start() error {
+	if con.handler == nil {
+		return errors.New("未注册回调")
+	}
 	return nil
 }
 

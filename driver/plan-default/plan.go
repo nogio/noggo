@@ -75,31 +75,26 @@ func (drv *DefaultPlanConnect) Close() error {
 
 
 
-//创建计划
-//直接就在这addfunc了。
-//应该在这里保存所有计划
-//然后在Start中运行， 这样科学一些
-func (con *DefaultPlanConnect) Accept(name, time string) error {
+//注册回调
+func (con *DefaultPlanConnect) Accept(handler driver.PlanHandler) error {
+	con.handler = handler
+	return nil
+}
+//注册计划
+func (con *DefaultPlanConnect) Register(name, time string) error {
+	con.mutex.Lock()
+	defer con.mutex.Unlock()
 
 	//保存计划列表
 	con.plans[name] = time
 
 	return nil
 }
-
-
-
-
-
-
-//开始
-func (con *DefaultPlanConnect) Start(handler driver.PlanHandler) error {
-	con.handler = handler
+//开始计划
+func (con *DefaultPlanConnect) Start() error {
 
 	for name,time := range con.plans {
-
 		con.cron.AddFunc(time, func() {
-
 			//新建计划
 			id := NewMd5Id()
 			plan := PlanData{
@@ -109,7 +104,6 @@ func (con *DefaultPlanConnect) Start(handler driver.PlanHandler) error {
 			con.mutex.Lock()
 			con.datas[id] = plan
 			con.mutex.Unlock()
-
 			//调用计划
 			con.execute(id, plan.Name, plan.Time, plan.Value)
 

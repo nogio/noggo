@@ -89,8 +89,18 @@ func (drv *DefaultEventConnect) Close() error {
 
 
 
+//订阅者注册回调
+func (con *DefaultEventConnect) Accept(handler driver.EventHandler) error {
+	con.mutex.Lock()
+	defer con.mutex.Unlock()
+
+	//保存回调
+	con.handler = handler
+
+	return nil
+}
 //订阅者注册事件
-func (con *DefaultEventConnect) Accept(name string) error {
+func (con *DefaultEventConnect) Register(name string) error {
 	con.mutex.Lock()
 	defer con.mutex.Unlock()
 
@@ -100,24 +110,8 @@ func (con *DefaultEventConnect) Accept(name string) error {
 	return nil
 }
 
-
-//发布者发布消息
-func (con *DefaultEventConnect) Publish(name string, value Map) error {
-	msg.Pub(name, value)
-	return nil
-}
-
-
-
-
-
-
-
-
 //开始订阅者
-func (con *DefaultEventConnect) Subscriber(handler driver.EventHandler) error {
-	con.handler = handler
-
+func (con *DefaultEventConnect) StartSubscriber() error {
 	//订阅消息
 	for _,name := range con.names {
 		msg.Sub(name, func(value Map) {
@@ -137,23 +131,8 @@ func (con *DefaultEventConnect) Subscriber(handler driver.EventHandler) error {
 			con.execute(id, event.Name, event.Value)
 		})
 	}
-
-	
 	return nil
 }
-//开始发布者
-func (con *DefaultEventConnect) Publisher() error {
-
-	//发布者貌似不需要干什么？
-
-	return nil
-}
-
-
-
-
-
-
 
 
 //执行统一到这里
@@ -162,6 +141,41 @@ func (con *DefaultEventConnect) execute(id string, name string, value Map) {
 	res := &DefaultEventResponse{ con }
 	con.handler(req, res)
 }
+
+
+
+
+
+
+
+
+
+
+
+//开始发布者
+func (con *DefaultEventConnect) StartPublisher() error {
+	//内存版发布者貌似不需要干什么
+	return nil
+}
+//发布者发布消息
+func (con *DefaultEventConnect) Publish(name string, value Map) error {
+	msg.Pub(name, value)
+	return nil
+}
+//发布者延时发布消息
+func (con *DefaultEventConnect) DeferredPublish(name string, delay time.Duration, value Map) error {
+	time.AfterFunc(delay, func() {
+		msg.Pub(name, value)
+	})
+	return nil
+}
+
+
+
+
+
+
+
 
 
 

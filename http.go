@@ -662,14 +662,11 @@ func (module *httpModule) runHttp() {
 			panic("节点HTTP：打开失败 " + err.Error())
 		}
 
-		//监听
+		//注册回调
 		con.Accept(module.serveHttp)
 
-		//开始HTTP
-		//这里要判断是否SSL，如果是应该开始SSL
-		//注意，connect.Start不应该阻塞线程
+		//开始http
 		con.Start(module.node.Port)
-
 
 		//保存连接
 		module.httpConnect = con

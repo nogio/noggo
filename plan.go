@@ -584,11 +584,11 @@ func (module *planModule) runPlan() {
 
 			//注册计划
 			for name,time := range module.routeTimes {
-				con.Accept(name, time)
+				con.Register(name, time)
 			}
 
 			//开始计划
-			con.Start(module.servePlan)
+			con.Accept(module.servePlan)
 
 			//保存
 			module.planConnect = con

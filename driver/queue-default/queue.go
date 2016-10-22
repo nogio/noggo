@@ -88,9 +88,13 @@ func (con *DefaultQueueConnect) Close() error {
 
 
 
-
+//注册回调
+func (con *DefaultQueueConnect) Accept(handler driver.QueueHandler) error {
+	con.handler = handler
+	return nil
+}
 //订阅者注册队列
-func (con *DefaultQueueConnect) Accept(name string, line int) error {
+func (con *DefaultQueueConnect) Register(name string, line int) error {
 	con.mutex.Lock()
 	defer con.mutex.Unlock()
 
@@ -101,32 +105,23 @@ func (con *DefaultQueueConnect) Accept(name string, line int) error {
 	return nil
 }
 
+//开始消费者
+func (con *DefaultQueueConnect) StartConsumer() error {
+	//订阅消息
+	for name,line := range con.names {
+		for i:=0;i<line;i++ {
+			go con.consuming(name)
+		}
+	}
 
-//发布者发布消息
-func (con *DefaultQueueConnect) Publish(name string, value Map) error {
-	msg.Pub(name, value)
 	return nil
 }
-//发布者发布延时消息
-func (con *DefaultQueueConnect) DeferredPublish(name string, delay time.Duration, value Map) error {
-	time.AfterFunc(delay, func() {
-		msg.Pub(name, value)
-	})
-	return nil
-}
-
-
-
-
-
-
-
-
-//开始订阅者
-func (con *DefaultQueueConnect) subscriber(name string) {
+//实际的订阅消息方法
+func (con *DefaultQueueConnect) consuming(name string) {
 
 	cc := msg.Sub(name)
 	for {
+		//从管道获取消息
 		v := <- cc
 
 		//新建队列
@@ -147,40 +142,6 @@ func (con *DefaultQueueConnect) subscriber(name string) {
 }
 
 
-//开始订阅者
-func (con *DefaultQueueConnect) Subscriber(handler driver.QueueHandler) error {
-	con.handler = handler
-
-	//订阅消息
-	for name,line := range con.names {
-		for i:=0;i<line;i++ {
-			go con.subscriber(name)
-		}
-	}
-	
-	return nil
-}
-
-
-
-
-
-
-
-
-//开始发布者
-func (con *DefaultQueueConnect) Publisher() error {
-
-	//发布者貌似不需要干什么？
-
-	return nil
-}
-
-
-
-
-
-
 
 
 //执行统一到这里
@@ -191,6 +152,31 @@ func (con *DefaultQueueConnect) execute(id string, name string, value Map) {
 }
 
 
+
+
+
+
+
+
+
+
+//开始生产者
+func (con *DefaultQueueConnect) StartProducer() error {
+	//发布者貌似不需要干什么？
+	return nil
+}
+//生产者发布消息
+func (con *DefaultQueueConnect) Publish(name string, value Map) error {
+	msg.Pub(name, value)
+	return nil
+}
+//生产者发布延时消息
+func (con *DefaultQueueConnect) DeferredPublish(name string, delay time.Duration, value Map) error {
+	time.AfterFunc(delay, func() {
+		msg.Pub(name, value)
+	})
+	return nil
+}
 
 
 
