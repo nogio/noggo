@@ -36,55 +36,56 @@ package main
 
 import (
 	"github.com/nogio/noggo"
+	_ "github.com/nogio/noggo/core" //引用框架默认驱动等等，也可自己定义各种驱动
 	"github.com/nogio/noggo/middler"
 )
 
+
+
 func main() {
 
-	nog := noggo.New()
-
 	//请求日志与静态文件中间件
-	nog.Use(middler.HttpLogger())
-	nog.Use(middler.HttpStatic("statics"))
+	noggo.Use(middler.HttpLogger())
+	noggo.Use(middler.HttpStatic("statics"))
 
-	//Get请求首页
-	nog.Get("/", func(ctx *noggo.HttpContext) {
-		ctx.Text("hello noggo")
+	//get 首页
+	noggo.Get("/", func(ctx *noggo.HttpContext) {
+		ctx.Text("hello noggo.")
+	})
+	//post 首页
+	noggo.Post("/", func(ctx *noggo.HttpContext) {
+		ctx.Text("post hello noggo.")
+	})
+	//添加一个触发器，noggo.Trigger.Touch("trigger.test") 触发
+	noggo.Add("trigger.test", func(ctx *noggo.TriggerContext) {
+		ctx.Finish()
+	})
+	//添加一个任务，noggo.Task.After("task.test", time.Second*3) 3秒后执行任务
+	noggo.Add("task.test", func(ctx *noggo.TaskContext) {
+		ctx.Finish()
+	})
+	//添加一个每5秒执行的计划，  不需调用，
+	noggo.Add("*/5 * * * * *", func(ctx *noggo.PlanContext) {
+		ctx.Finish()
+	})
+	//添加一个事件，noggo.Event.Publish("event.test")调用
+	noggo.Add("event.test", func(ctx *noggo.EventContext) {
+		ctx.Finish()
+	})
+	//添加一个队列，noggo.Queue.Publish("queue.test")调用
+	noggo.Add("queue.test", func(ctx *noggo.QueueContext) {
+		ctx.Finish()
 	})
 
-	nog.Run(":8080")
+	noggo.Launch(":8080")
 }
-```
-
-添加一个计划：
-
-```
-	//添加一个每10秒运行的周期性计划
-	nog.Add("*/10 * * * * *", func(ctx *noggo.PlanContext) {
-		noggo.Logger.Debug("10秒计划开始执行了")
-		ctx.Finish()
-	})
-```
-
-添加一个任务：
-
-```
-	//添加一个测试任务
-	nog.Add("test", func(ctx *noggo.TaskContext) {
-		noggo.Logger.Debug("测试任务开始执行了")
-		ctx.Finish()
-	})
-```
-
-调用任务：
-
-```
-		//3秒后开始test任务
-		noggo.Task.After("test", time.Second*3)
 ```
 
 
 
 # 项目
-完整项目示例，请参考 nogio/noggo/project 目录
+完整项目示例，请参考 noggo-project 
+```
+go get github.com/nogio/noggo-project
+```
 
