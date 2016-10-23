@@ -582,13 +582,15 @@ func (module *planModule) runPlan() {
 			panic("节点计划：打开失败 " + err.Error())
 		} else {
 
+			//注册回调
+			con.Accept(module.servePlan)
+
 			//注册计划
 			for name,time := range module.routeTimes {
 				con.Register(name, time)
 			}
 
-			//开始计划
-			con.Accept(module.servePlan)
+			con.Start()
 
 			//保存
 			module.planConnect = con

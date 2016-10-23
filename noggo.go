@@ -52,7 +52,9 @@ func New(names ...string) (*Noggo) {
 		node.Id = name
 		node.Name = name
 		node.Port = ":8080"
-		node.Config = &nodeConfig{}
+		node.Config = &nodeConfig{
+			Charset:"", Cookie:"noggo", Domain:"",
+		}
 	}
 
 	//模块们
@@ -112,15 +114,10 @@ func (node *Noggo) End() {
 		Logger.Info("node", node.Name, node.Id, "is ending")
 	}
 
-	Logger.Info("http exiting")
 	node.Http.end()
-	Logger.Info("queue exiting")
 	node.Queue.end()
-	Logger.Info("event exiting")
 	node.Event.end()
-	Logger.Info("plan exiting")
 	node.Plan.end()
-	Logger.Info("session exiting")
 	node.session.end()
 }
 

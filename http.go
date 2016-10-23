@@ -1251,7 +1251,7 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 func (module *httpModule) contextRequest(ctx *HttpContext) {
 
 	//会话处理相关
-	cookie, err := ctx.req.Cookie(Config.Http.Cookie)
+	cookie, err := ctx.req.Cookie(module.node.Config.Cookie)
 	if err != nil || cookie.Value == "" {
 		ctx.Id = NewMd5Id()
 		m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
@@ -1264,12 +1264,12 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 		//注意域设置
 		//这里在ctx.Cookie封装之后，应当写到ctx.Cookie中，在response写入res
 		//待修改
-		cookie := http.Cookie{ Name: Config.Http.Cookie, Value: url.QueryEscape(ctx.Id), Path: "/", HttpOnly: true }
+		cookie := http.Cookie{ Name: module.node.Config.Cookie, Value: url.QueryEscape(ctx.Id), Path: "/", HttpOnly: true }
 		if Config.Session.Expiry > 0 {
 			cookie.MaxAge = int(Config.Session.Expiry)
 		}
-		if Config.Http.Domain != "" {
-			cookie.Domain = Config.Http.Domain
+		if module.node.Config.Domain != "" {
+			cookie.Domain = module.node.Config.Domain
 		}
 		http.SetCookie(ctx.res, &cookie)
 	} else {
@@ -1729,7 +1729,7 @@ func (module *httpModule) contextResponder(ctx *HttpContext) {
 		ctx.Code = 200
 	}
 	if ctx.Charset == "" {
-		ctx.Charset = Config.Http.Charset
+		ctx.Charset = module.node.Config.Charset
 		if ctx.Charset == "" {
 			ctx.Charset = "utf-8"
 		}

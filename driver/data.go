@@ -7,6 +7,7 @@ package driver
 
 import (
 	. "github.com/nogio/noggo/base"
+	"database/sql"
 )
 
 const (
@@ -48,7 +49,16 @@ type (
 		Begin() (DataBase)
 		Submit() (error)
 		Cancel() (error)
-	}
+
+		//原生SQL的方法，接口可以执行原生查询，以支持Model不能完成的工作
+		//但是，必须 调用Begin之后，才能使用下例方法，然后 Submit 或 Cancel
+		//因为全部使用事务。
+		Exec(query string, args ...interface{}) (sql.Result, error)
+		Prepare(query string) (*sql.Stmt, error)
+		Query(query string, args ...interface{}) (*sql.Rows, error)
+		QueryRow(query string, args ...interface{}) (*sql.Row)
+		Stmt(stmt *sql.Stmt) (*sql.Stmt)
+}
 	//数据模型接口
 	DataModel interface {
 		Create(Map) (Map,error)

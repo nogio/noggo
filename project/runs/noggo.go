@@ -8,11 +8,13 @@ import (
 	_ "../datas"
 	_ "../nodes"
 	"os"
-	"github.com/nogio/noggo/driver/data-pgsql"
+	"github.com/nogio/noggo/driver/data-mysql"
+	"github.com/nogio/noggo/driver/data-postgres"
 )
 
 func init() {
-	noggo.Data.Driver("pgsql", data_pgsql.Driver())
+	noggo.Data.Driver("mysql", data_mysql.Driver())
+	noggo.Data.Driver("postgres", data_postgres.Driver())
 }
 
 func main() {

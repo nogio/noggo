@@ -113,9 +113,9 @@ func (base *noCacheBase) Set(key string, val Any, expiry int64) (error) {
 func (base *noCacheBase) Del(key string) (error) {
 	return errors.New("无缓存")
 }
-func (base *noCacheBase) Empty() (error) {
+func (base *noCacheBase) Empty(prefixs ...string) (error) {
 	return errors.New("无缓存")
 }
-func (base *noCacheBase) Keys(args ...string) ([]string,error) {
+func (base *noCacheBase) Keys(prefixs ...string) ([]string,error) {
 	return []string{},errors.New("无缓存")
 }

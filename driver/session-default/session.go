@@ -24,8 +24,9 @@ type (
 	//会话连接
 	DefaultConnect struct {
 		config Map
+		mutex sync.Mutex
 		sessions map[string]DefaultSessionValue
-		sessionsMutex sync.Mutex
+
 	}
 
 	DefaultSessionValue struct {
@@ -84,8 +85,8 @@ func (session *DefaultConnect) Close() error {
 
 //查询会话，
 func (session *DefaultConnect) Entity(id string, expiry int64) (Map,error) {
-	session.sessionsMutex.Lock()
-	defer session.sessionsMutex.Unlock()
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
 
 	if v,ok := session.sessions[id]; ok {
 		//简单复制一份
@@ -107,8 +108,8 @@ func (session *DefaultConnect) Entity(id string, expiry int64) (Map,error) {
 
 //更新会话
 func (session *DefaultConnect) Update(id string, value Map, expiry int64) error {
-	session.sessionsMutex.Lock()
-	defer session.sessionsMutex.Unlock()
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
 
 	session.sessions[id] = DefaultSessionValue{
 		Value: value, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
@@ -120,8 +121,8 @@ func (session *DefaultConnect) Update(id string, value Map, expiry int64) error 
 
 //删除会话
 func (session *DefaultConnect) Remove(id string) error {
-	session.sessionsMutex.Lock()
-	defer session.sessionsMutex.Unlock()
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
 
 	delete(session.sessions, id)
 
@@ -133,8 +134,8 @@ func (session *DefaultConnect) Remove(id string) error {
 //回收会话
 //自动回收过期的会话
 func (session *DefaultConnect) Recycle(expiry int64) error {
-	session.sessionsMutex.Lock()
-	defer session.sessionsMutex.Unlock()
+	session.mutex.Lock()
+	defer session.mutex.Unlock()
 
 	for k,v := range session.sessions {
 		if v.Expiry.Unix() < time.Now().Unix() {

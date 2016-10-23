@@ -24,6 +24,12 @@ type (
 		Text string	`json:"text"`
 
 		Crypto string `json:"crypto"`
+		//字符集
+		Charset	string	`json:"charset"`
+		//Session使用的cookie name
+		Cookie	string	`json:"cookie"`
+		//Session使用的domain
+		Domain	string	`json:"domain"`
 
 		//节点指定SESSION
 		Session *sessionConfig `json:"session"`
@@ -124,20 +130,6 @@ type (
 		Driver	string	`json:"driver"`
 		//http驱动配置
 		Config	Map		`json:"config"`
-
-		//字符集
-		Charset	string	`json:"charset"`
-
-		//静态目录
-		Static	string	`json:"static"`
-
-		//视图目录
-		View	string	`json:"view"`
-
-		//Session使用的cookie name
-		Cookie	string	`json:"cookie"`
-		//Session使用的domain
-		Domain	string	`json:"domain"`
 	}
 
 

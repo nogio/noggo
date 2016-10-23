@@ -5,13 +5,13 @@ import (
 	_ "github.com/nogio/noggo/core"
 	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/middler"
-	"github.com/nogio/noggo/driver/data-pgsql"
+	"github.com/nogio/noggo/driver/data-postgres"
 	"time"
 )
 
 func init() {
 	//注册pgsql数据驱动
-	noggo.Data.Driver("pgsql", data_pgsql.Driver())
+	noggo.Data.Driver("postgres", data_postgres.Driver())
 
 	//注册数据模型
 	noggo.Data.Model("test", Map{

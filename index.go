@@ -94,7 +94,7 @@ func init() {
 		Plan: &planConfig{ Driver: "default", Config: Map{} },
 		Event: &eventConfig{ Driver: "default", Prefix: "", Config: Map{} },
 		Queue: map[string]*queueConfig{ "default": &queueConfig{ Driver: "default", Prefix: "", Config: Map{} } },
-		Http: &httpConfig{ Driver: "default", Config: Map{}, Charset:"", Cookie:"noggo", Domain:"" },
+		Http: &httpConfig{ Driver: "default", Config: Map{} },
 		View: &viewConfig{ Driver: "default", Config: Map{} },
 	}
 

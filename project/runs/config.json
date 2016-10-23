@@ -17,28 +17,30 @@
   
   "node": {
     "ing": {
-      "id": "ing-1", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心"
+      "id": "ing-1", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心",
+      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": ""
     },
     "www": {
-      "id": "www-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站"
+      "id": "www-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站",
+      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": ""
     }
   },
 
 
   "data": {
     "main": {
-      "driver": "pgsql",
+      "driver": "postgres",
+      "cache": "main",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_main?sslmode=disable"
-      },
-      "cache": "main"
+      }
     },
     "temp": {
-      "driver": "pgsql",
+      "driver": "postgres",
+      "cache": "main",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_temp?sslmode=disable"
-      },
-      "cache": "main"
+      }
     }
   },
 
@@ -119,10 +121,7 @@
 
   "http": {
     "driver": "default",
-    "config": {},
-
-    "charset": "utf-8", "cookie": "nog", "domain": "",
-     "static": "statics", "view": "views"
+    "config": {}
   },
 
 
@@ -136,9 +135,6 @@
   "custom": {
 
   },
-
-
-
 
 
   "test": ""

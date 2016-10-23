@@ -5,6 +5,7 @@ import (
 	"sync"
 	"github.com/nogio/noggo/driver"
 	"errors"
+	"database/sql"
 )
 
 type (
@@ -202,7 +203,39 @@ func (base *noDataBase) Cancel() (error) {
 }
 
 
-//-----------
+//----------------------------------------------------
+
+
+
+
+
+//Exec
+func (base *noDataBase) Exec(query string, args ...interface{}) (sql.Result,error) {
+	return nil,errors.New("无数据")
+}
+//Prepare
+func (base *noDataBase) Prepare(query string) (*sql.Stmt, error) {
+	return nil,errors.New("无数据")
+}
+//Query
+func (base *noDataBase) Query(query string, args ...interface{}) (*sql.Rows, error) {
+	return nil,errors.New("无数据")
+}
+//QueryRow
+func (base *noDataBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
+	return nil
+}
+//QueryRow
+func (base *noDataBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
+	return nil
+}
+
+
+
+
+
+
+//------------------------------------
 
 
 

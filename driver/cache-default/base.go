@@ -47,18 +47,21 @@ func (base *DefaultCacheBase) Del(key string) (error) {
 	return nil
 }
 //空清数据
-func (base *DefaultCacheBase) Empty() (error) {
-	base.conn.mutex.Lock()
-	defer base.conn.mutex.Unlock()
+func (base *DefaultCacheBase) Empty(prefixs ...string) (error) {
 
-	//暂时不直接过期的问题
-	base.conn.caches = map[string]Any{}
-
+	keys,err := base.Keys(prefixs...)
+	if err == nil {
+		base.conn.mutex.Lock()
+		for _,key := range keys {
+			delete(base.conn.caches, key)
+		}
+		base.conn.mutex.Unlock()
+	}
 	return nil
 }
 
 //获取keys
-func (base *DefaultCacheBase) Keys(args ...string) ([]string,error) {
+func (base *DefaultCacheBase) Keys(prefixs ...string) ([]string,error) {
 	base.conn.mutex.RLock()
 	defer base.conn.mutex.RUnlock()
 

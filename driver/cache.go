@@ -1,6 +1,9 @@
 /*
 	缓存接口
 	2016-10-22  未定稿
+	因为返回的时候，其实无法确定是什么任务，也无法强制转换
+	所有只能在使用缓存的地方，手动设置和转换类型
+	所以暂时不能确认接口文档
 */
 
 
@@ -36,9 +39,9 @@ type (
 		Del(key string) error
 
 		//获取keys
-		Keys(args ...string) ([]string,error)
+		Keys(prefixs ...string) ([]string,error)
 
 		//清空
-		Empty() (error)
+		Empty(prefixs ...string) (error)
 	}
 )
