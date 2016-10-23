@@ -29,15 +29,12 @@ var (
 
 	//日志模块
 	Logger *loggerGlobal
-
 	//会话模块
 	Session *sessionGlobal
 
 
-
 	//触发器模块
 	Trigger *triggerGlobal
-
 	//任务模块
 	Task *taskGlobal
 
@@ -46,28 +43,23 @@ var (
 
 	//计划模块
 	Plan *planGlobal
-
 	//事件模块
 	Event *eventGlobal
-
 	//队列模块
 	Queue *queueGlobal
-
 	//http模块
 	Http *httpGlobal
-
-
 	//view
 	View *viewGlobal
 
-
-
 	//缓存
 	Cache *cacheGlobal
-
 	//数据
 	Data *dataGlobal
 
+
+	//语法糖
+	sugar *sugarGlobal
 )
 
 
@@ -161,6 +153,16 @@ func init() {
 		connects: map[string]driver.DataConnect{},
 	}
 
+
+
+
+	sugar = &sugarGlobal{
+		https: map[string]Map{},
+	}
+
+
+
+
 	loadConfig()
 	loadLang()
 }
@@ -221,76 +223,3 @@ func readJsonFile(filename string) (error,Map) {
 
 
 
-
-
-//-------------------------------- 语法糖 ----------------------------------------
-
-
-//---------------------------------------------------------- 语法糖 begin ----------------------------------------------------------
-
-
-//注册驱动
-//方便注册各种驱动
-func Driver(name string, drv Any) {
-	switch v := drv.(type) {
-	case driver.LoggerDriver:
-		Logger.Driver(name, v)
-
-	case driver.SessionDriver:
-		Session.Driver(name, v)
-
-	case driver.TaskDriver:
-		Task.Driver(name, v)
-
-	case driver.PlanDriver:
-		Plan.Driver(name, v)
-
-	case driver.EventDriver:
-		Event.Driver(name, v)
-
-	case driver.HttpDriver:
-		Http.Driver(name, v)
-
-	case driver.ViewDriver:
-		View.Driver(name, v)
-	default:
-		panic("未支持的驱动")
-	}
-}
-
-//注册中间件
-//方便注册各种中间件
-func Middler(call Any) {
-	switch v := call.(type) {
-
-	case TriggerFunc:
-		Trigger.Middler(NewMd5Id(), v)
-	case func(*TriggerContext):
-		Trigger.Middler(NewMd5Id(), v)
-
-	case TaskFunc:
-		Task.Middler(NewMd5Id(), v)
-	case func(*TaskContext):
-		Task.Middler(NewMd5Id(), v)
-
-
-	case HttpFunc:
-		Http.Middler(NewMd5Id(), v)
-	case func(*HttpContext):
-		Http.Middler(NewMd5Id(), v)
-
-	case PlanFunc:
-		Plan.Middler(NewMd5Id(), v)
-	case func(*PlanContext):
-		Plan.Middler(NewMd5Id(), v)
-
-
-	case EventFunc:
-		Event.Middler(NewMd5Id(), v)
-	case func(*EventContext):
-		Event.Middler(NewMd5Id(), v)
-
-	default:
-		panic("未支持的中间件")
-	}
-}

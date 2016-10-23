@@ -1335,37 +1335,3 @@ func (ctx *TaskContext) Retask(delays ...time.Duration) {
 	任务上下文方法 end
 */
 
-
-
-//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
-
-
-
-//注册中间件
-func (global *taskGlobal) Use(call TaskFunc) {
-	//直接加到请求拦截器，和中间件位置一样
-	global.RequestFilter(NewMd5Id(), call)
-}
-
-
-//添加任务
-func (global *taskGlobal) Add(name string, call TaskFunc) {
-	global.Route(name, Map{
-		"route": Map{
-			"name": name, "text": name,
-			"action": call,
-		},
-	})
-
-	Logger.Debug("加了任务啊", name, call)
-}
-
-
-
-
-
-
-
-
-//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
-

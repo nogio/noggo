@@ -2,7 +2,6 @@ package noggo
 
 
 import (
-	. "github.com/nogio/noggo/base"
 )
 
 type (
@@ -80,12 +79,6 @@ func (node *Noggo) Run(ports ...string) {
 		node.Port = ports[0]
 	}
 
-
-	//如果还没初妈化， 先初始化
-	if initialized == false {
-		Init()
-	}
-
 	if node.running == false {
 
 		node.session.run()
@@ -99,7 +92,6 @@ func (node *Noggo) Run(ports ...string) {
 		//如果是直接运行， 就监听退出信号
 		if node.Name == ConstNodeGlobal {
 			Logger.Info("noggo", "is running at", node.Port)
-			Exit()
 		} else {
 			Logger.Info("node", node.Name, node.Id, "is running at", node.Port)
 		}
@@ -124,93 +116,4 @@ func (node *Noggo) End() {
 
 
 /* 注册处理器 end */
-
-
-
-
-//---------------------------------------------------------- 语法糖 begin ----------------------------------------------------------
-
-
-//注册中间件
-//用Any类似，是方便，为HTTP，PLAN，等等不同的模块直接注册中间件
-func (node *Noggo) Use(call Any) {
-	switch v := call.(type) {
-	case HttpFunc:
-		node.Http.Use(v)
-	case func(*HttpContext):
-		node.Http.Use(v)
-
-	case PlanFunc:
-		node.Plan.Use(v)
-	case func(*PlanContext):
-		node.Plan.Use(v)
-
-	case EventFunc:
-		node.Event.Use(v)
-	case func(*EventContext):
-		node.Event.Use(v)
-	}
-
-}
-
-
-
-
-//添加路由
-func (node *Noggo) Add(name string, call Any) {
-	switch v := call.(type) {
-
-	case TriggerFunc:
-		Trigger.Add(name, v)
-	case func(*TriggerContext):
-		Trigger.Add(name, v)
-
-	case TaskFunc:
-		Task.Add(name, v)
-	case func(*TaskContext):
-		Task.Add(name, v)
-
-
-
-	case HttpFunc:
-		node.Http.Any(name, v)
-	case func(*HttpContext):
-		node.Http.Any(name, v)
-
-	case PlanFunc:
-		node.Plan.Add(name, v)
-	case func(*PlanContext):
-		node.Plan.Add(name, v)
-
-	case EventFunc:
-		node.Event.Add(name, v)
-	case func(*EventContext):
-		node.Event.Add(name, v)
-	}
-}
-
-
-//注册Any方法
-func (node *Noggo) Any(path string, call HttpFunc) {
-	node.Http.Any(path, call)
-}
-//注册get方法
-func (node *Noggo) Get(path string, call HttpFunc) {
-	node.Http.Get(path, call)
-}
-//注册post方法
-func (node *Noggo) Post(path string, call HttpFunc) {
-	node.Http.Post(path, call)
-}
-//注册put方法
-func (node *Noggo) Put(path string, call HttpFunc) {
-	node.Http.Put(path, call)
-}
-//注册delete方法
-func (node *Noggo) Delete(path string, call HttpFunc) {
-	node.Http.Put(path, call)
-}
-//---------------------------------------------------------- 语法糖 end ----------------------------------------------------------
-
-
 

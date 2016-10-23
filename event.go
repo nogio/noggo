@@ -1923,38 +1923,3 @@ func (ctx *EventContext) Reevent(delays ...time.Duration) {
 
 
 
-
-
-
-
-//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
-
-
-
-//注册中间件
-func (module *eventModule) Use(call EventFunc) {
-	//直接加到请求拦截器，和中间件位置一样
-	module.RequestFilter(NewMd5Id(), call)
-}
-
-
-//注册all方法
-func (module *eventModule) Add(name string, call EventFunc) {
-	module.Route(name, Map{
-		"route": Map{
-			"name": name, "text": name,
-			"action": call,
-		},
-	})
-}
-
-
-
-
-
-
-
-
-//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
-
-

@@ -12,6 +12,10 @@ var (
 
 func Init() {
 	if initialized == false {
+
+		//语法糖初始化
+		sugar.init()
+
 		Logger.init()
 		Session.init()
 
@@ -63,4 +67,25 @@ func wating() {
 	exitChan := make(chan os.Signal, 1)
 	signal.Notify(exitChan, os.Interrupt, os.Kill, syscall.SIGINT, syscall.SIGTERM)
 	<-exitChan
+}
+
+
+
+
+
+
+
+
+
+
+
+
+//运行单例模式
+func Launch(ports ...string) {
+	Init()
+
+	nog := New()
+	nog.Run(ports...)
+
+	Exit()
 }

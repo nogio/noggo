@@ -604,6 +604,7 @@ func (module *planModule) runPlan() {
 func (module *planModule) end() {
 	module.endSession()
 	module.endPlan()
+
 }
 //退出SESSION
 func (module *planModule) endSession() {
@@ -1894,39 +1895,5 @@ func (ctx *PlanContext) Replan(delays ...time.Duration) {
 
 
 
-
-
-
-
-//-------------------------------------------------------  语法糖 begin ----------------------------------------------------------
-
-
-
-//注册中间件
-func (module *planModule) Use(call PlanFunc) {
-	//直接加到请求拦截器，和中间件位置一样
-	module.RequestFilter(NewMd5Id(), call)
-}
-
-
-//注册all方法
-func (module *planModule) Add(time string, call PlanFunc) {
-	module.Route(NewMd5Id(), Map{
-		"time": time,
-		"route": Map{
-			"name": time, "text": time,
-			"action": call,
-		},
-	})
-}
-
-
-
-
-
-
-
-
-//-------------------------------------------------------  语法糖 end ----------------------------------------------------------
 
 

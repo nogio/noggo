@@ -9,7 +9,7 @@ package noggo
 
 import (
 	"sync"
-	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
 )
 
@@ -29,7 +29,7 @@ type (
 		Close() error
 
 		//帮助VIEW函数
-		Helper(name string, helper Any) error
+		Helper(name string, helper base.Any) error
 
 		//解析
 		Parse(ctx *HttpContext, view string, model Map, data Map) (error,string)
@@ -44,8 +44,8 @@ type (
 		drivers map[string]driver.ViewDriver
 
 		//视图函数库
-		//因为可能各种各样的函数，所以用Any类型
-		helpers map[string]Any
+		//因为可能各种各样的函数，所以用base.Any类型
+		helpers map[string]base.Any
 
 
 		//日志配置，日志连接
@@ -78,13 +78,13 @@ func (global *viewGlobal) Driver(name string, config driver.ViewDriver) {
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
 	global.drivers[name] = config
 }
-func (global *viewGlobal) Helper(name string, helper Any) {
+func (global *viewGlobal) Helper(name string, helper base.Any) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 
 	if global.helpers == nil {
-		global.helpers = map[string]Any{}
+		global.helpers = map[string]base.Any{}
 	}
 
 	if helper == nil {

@@ -106,7 +106,6 @@ func (global *loggerGlobal) exit() {
 	//关闭日志连接
 	if global.loggerConnect != nil {
 		global.loggerConnect.Close()
-		global.loggerConnect = nil
 	}
 }
 
