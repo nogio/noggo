@@ -50,14 +50,24 @@ func (base *MysqlBase) Model(name string) (driver.DataModel) {
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
+
 		if n,ok := config["object"].(string); ok {
 			object = n
 		}
+		if n,ok := config["table"].(string); ok {
+			object = n
+		}
+		if n,ok := config["view"].(string); ok {
+			object = n
+		}
+
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
 		if n,ok := config["fields"].(Map); ok {
 			fields = n
+		} else {
+			panic("数据：未定义字段fields")
 		}
 
 		return &MysqlModel{

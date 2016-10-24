@@ -357,17 +357,18 @@ func (model *AdodbModel) Delete(args ...Map) (int64,error) {
 
 
 //批量更新
-func (model *AdodbModel) Update(args ...Map) (int64,error) {
+func (model *AdodbModel) Update(sets Map, args ...Map) (int64,error) {
 
 	//注意，args[0]为更新的内容，之后的为查询条件
-	data := args[0]
-	args = args[1:]
+	//data := args[0]
+	//args = args[1:]
 
 
 	//按字段生成值
 	value := Map{}
-	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, true);
+	err := noggo.Mapping.Parse([]string{}, model.fields, sets, value, true);
 	noggo.Logger.Debug("data", "update", "mapping", err)
+
 
 	if err != nil {
 		return int64(0),err

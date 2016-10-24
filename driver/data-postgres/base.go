@@ -50,9 +50,18 @@ func (base *PostgresBase) Model(name string) (driver.DataModel) {
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
+
 		if n,ok := config["object"].(string); ok {
 			object = n
 		}
+		if n,ok := config["table"].(string); ok {
+			object = n
+		}
+		if n,ok := config["view"].(string); ok {
+			object = n
+		}
+
+
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}

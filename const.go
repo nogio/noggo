@@ -42,6 +42,7 @@ const (
 	KeyMapFound		= "found"
 	KeyMapError		= "error"
 	KeyMapFailed	= "failed"
+	KeyMapNone 	    = "none"
 	KeyMapDenied	= "denied"
 
 	KeyMapEncode	= "encode"
@@ -337,3 +338,27 @@ func (global *constGlobal) NewLangStateError(lang, state string, args ...interfa
 }
 
 
+
+//按状态生成错误
+//args是用来Format错误信息的
+//state 和langstring 联动
+func (global *constGlobal) NewTypeLangStateError(tttt, lang, state string, args ...interface{}) *Error {
+
+	stateCode := global.StateCode(state)
+	stateText := global.LangString(state, lang)
+
+	return NewTypeCodeError(tttt, stateCode, fmt.Sprintf(stateText, args...))
+}
+
+
+
+//按状态生成错误
+//args是用来Format错误信息的
+//state 和langstring 联动
+func (global *constGlobal) NewTypeStateError(tttt,state string, args ...interface{}) *Error {
+
+	stateCode := global.StateCode(state)
+	stateText := global.LangString(state)
+
+	return NewTypeCodeError(tttt,stateCode, fmt.Sprintf(stateText, args...))
+}

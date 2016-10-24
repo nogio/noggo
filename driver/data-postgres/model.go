@@ -361,16 +361,16 @@ func (model *PostgresModel) Delete(args ...Map) (int64,error) {
 
 
 //批量更新
-func (model *PostgresModel) Update(args ...Map) (int64,error) {
+func (model *PostgresModel) Update(sets Map, args ...Map) (int64,error) {
 
 	//注意，args[0]为更新的内容，之后的为查询条件
-	data := args[0]
-	args = args[1:]
+	//sets := args[0]
+	//args = args[1:]
 
 
 	//按字段生成值
 	value := Map{}
-	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, true);
+	err := noggo.Mapping.Parse([]string{}, model.fields, sets, value, true);
 	noggo.Logger.Debug("data", "update", "mapping", err)
 
 	if err != nil {

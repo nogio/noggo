@@ -369,7 +369,7 @@ func (model *noDataModel) Entity(id Any) (Map,error) {
 func (model *noDataModel) Delete(args ...Map) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataModel) Update(args ...Map) (int64,error) {
+func (model *noDataModel) Update(sets Map,args ...Map) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
 func (model *noDataModel) Count(args ...Map) (int64,error) {

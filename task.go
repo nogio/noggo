@@ -558,9 +558,9 @@ func (global *taskGlobal) contextExecute(ctx *TaskContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		if _,ok := ctx.Config[KeyMapAuth]; ok {
-			ctx.handler(global.contextAuth)
-		}
+		//if _,ok := ctx.Config[KeyMapAuth]; ok {
+		//	ctx.handler(global.contextAuth)
+		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -675,9 +675,9 @@ func (global *taskGlobal) contextBranch(ctx *TaskContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		if _,ok := ctx.Config[KeyMapAuth]; ok {
-			ctx.handler(global.contextAuth)
-		}
+		//if _,ok := ctx.Config[KeyMapAuth]; ok {
+		//	ctx.handler(global.contextAuth)
+		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -747,100 +747,6 @@ func (global *taskGlobal) contextArgs(ctx *TaskContext) {
 
 
 
-//Auth验证处理
-func (global *taskGlobal) contextAuth(ctx *TaskContext) {
-
-	if auths,ok := ctx.Config["auth"]; ok {
-		saveMap := Map{}
-
-		for authKey,authMap := range auths.(Map) {
-
-			ohNo := false
-			authConfig := authMap.(Map)
-
-			if authConfig["sign"] == nil {
-				continue
-			}
-
-			authSign := authConfig["sign"].(string)
-			authMust := false
-			authName := authSign
-
-			if authConfig["must"] != nil {
-				authMust = authConfig["must"].(bool)
-			}
-			if authConfig["name"] != nil {
-				authName = authConfig["name"].(string)
-			}
-
-			//判断是否登录
-			if ctx.Sign.Yes(authSign) {
-
-				/*
-				因为数据层还没上， 所以暂不支持，以下查询数据库的操作
-				//判断是否需要查询数据
-				dataName,dok := authConfig["data"]; modelName,mok := authConfig["model"];
-				if dok && mok {
-
-					//要查询库
-					//不管must是否,都要查库
-					db := Data.Data(dataName.(string)); defer db.Close()
-					item := db.Model(modelName.(string)).Entity(ctx.Sign.Id(authSign))
-					if item != nil {
-						saveMap[authKey] = item
-					} else {
-						if authMust {	//是必要的
-							//是否有自定义状态
-							err := NewStateError("auth.error", authName)
-							if v,ok := authConfig["error"]; ok {
-								err = NewStateError(v.(string))
-							}
-
-							err.Data = authConfig
-							ctx.Denied(authKey, err)
-							return;
-						}
-					}
-
-
-				} else {
-					//无需data, model， 不管
-				}
-				*/
-
-			} else {
-				ohNo = true
-			}
-
-			//到这里是未登录的
-			//而且是必须要登录，才显示错误
-			if ohNo && authMust {
-
-				//是否有自定义状态
-				err := Const.NewStateError("auth.empty", authName)
-				if v,ok := authConfig["empty"]; ok {
-					err = Const.NewStateError(v.(string))
-				}
-
-				//貌似不需要这个
-				//err.Data = authConfig
-
-				//指定错误类型为authKey
-				err.Type = authKey
-				ctx.Denied(err)
-				return;
-
-			}
-		}
-
-		//存入
-		for k,v := range saveMap {
-			ctx.Auth[k] = v
-		}
-	}
-
-	ctx.Next()
-}
 //Entity实体处理
 func (global *taskGlobal) contextItem(ctx *TaskContext) {
 	if ctx.Config["item"] != nil {
@@ -853,8 +759,8 @@ func (global *taskGlobal) contextItem(ctx *TaskContext) {
 
 			name := config["name"].(string)
 			key := k
-			if config["key"] != nil && config["key"] != "" {
-				key = config["key"].(string)
+			if config["value"] != nil && config["value"] != "" {
+				key = config["value"].(string)
 			}
 
 			if ctx.Value[key] == nil {
@@ -864,45 +770,34 @@ func (global *taskGlobal) contextItem(ctx *TaskContext) {
 				if v,ok := config["empty"]; ok {
 					state = v.(string)
 				}
-				err := Const.NewStateError(state, name)
-
-				//指定错误类型为item的key，好在处理时区分
-				err.Type = k
+				err := Const.NewTypeStateError(k, state, name)
 				//查询不到东西，也要失败， 接口访问失败
 				ctx.Failed(err)
 				return
 			} else {
 
-				/*
-				由于数据层还未完工，暂不支持数据查询
 				//判断是否需要查询数据
-				dataName,dok := config["data"]; modelName,mok := config["model"];
+				dataName,dok := config["base"].(string); modelName,mok := config["model"].(string);
 				if dok && mok {
 
 					//要查询库
-					db := Data.Data(dataName.(string)); defer db.Close()
-					item := db.Model(modelName.(string)).Entity(ctx.Value[key])
-					if item != nil {
-						saveMap[k] = item
-					} else {
+					db := Data.Base(dataName);
+					item,err := db.Model(modelName).Entity(ctx.Value[key])
+					db.Close()
+					if err != nil {
 						state := "item.error"
 						//是否有自定义状态
 						if v,ok := config["error"]; ok {
 							state = v.(string)
 						}
-						err := Const.NewStateError(state, name)
+						err := Const.NewTypeStateError(k, state, name)
 
-						//这个不需要了吧
-						//err.Data = config
-
-						//错误类型等于item.key,方便处理
-						err.Type = k
 						ctx.Failed(err)
 						return;
+					} else {
+						saveMap[k] = item
 					}
 				}
-
-				*/
 			}
 		}
 

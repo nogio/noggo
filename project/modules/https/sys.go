@@ -19,7 +19,7 @@ func init() {
 				ctx.Data["models"] = noggo.Data.Models()
 				ctx.Data["routes"] = ctx.Node.Http.Routes()
 
-				ctx.View("_sys_/index")
+				ctx.View("_sys_/doc")
 			},
 		},
 	})

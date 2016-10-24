@@ -43,9 +43,9 @@ type (
 		requestFilters, executeFilters, responseFilters map[string]map[string]HttpFunc
 		requestFilterNames, executeFilterNames, responseFilterNames map[string][]string
 
-		                                             //处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]map[string]HttpFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames map[string][]string
+		//处理器们
+		foundHandlers, errorHandlers, failedHandlers, deniedHandlers, noneHandlers map[string]map[string]HttpFunc
+		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames, noneHandlerNames map[string][]string
 	}
 
 )
@@ -426,6 +426,45 @@ func (global *httpGlobal) DeniedHandler(name string, call HttpFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.deniedHandlers[nodeName][name] = call
 }
+
+//不存在处理器
+func (global *httpGlobal) NoneHandler(name string, call HttpFunc) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.noneHandlers == nil {
+		global.noneHandlers = map[string]map[string]HttpFunc{}
+	}
+	if global.noneHandlerNames == nil {
+		global.noneHandlerNames =  map[string][]string{}
+	}
+
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+
+	//如果节点配置不存在，创建
+	if global.noneHandlers[nodeName] == nil {
+		global.noneHandlers[nodeName] = map[string]HttpFunc{}
+	}
+	if global.noneHandlerNames[nodeName] == nil {
+		global.noneHandlerNames[nodeName] = []string{}
+	}
+
+
+
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := global.noneHandlers[nodeName][name]; ok == false {
+		global.noneHandlerNames[nodeName] = append(global.noneHandlerNames[nodeName], name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	global.noneHandlers[nodeName][name] = call
+}
 //-----------------------------------------------------------------------------------------------------------------------//
 
 
@@ -480,8 +519,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]HttpFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+		foundHandlers, errorHandlers, failedHandlers, noneHandlers, deniedHandlers map[string]HttpFunc
+		foundHandlerNames, errorHandlerNames, failedHandlerNames, noneHandlerNames, deniedHandlerNames []string
 	}
 
 	//HTTP上下文
@@ -881,6 +920,24 @@ func (module *httpModule) DeniedHandler(name string, call HttpFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.deniedHandlers[name] = call
 }
+func (module *httpModule) NoneHandler(name string, call HttpFunc) {
+	module.mutex.Lock()
+	defer module.mutex.Unlock()
+
+	if module.noneHandlers == nil {
+		module.noneHandlers = make(map[string]HttpFunc)
+	}
+	if module.noneHandlerNames == nil {
+		module.noneHandlerNames = make([]string, 0)
+	}
+
+	//如果没有注册个此name，才加入数组
+	if _,ok := module.noneHandlers[name]; ok == false {
+		module.noneHandlerNames = append(module.noneHandlerNames, name)
+	}
+	//函数直接写， 因为可以使用同名替换现有的
+	module.noneHandlers[name] = call
+}
 /* 注册处理器 end */
 
 
@@ -1043,7 +1100,7 @@ func newHttpModule(node *Noggo) (*httpModule) {
 
 
 
-	//节点 请求拦截器
+	//节点 拒绝处理器
 	nodeDeniedHandlers, nodeDeniedHandlersOK := Http.deniedHandlers[node.Name];
 	nodeDeniedHandlerNames, nodeDeniedHandlerNamesOK := Http.deniedHandlerNames[node.Name];
 	if nodeDeniedHandlersOK && nodeDeniedHandlerNamesOK {
@@ -1051,7 +1108,7 @@ func newHttpModule(node *Noggo) (*httpModule) {
 			module.DeniedHandler(n, nodeDeniedHandlers[n])
 		}
 	}
-	//全局 请求拦截器
+	//全局 拒绝处理器
 	deniedHandlers, deniedHandlersOK := Http.deniedHandlers[ConstNodeGlobal];
 	deniedHandlerNames, deniedHandlerNamesOK := Http.deniedHandlerNames[ConstNodeGlobal];
 	if deniedHandlersOK && deniedHandlerNamesOK {
@@ -1059,6 +1116,27 @@ func newHttpModule(node *Noggo) (*httpModule) {
 			//不存在才注册，这样全局不会替换节点的处理器
 			if _,ok := module.deniedHandlers[n]; ok == false {
 				module.DeniedHandler(n, deniedHandlers[n])
+			}
+		}
+	}
+
+
+	//节点 不存在处理器
+	nodeNoneHandlers, nodeNoneHandlersOK := Http.noneHandlers[node.Name];
+	nodeNoneHandlerNames, nodeNoneHandlerNamesOK := Http.noneHandlerNames[node.Name];
+	if nodeNoneHandlersOK && nodeNoneHandlerNamesOK {
+		for _,n := range nodeNoneHandlerNames {
+			module.NoneHandler(n, nodeNoneHandlers[n])
+		}
+	}
+	//全局 不存在处理器
+	noneHandlers, noneHandlersOK := Http.noneHandlers[ConstNodeGlobal];
+	noneHandlerNames, noneHandlerNamesOK := Http.noneHandlerNames[ConstNodeGlobal];
+	if noneHandlersOK && noneHandlerNamesOK {
+		for _,n := range noneHandlerNames {
+			//不存在才注册，这样全局不会替换节点的处理器
+			if _,ok := module.noneHandlers[n]; ok == false {
+				module.NoneHandler(n, noneHandlers[n])
 			}
 		}
 	}
@@ -1533,7 +1611,7 @@ func (module *httpModule) contextArgs(ctx *HttpContext) {
 	//所有值都会放在 module.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
-		ctx.Failed(err)
+		ctx.failed(err)
 	} else {
 		ctx.Next()
 	}
@@ -1570,37 +1648,34 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 			//判断是否登录
 			if ctx.Sign.Yes(authSign) {
 
-				/*
-				因为数据层还没上， 所以暂不支持，以下查询数据库的操作
 				//判断是否需要查询数据
-				dataName,dok := authConfig["data"]; modelName,mok := authConfig["model"];
+				dataName,dok := authConfig["base"].(string); modelName,mok := authConfig["model"].(string);
 				if dok && mok {
 
 					//要查询库
 					//不管must是否,都要查库
-					db := Data.Data(dataName.(string)); defer db.Close()
-					item := db.Model(modelName.(string)).Entity(ctx.Sign.Id(authSign))
-					if item != nil {
-						saveMap[authKey] = item
-					} else {
+					db := Data.Base(dataName);
+					item,err := db.Model(modelName).Entity(ctx.Sign.Id(authSign))
+					db.Close()
+					if err != nil {
 						if authMust {	//是必要的
 							//是否有自定义状态
-							err := NewStateError("auth.error", authName)
+							err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
 							if v,ok := authConfig["error"]; ok {
-								err = NewStateError(v.(string))
+								err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 							}
 
-							err.Data = authConfig
-							ctx.Denied(authKey, err)
+							ctx.denied(err)
 							return;
 						}
+					} else {
+						saveMap[authKey] = item
 					}
 
 
 				} else {
-					//无需data, model， 不管
+					//无需base, model， 不管
 				}
-				*/
 
 			} else {
 				ohNo = true
@@ -1611,17 +1686,12 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 			if ohNo && authMust {
 
 				//是否有自定义状态
-				err := Const.NewStateError("auth.empty", authName)
+				err := Const.NewTypeLangStateError(authKey, ctx.Lang, "auth.empty", authName)
 				if v,ok := authConfig["empty"]; ok {
-					err = Const.NewStateError(v.(string))
+					err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 				}
 
-				//貌似不需要这个
-				//err.Data = authConfig
-
-				//指定错误类型为authKey
-				err.Type = authKey
-				ctx.Denied(err)
+				ctx.denied(err)
 				return;
 
 			}
@@ -1647,8 +1717,8 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 
 			name := config["name"].(string)
 			key := k
-			if config["key"] != nil && config["key"] != "" {
-				key = config["key"].(string)
+			if config["value"] != nil && config["value"] != "" {
+				key = config["value"].(string)
 			}
 
 			if ctx.Value[key] == nil {
@@ -1658,45 +1728,34 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 				if v,ok := config["empty"]; ok {
 					state = v.(string)
 				}
-				err := Const.NewStateError(state, name)
-
-				//指定错误类型为item的key，好在处理时区分
-				err.Type = k
+				err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
 				//查询不到东西，也要失败， 接口访问失败
-				ctx.Failed(err)
+				ctx.none(err)
 				return
 			} else {
 
-				/*
-				由于数据层还未完工，暂不支持数据查询
 				//判断是否需要查询数据
-				dataName,dok := config["data"]; modelName,mok := config["model"];
+				dataName,dok := config["base"].(string); modelName,mok := config["model"].(string);
 				if dok && mok {
 
 					//要查询库
-					db := Data.Data(dataName.(string)); defer db.Close()
-					item := db.Model(modelName.(string)).Entity(ctx.Value[key])
-					if item != nil {
-						saveMap[k] = item
-					} else {
+					db := Data.Base(dataName);
+					item,err := db.Model(modelName).Entity(ctx.Value[key])
+					db.Close()
+					if err != nil {
 						state := "item.error"
 						//是否有自定义状态
 						if v,ok := config["error"]; ok {
 							state = v.(string)
 						}
-						err := Const.NewStateError(state, name)
+						err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
 
-						//这个不需要了吧
-						//err.Data = config
-
-						//错误类型等于item.key,方便处理
-						err.Type = k
-						ctx.Failed(err)
+						ctx.none(err)
 						return;
+					} else {
+						saveMap[k] = item
 					}
 				}
-
-				*/
 			}
 		}
 
@@ -1934,6 +1993,48 @@ func (module *httpModule) contextFailed(ctx *HttpContext) {
 }
 
 
+//路由执行，exist 就是 item不存在
+func (module *httpModule) contextNone(ctx *HttpContext) {
+	//清理执行线
+	ctx.cleanup()
+
+	//如果路由配置中有None，就自定义处理
+	if v,ok := ctx.Config[KeyMapNone]; ok {
+		switch c := v.(type) {
+		case HttpFunc: {
+			ctx.handler(c)
+		}
+		case []HttpFunc: {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		case func(*HttpContext): {
+			ctx.handler(c)
+		}
+		case []func(*HttpContext): {
+			for _,v := range c {
+				ctx.handler(v)
+			}
+		}
+		default:
+		}
+	}
+
+
+	//handler中的failed
+	//用数组保证原始注册顺序
+	for _,name := range module.noneHandlerNames {
+		ctx.handler(module.noneHandlers[name])
+	}
+
+	//最后是默认None中间件
+	ctx.handler(module.noneDefaultHandler)
+
+	ctx.Code = 404
+
+	ctx.Next()
+}
 
 //路由执行，denied
 func (module *httpModule) contextDenied(ctx *HttpContext) {
@@ -1998,6 +2099,9 @@ func (module *httpModule) errorDefaultHandler(ctx *HttpContext) {
 }
 func (module *httpModule) failedDefaultHandler(ctx *HttpContext) {
 	ctx.Text(fmt.Sprintf("http failed %v", ctx.Wrong))
+}
+func (module *httpModule) noneDefaultHandler(ctx *HttpContext) {
+	ctx.Text(fmt.Sprintf("http none %v", ctx.Wrong))
 }
 func (module *httpModule) deniedDefaultHandler(ctx *HttpContext) {
 	ctx.Text(fmt.Sprintf("http denied %v", ctx.Wrong))
@@ -2127,14 +2231,106 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyView)
 
 
+	/*
+		"agent": func() string{
+			return ctx.Agent()
+		},
+		"ip": func() string{
+			return ctx.Ip()
+		},
+		*/
+
+	/*
+	"storage": func(item Map) string {
+		return ctx.Url.Storage(item)
+	},
+	"thumbnail": func(item Map, w,h,t int64) string {
+		return ctx.Url.Thumbnail(item, w,h,t)
+	},
+	*/
+
+
+
+
+	/*
+	"enum": func(data,model,field string,v Any) (template.HTML) {
+		html := ""
+
+		value := fmt.Sprintf("%v", v)
+
+		enums := Data.Enums(data,model,field)
+		if v,ok := enums[value]; ok {
+			html = fmt.Sprintf("%v", v)
+		}
+		return template.HTML(html)
+	},
+	"status":  func(data,model string, value Any) template.HTML {
+		html := ""
+
+		if value == nil {
+			html = `<span class="green">正常</span>`
+		} else {
+			enums := Data.Status(data, model)
+			key := fmt.Sprintf("%v", value)
+			if v, ok := enums[key]; ok {
+				html = fmt.Sprintf(`<span class="red">%v</span>`, v)
+			}
+		}
+		return template.HTML(html)
+	},
+*/
 
 
 	parse := &driver.ViewParse{
 		Node: ctx.Node.Name, Lang: ctx.Lang,
 		Data: ctx.Data, View: body.View, Model: body.Model,
-		Helpers: Map{},
+		Helpers: Map{
+			"backurl": func() string{ return ctx.Url.Back() },
+			"lasturl": func() string{ return ctx.Url.Last() },
+			"nodeurl": func(name string, args ...string) string{ return ctx.Url.Node(name, args...) },
+			"route": func(name string, vals ...Any) string{
+				args := []Map{}
+				for _,v := range vals {
+					switch t := v.(type) {
+					case Map:
+						args = append(args, t)
+					default:
+						m := Map{}
+						e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
+						if e == nil {
+							args = append(args, m)
+						}
+					}
+				}
+				return ctx.Url.Route(name, args...)
+			},
+			"routo": func(site,name string, vals ...Any) string {
+				args := []Map{}
+				for _,v := range vals {
+					switch t := v.(type) {
+					case Map:
+						args = append(args, t)
+					default:
+						m := Map{}
+						e := json.Unmarshal([]byte(fmt.Sprintf("%v", t)), &m)
+						if e == nil {
+							args = append(args, m)
+						}
+					}
+				}
+				return ctx.Url.Routo(site,name, args...)
+			},
+			"signed": func(key string) bool {
+				return ctx.Sign.Yes(key)
+			},
+			"signid": func(key string) string {
+				return fmt.Sprintf("%v", ctx.Sign.Id(key))
+			},
+			"signer": func(key string) Any {
+				return ctx.Sign.Name(key)
+			},
+		},
 	}
-
 
 	//helper要在这里处理
 	//可以注册Helper
@@ -2252,15 +2448,23 @@ func (ctx *HttpContext) Error(err *Error) {
 	ctx.Module.contextError(ctx)
 }
 
+//下面方法应该私有吧。其实在请求中用不到这两
+
+
 //失败, 就是参数处理失败为主
-func (ctx *HttpContext) Failed(err *Error) {
+func (ctx *HttpContext) failed(err *Error) {
 	ctx.Wrong = err
 	ctx.Module.contextFailed(ctx)
 }
 //拒绝,主要是 auth
-func (ctx *HttpContext) Denied(err *Error) {
+func (ctx *HttpContext) denied(err *Error) {
 	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
+	ctx.Module.contextDenied(ctx)
+}
+//不存在，item 不存在时，应该和found一样
+func (ctx *HttpContext) none(err *Error) {
+	ctx.Wrong = err
+	ctx.Module.contextNone(ctx)
 }
 /* 上下文处理器 end */
 
@@ -2407,7 +2611,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v)
 				if e != nil {
 					//出错了
-					ctx.Failed(e)
+					ctx.failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2422,7 +2626,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, c, d, v)
 				if e != nil {
 					//出错了
-					ctx.Failed(e)
+					ctx.failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2453,7 +2657,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v)
 				if e != nil {
 					//出错了
-					ctx.Failed(e)
+					ctx.failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2505,7 +2709,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, newConfig, newData, v)
 			if e != nil {
 				//出错了
-				ctx.Failed(e)
+				ctx.failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2520,7 +2724,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, c, d, v)
 			if e != nil {
 				//出错了
-				ctx.Failed(e)
+				ctx.failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2554,7 +2758,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, newConfig, newData, v)
 			if e != nil {
 				//出错了
-				ctx.Failed(e)
+				ctx.failed(e)
 				return
 			} else {
 				//处理后的data

@@ -67,8 +67,8 @@ type (
 		Entity(Any) (Map,error)
 
 		//批量更新
-		//其中args[0]为更新内容
-		Update(args ...Map) (int64,error)
+		Update(sets Map,args ...Map) (int64,error)
+		//批量删除
 		Delete(args ...Map) (int64,error)
 
 		Count(...Map) (int64,error)
