@@ -4,6 +4,7 @@ package view_default
 
 import (
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo/driver"
 	"errors"
 	"fmt"
 	"html/template"
@@ -13,7 +14,6 @@ import (
 	"strings"
 	"encoding/json"
 	"time"
-	"github.com/nogio/noggo/driver"
 )
 
 
@@ -617,11 +617,13 @@ func (view *DefaultView) Body(name string, args ...Map) (string,error) {
 
 
 
+
 	var viewname string
 
 	for _,s := range viewpaths {
 		if f, _ := os.Stat(s); f != nil && !f.IsDir() {
 			viewname = s
+			//这里要保存body所在的目录，为当前目录
 			view.path = filepath.Dir(s)
 			break
 		}
@@ -664,16 +666,17 @@ func (view *DefaultView) Render(name string, args ...Map) (string,error) {
 		renderModel = args[0]
 	}
 
-
 	//先搜索body所在目录
 	viewpaths := []string{};
 	if view.path != "" {
-		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, view.path, name))
+		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, name))
 	}
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.root, view.parse.Node, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.root, view.parse.Node, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.root, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.root, name))
+
+
 
 	var viewname string
 	for _,s := range viewpaths {

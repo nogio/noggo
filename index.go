@@ -49,6 +49,8 @@ var (
 	Queue *queueGlobal
 	//http模块
 	Http *httpGlobal
+	//url
+	Url *httpUrl
 	//view
 	View *viewGlobal
 
@@ -59,7 +61,7 @@ var (
 
 
 	//语法糖
-	sugar *sugarGlobal
+	Sugar *sugarGlobal
 )
 
 
@@ -136,6 +138,8 @@ func init() {
 		drivers: map[string]driver.HttpDriver{}, middlers:map[string]HttpFunc{},
 	}
 
+	Url = &httpUrl{}
+
 	//View
 	View = &viewGlobal{
 		drivers: map[string]driver.ViewDriver{}, helpers: map[string]Any{},
@@ -156,7 +160,7 @@ func init() {
 
 
 
-	sugar = &sugarGlobal{
+	Sugar = &sugarGlobal{
 		https: map[string]Map{},
 	}
 

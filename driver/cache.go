@@ -29,9 +29,12 @@ type (
 		Base(string) (CacheBase,error)
 	}
 
+	CacheValueFunc func(Any)(Any)
+
+
 	//缓存库
 	CacheBase interface {
-		//查询缓存，不存在就创建新的返回
+		//查询缓存，自带值包装函数
 		Get(key string) (Any,error)
 		//更新缓存数据，不存在则创建，存在就更新
 		Set(key string, val Any, exp int64) error

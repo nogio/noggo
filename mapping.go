@@ -33,7 +33,13 @@ func (global *mappingGlobal) Crypto(name string, config Map) {
 	}
 	global.cryptos[name] = config
 }
-
+func (global *mappingGlobal) Cryptos() (Map) {
+	m := Map{}
+	for k,v := range global.cryptos {
+		m[k] = v
+	}
+	return m
+}
 
 
 

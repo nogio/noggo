@@ -14,7 +14,7 @@ func Init() {
 	if initialized == false {
 
 		//语法糖初始化
-		sugar.init()
+		Sugar.init()
 
 		Logger.init()
 		Session.init()
@@ -59,6 +59,8 @@ func Exit() {
 	Trigger.exit()
 	Session.exit()
 	Logger.exit()
+
+	Sugar.init()
 }
 
 

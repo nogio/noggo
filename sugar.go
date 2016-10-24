@@ -4,6 +4,7 @@ package noggo
 import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
+	"fmt"
 )
 
 
@@ -22,6 +23,30 @@ func (global *sugarGlobal) init() {
 			"uri": uri, "route": route,
 		})
 	}
+}
+func (global *sugarGlobal) exit() {
+	//没东西需要处理
+}
+
+
+
+
+
+//返回状态字定以及字串
+func (global *sugarGlobal) States(args ...string) (Map) {
+	m := Map{}
+
+	if len(args) > 0 {
+		for _,n := range args {
+			m[fmt.Sprintf("%d", Const.StateCode(n))] = Const.LangString(n)
+		}
+	} else {
+		for k,v := range Const.states {
+			m[fmt.Sprintf("%d", v)] = Const.LangString(k)
+		}
+	}
+
+	return m
 }
 
 
@@ -238,7 +263,7 @@ func addHttp(name string, call HttpFunc) {
 /*
 //http Any
 func Any(uri string, call *HttpContext) {
-	sugar.https[uri] = Map{
+	Sugar.https[uri] = Map{
 		"name": "", "text": "",
 		"action": call,
 	}
@@ -246,13 +271,13 @@ func Any(uri string, call *HttpContext) {
 */
 //http Get
 func Get(uri string, call HttpFunc) {
-	if v,ok := sugar.https[uri]; ok {
+	if v,ok := Sugar.https[uri]; ok {
 		v["get"] = Map{
 			"name": "", "text": "",
 			"action": call,
 		}
 	} else {
-		sugar.https[uri] = Map{
+		Sugar.https[uri] = Map{
 			"get": Map{
 				"name": "", "text": "",
 				"action": call,
@@ -262,13 +287,13 @@ func Get(uri string, call HttpFunc) {
 }
 //http Post
 func Post(uri string, call HttpFunc) {
-	if v,ok := sugar.https[uri]; ok {
+	if v,ok := Sugar.https[uri]; ok {
 		v["post"] = Map{
 			"name": "", "text": "",
 			"action": call,
 		}
 	} else {
-		sugar.https[uri] = Map{
+		Sugar.https[uri] = Map{
 			"post": Map{
 				"name": "", "text": "",
 				"action": call,
@@ -278,13 +303,13 @@ func Post(uri string, call HttpFunc) {
 }
 //http Put
 func Put(uri string, call HttpFunc) {
-	if v,ok := sugar.https[uri]; ok {
+	if v,ok := Sugar.https[uri]; ok {
 		v["put"] = Map{
 			"name": "", "text": "",
 			"action": call,
 		}
 	} else {
-		sugar.https[uri] = Map{
+		Sugar.https[uri] = Map{
 			"put": Map{
 				"name": "", "text": "",
 				"action": call,
@@ -294,13 +319,13 @@ func Put(uri string, call HttpFunc) {
 }
 //http Patch
 func Patch(uri string, call HttpFunc) {
-	if v,ok := sugar.https[uri]; ok {
+	if v,ok := Sugar.https[uri]; ok {
 		v["patch"] = Map{
 			"name": "", "text": "",
 			"action": call,
 		}
 	} else {
-		sugar.https[uri] = Map{
+		Sugar.https[uri] = Map{
 			"patch": Map{
 				"name": "", "text": "",
 				"action": call,
@@ -310,13 +335,13 @@ func Patch(uri string, call HttpFunc) {
 }
 //http Delete
 func Delete(uri string, call HttpFunc) {
-	if v,ok := sugar.https[uri]; ok {
+	if v,ok := Sugar.https[uri]; ok {
 		v["delete"] = Map{
 			"name": "", "text": "",
 			"action": call,
 		}
 	} else {
-		sugar.https[uri] = Map{
+		Sugar.https[uri] = Map{
 			"delete": Map{
 				"name": "", "text": "",
 				"action": call,

@@ -155,6 +155,35 @@ func (global *constGlobal) StateCode(name string) int {
 	}
 }
 
+
+//返回状态定字串列表
+func (global *constGlobal) StateStrings(args ...string) (Map) {
+	m := Map{}
+
+	if len(args) > 0 {
+		for _,n := range args {
+			m[fmt.Sprintf("%d", global.StateCode(n))] = global.LangString(n)
+		}
+	} else {
+		for k,v := range global.states {
+			m[fmt.Sprintf("%d", v)] = global.LangString(k)
+		}
+	}
+
+
+	return m
+}
+
+
+
+
+
+
+
+
+
+
+
 //注册Regular
 func (global *constGlobal) Regular(name string, value Any) {
 	if global.regulars == nil {
@@ -249,7 +278,7 @@ func (global *constGlobal) LangString(name string, langs ...string) string {
 	}
 
 	if langs,ok := global.langs[lang]; ok {
-		if v,ok := langs[lang]; ok {
+		if v,ok := langs[name]; ok {
 			return v
 		}
 	}

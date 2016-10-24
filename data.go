@@ -147,6 +147,120 @@ func (global *dataGlobal) Model(name string, config Map) {
 }
 
 
+//查询某库所有模型
+func (global *dataGlobal) Models(bases ...string) (Map) {
+
+	if len(bases) > 0 {
+		base := bases[0]
+		if global.models[base] != nil {
+
+			m := Map{}
+			for k,v := range global.models[base] {
+				m[k] = v
+			}
+			return m
+		}
+	} else {
+		m := Map{}
+		for k,v := range global.models {
+			m[k] = v
+		}
+		return m
+	}
+
+	return Map{}
+}
+
+
+
+//查询某表所有字段
+func (global *dataGlobal) Fields(base, model string, maps ...Map) (Map) {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[model]; ok {
+			if fc,ok := mc["fields"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+
+//查询某表部分字段
+func (global *dataGlobal) Field(base, model string, fields []string, maps ...Map) Map {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[model]; ok {
+			if fc,ok := mc["fields"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
