@@ -164,7 +164,7 @@ func (base *AdodbBase) Query(query string, args ...interface{}) (*sql.Rows, erro
 //QueryRow
 func (base *AdodbBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
 	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+		return nil
 	}
 	return base.tx.QueryRow(query, args...)
 }
@@ -172,7 +172,7 @@ func (base *AdodbBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
 //QueryRow
 func (base *AdodbBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
 	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+		return nil
 	}
 	return base.tx.Stmt(stmt)
 }

@@ -161,7 +161,7 @@ func (base *SqliteBase) Query(query string, args ...interface{}) (*sql.Rows, err
 //QueryRow
 func (base *SqliteBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
 	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+		return nil
 	}
 	return base.tx.QueryRow(query, args...)
 }
@@ -169,7 +169,7 @@ func (base *SqliteBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
 //QueryRow
 func (base *SqliteBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
 	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+		return nil
 	}
 	return base.tx.Stmt(stmt)
 }
