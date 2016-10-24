@@ -4,5 +4,8 @@
 
 
 20161024
-	HTTP模块加了 NoneHandler ，其它模块还没加，待处理
+	HTTP模块加了 删除了 error,denied,none处理器，
+	Triiger  也删了
+	Task  也删了
+	其它的模块还没处理
 

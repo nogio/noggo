@@ -49,8 +49,11 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TaskFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+		foundHandlers, failedHandlers map[string]TaskFunc
+		foundHandlerNames, failedHandlerNames []string
+
+
+
 
 		//会话配置与连接
 		sessionConfig   *sessionConfig
@@ -86,13 +89,12 @@ type (
 		Value	Map			//所有请求过来的原始参数汇总
 		Local	Map			//在ctx中传递数据用的
 		Item	Map			//单条记录查询对象
-		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
 
 		//响应相关
 		Body	Any			//响应内容
 
-		Wrong	*Error		//错误信息
+		Error	*Error		//错误信息
 	}
 )
 
@@ -327,24 +329,6 @@ func (global *taskGlobal) FoundHandler(name string, call TaskFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.foundHandlers[name] = call
 }
-func (global *taskGlobal) ErrorHandler(name string, call TaskFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.errorHandlers == nil {
-		global.errorHandlers = make(map[string]TaskFunc)
-	}
-	if global.errorHandlerNames == nil {
-		global.errorHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.errorHandlers[name]; ok == false {
-		global.errorHandlerNames = append(global.errorHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.errorHandlers[name] = call
-}
 func (global *taskGlobal) FailedHandler(name string, call TaskFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
@@ -362,24 +346,6 @@ func (global *taskGlobal) FailedHandler(name string, call TaskFunc) {
 	}
 	//函数直接写， 因为可以使用同名替换现有的
 	global.failedHandlers[name] = call
-}
-func (global *taskGlobal) DeniedHandler(name string, call TaskFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.deniedHandlers == nil {
-		global.deniedHandlers = make(map[string]TaskFunc)
-	}
-	if global.deniedHandlerNames == nil {
-		global.deniedHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.deniedHandlers[name]; ok == false {
-		global.deniedHandlerNames = append(global.deniedHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.deniedHandlers[name] = call
 }
 /* 注册处理器 end */
 
@@ -402,7 +368,7 @@ func (global *taskGlobal) newTaskContext(req *driver.TaskRequest, res driver.Tas
 		req: req, res: res,
 
 		Id: req.Id, Name: req.Name, Config: nil, Branchs:nil,
-		Delay: req.Delay, Value: Map{}, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
+		Delay: req.Delay, Value: Map{}, Local: Map{}, Item: Map{}, Args: Map{},
 	}
 }
 
@@ -558,9 +524,6 @@ func (global *taskGlobal) contextExecute(ctx *TaskContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		//if _,ok := ctx.Config[KeyMapAuth]; ok {
-		//	ctx.handler(global.contextAuth)
-		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -675,9 +638,6 @@ func (global *taskGlobal) contextBranch(ctx *TaskContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		//if _,ok := ctx.Config[KeyMapAuth]; ok {
-		//	ctx.handler(global.contextAuth)
-		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -882,47 +842,6 @@ func (global *taskGlobal) contextFound(ctx *TaskContext) {
 }
 
 
-//路由执行，error
-func (global *taskGlobal) contextError(ctx *TaskContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapError]; ok {
-		switch c := v.(type) {
-		case TaskFunc: {
-			ctx.handler(c)
-		}
-		case []TaskFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*TaskContext): {
-			ctx.handler(c)
-		}
-		case []func(*TaskContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-
-	//handler中的error
-	//用数组保证原始注册顺序
-	for _,name := range global.errorHandlerNames {
-		ctx.handler(global.errorHandlers[name])
-	}
-
-	//最后是默认error中间件
-	ctx.handler(global.errorDefaultHandler)
-
-	ctx.Next()
-}
-
 
 //路由执行，failed
 func (global *taskGlobal) contextFailed(ctx *TaskContext) {
@@ -964,49 +883,6 @@ func (global *taskGlobal) contextFailed(ctx *TaskContext) {
 
 	ctx.Next()
 }
-
-
-
-//路由执行，denied
-func (global *taskGlobal) contextDenied(ctx *TaskContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapDenied]; ok {
-		switch c := v.(type) {
-		case TaskFunc: {
-			ctx.handler(c)
-		}
-		case []TaskFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*TaskContext): {
-			ctx.handler(c)
-		}
-		case []func(*TaskContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//handler中的denied
-	//用数组保证原始注册顺序
-	for _,name := range global.deniedHandlerNames {
-		ctx.handler(global.deniedHandlers[name])
-	}
-
-	//最后是默认denied中间件
-	ctx.handler(global.deniedDefaultHandler)
-
-	ctx.Next()
-}
-
 
 
 /*
@@ -1079,15 +955,7 @@ func (global *taskGlobal) foundDefaultHandler(ctx *TaskContext) {
 	//当找不到任务时，应当通知驱动，完成此任务，以免重复调用
 	ctx.res.Finish(ctx.Id)
 }
-func (global *taskGlobal) errorDefaultHandler(ctx *TaskContext) {
-	//出错，此任务就完成了
-	ctx.res.Finish(ctx.Id)
-}
 func (global *taskGlobal) failedDefaultHandler(ctx *TaskContext) {
-	//出错，此任务就完成了
-	ctx.res.Finish(ctx.Id)
-}
-func (global *taskGlobal) deniedDefaultHandler(ctx *TaskContext) {
 	//出错，此任务就完成了
 	ctx.res.Finish(ctx.Id)
 }
@@ -1175,20 +1043,9 @@ func (ctx *TaskContext) Next() {
 func (ctx *TaskContext) Found() {
 	ctx.Global.contextFound(ctx)
 }
-//返回错误
-func (ctx *TaskContext) Error(err *Error) {
-	ctx.Wrong = err
-	ctx.Global.contextError(ctx)
-}
-
 //失败, 就是参数处理失败为主
 func (ctx *TaskContext) Failed(err *Error) {
-	ctx.Wrong = err
-	ctx.Global.contextFailed(ctx)
-}
-//拒绝,主要是 auth
-func (ctx *TaskContext) Denied(err *Error) {
-	ctx.Wrong = err
+	ctx.Error = err
 	ctx.Global.contextFailed(ctx)
 }
 /* 上下文处理器 end */

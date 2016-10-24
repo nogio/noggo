@@ -44,8 +44,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames map[string][]string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers, noneHandlers map[string]map[string]HttpFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames, noneHandlerNames map[string][]string
+		foundHandlers, failedHandlers, deniedHandlers map[string]map[string]HttpFunc
+		foundHandlerNames, failedHandlerNames, deniedHandlerNames map[string][]string
 	}
 
 )
@@ -309,47 +309,6 @@ func (global *httpGlobal) FoundHandler(name string, call HttpFunc) {
 	global.foundHandlers[nodeName][name] = call
 }
 //错误处理器
-func (global *httpGlobal) ErrorHandler(name string, call HttpFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.errorHandlers == nil {
-		global.errorHandlers = map[string]map[string]HttpFunc{}
-	}
-	if global.errorHandlerNames == nil {
-		global.errorHandlerNames =  map[string][]string{}
-	}
-
-
-	//节点
-	nodeName := ConstNodeGlobal
-	if Current != "" {
-		nodeName = Current
-	}
-
-
-	//如果节点配置不存在，创建
-	if global.errorHandlers[nodeName] == nil {
-		global.errorHandlers[nodeName] = map[string]HttpFunc{}
-	}
-	if global.errorHandlerNames[nodeName] == nil {
-		global.errorHandlerNames[nodeName] = []string{}
-	}
-
-
-
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.errorHandlers[nodeName][name]; ok == false {
-		global.errorHandlerNames[nodeName] = append(global.errorHandlerNames[nodeName], name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.errorHandlers[nodeName][name] = call
-}
-
-
-
-//失败处理器
 func (global *httpGlobal) FailedHandler(name string, call HttpFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
@@ -387,6 +346,7 @@ func (global *httpGlobal) FailedHandler(name string, call HttpFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.failedHandlers[nodeName][name] = call
 }
+
 
 //拒绝处理器
 func (global *httpGlobal) DeniedHandler(name string, call HttpFunc) {
@@ -427,44 +387,6 @@ func (global *httpGlobal) DeniedHandler(name string, call HttpFunc) {
 	global.deniedHandlers[nodeName][name] = call
 }
 
-//不存在处理器
-func (global *httpGlobal) NoneHandler(name string, call HttpFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.noneHandlers == nil {
-		global.noneHandlers = map[string]map[string]HttpFunc{}
-	}
-	if global.noneHandlerNames == nil {
-		global.noneHandlerNames =  map[string][]string{}
-	}
-
-
-	//节点
-	nodeName := ConstNodeGlobal
-	if Current != "" {
-		nodeName = Current
-	}
-
-
-	//如果节点配置不存在，创建
-	if global.noneHandlers[nodeName] == nil {
-		global.noneHandlers[nodeName] = map[string]HttpFunc{}
-	}
-	if global.noneHandlerNames[nodeName] == nil {
-		global.noneHandlerNames[nodeName] = []string{}
-	}
-
-
-
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.noneHandlers[nodeName][name]; ok == false {
-		global.noneHandlerNames[nodeName] = append(global.noneHandlerNames[nodeName], name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.noneHandlers[nodeName][name] = call
-}
 //-----------------------------------------------------------------------------------------------------------------------//
 
 
@@ -519,8 +441,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, noneHandlers, deniedHandlers map[string]HttpFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, noneHandlerNames, deniedHandlerNames []string
+		foundHandlers, failedHandlers, deniedHandlers map[string]HttpFunc
+		foundHandlerNames, failedHandlerNames, deniedHandlerNames []string
 	}
 
 	//HTTP上下文
@@ -579,7 +501,7 @@ type (
 		Data	Map			//返回给view层的数据
 
 		//错误信息，failed,error,denied上下文中使用
-		Wrong	*Error		//错误信息
+		Error	*Error		//错误信息
 	}
 
 
@@ -866,24 +788,6 @@ func (module *httpModule) FoundHandler(name string, call HttpFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.foundHandlers[name] = call
 }
-func (module *httpModule) ErrorHandler(name string, call HttpFunc) {
-	module.mutex.Lock()
-	defer module.mutex.Unlock()
-
-	if module.errorHandlers == nil {
-		module.errorHandlers = make(map[string]HttpFunc)
-	}
-	if module.errorHandlerNames == nil {
-		module.errorHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := module.errorHandlers[name]; ok == false {
-		module.errorHandlerNames = append(module.errorHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	module.errorHandlers[name] = call
-}
 func (module *httpModule) FailedHandler(name string, call HttpFunc) {
 	module.mutex.Lock()
 	defer module.mutex.Unlock()
@@ -920,24 +824,6 @@ func (module *httpModule) DeniedHandler(name string, call HttpFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.deniedHandlers[name] = call
 }
-func (module *httpModule) NoneHandler(name string, call HttpFunc) {
-	module.mutex.Lock()
-	defer module.mutex.Unlock()
-
-	if module.noneHandlers == nil {
-		module.noneHandlers = make(map[string]HttpFunc)
-	}
-	if module.noneHandlerNames == nil {
-		module.noneHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := module.noneHandlers[name]; ok == false {
-		module.noneHandlerNames = append(module.noneHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	module.noneHandlers[name] = call
-}
 /* 注册处理器 end */
 
 
@@ -971,6 +857,7 @@ func newHttpModule(node *Noggo) (*httpModule) {
 			module.Route(n, nodeRoutes[n])
 		}
 	}
+
 
 
 
@@ -1058,27 +945,6 @@ func newHttpModule(node *Noggo) (*httpModule) {
 
 
 	//节点 错误处理器
-	nodeErrorHandlers, nodeErrorHandlersOK := Http.errorHandlers[node.Name];
-	nodeErrorHandlerNames, nodeErrorHandlerNamesOK := Http.errorHandlerNames[node.Name];
-	if nodeErrorHandlersOK && nodeErrorHandlerNamesOK {
-		for _,n := range nodeErrorHandlerNames {
-			module.ErrorHandler(n, nodeErrorHandlers[n])
-		}
-	}
-	//全局 错误处理器
-	errorHandlers, errorHandlersOK := Http.errorHandlers[ConstNodeGlobal];
-	errorHandlerNames, errorHandlerNamesOK := Http.errorHandlerNames[ConstNodeGlobal];
-	if errorHandlersOK && errorHandlerNamesOK {
-		for _,n := range errorHandlerNames {
-			//不存在才注册，这样全局不会替换节点的处理器
-			if _,ok := module.errorHandlers[n]; ok == false {
-				module.ErrorHandler(n, errorHandlers[n])
-			}
-		}
-	}
-
-
-	//节点 失败处理器
 	nodeFailedHandlers, nodeFailedHandlersOK := Http.failedHandlers[node.Name];
 	nodeFailedHandlerNames, nodeFailedHandlerNamesOK := Http.failedHandlerNames[node.Name];
 	if nodeFailedHandlersOK && nodeFailedHandlerNamesOK {
@@ -1086,7 +952,7 @@ func newHttpModule(node *Noggo) (*httpModule) {
 			module.FailedHandler(n, nodeFailedHandlers[n])
 		}
 	}
-	//全局 失败处理器
+	//全局 错误处理器
 	failedHandlers, failedHandlersOK := Http.failedHandlers[ConstNodeGlobal];
 	failedHandlerNames, failedHandlerNamesOK := Http.failedHandlerNames[ConstNodeGlobal];
 	if failedHandlersOK && failedHandlerNamesOK {
@@ -1120,26 +986,6 @@ func newHttpModule(node *Noggo) (*httpModule) {
 		}
 	}
 
-
-	//节点 不存在处理器
-	nodeNoneHandlers, nodeNoneHandlersOK := Http.noneHandlers[node.Name];
-	nodeNoneHandlerNames, nodeNoneHandlerNamesOK := Http.noneHandlerNames[node.Name];
-	if nodeNoneHandlersOK && nodeNoneHandlerNamesOK {
-		for _,n := range nodeNoneHandlerNames {
-			module.NoneHandler(n, nodeNoneHandlers[n])
-		}
-	}
-	//全局 不存在处理器
-	noneHandlers, noneHandlersOK := Http.noneHandlers[ConstNodeGlobal];
-	noneHandlerNames, noneHandlerNamesOK := Http.noneHandlerNames[ConstNodeGlobal];
-	if noneHandlersOK && noneHandlerNamesOK {
-		for _,n := range noneHandlerNames {
-			//不存在才注册，这样全局不会替换节点的处理器
-			if _,ok := module.noneHandlers[n]; ok == false {
-				module.NoneHandler(n, noneHandlers[n])
-			}
-		}
-	}
 
 
 	return module
@@ -1611,7 +1457,7 @@ func (module *httpModule) contextArgs(ctx *HttpContext) {
 	//所有值都会放在 module.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
-		ctx.failed(err)
+		ctx.Failed(err)
 	} else {
 		ctx.Next()
 	}
@@ -1665,7 +1511,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 								err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 							}
 
-							ctx.denied(err)
+							ctx.Failed(err)
 							return;
 						}
 					} else {
@@ -1691,7 +1537,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 					err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 				}
 
-				ctx.denied(err)
+				ctx.Failed(err)
 				return;
 
 			}
@@ -1730,7 +1576,7 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 				}
 				err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
 				//查询不到东西，也要失败， 接口访问失败
-				ctx.none(err)
+				ctx.Failed(err)
 				return
 			} else {
 
@@ -1750,7 +1596,7 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 						}
 						err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
 
-						ctx.none(err)
+						ctx.Failed(err)
 						return;
 					} else {
 						saveMap[k] = item
@@ -1905,50 +1751,6 @@ func (module *httpModule) contextFound(ctx *HttpContext) {
 }
 
 
-//路由执行，error
-func (module *httpModule) contextError(ctx *HttpContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapError]; ok {
-		switch c := v.(type) {
-		case HttpFunc: {
-			ctx.handler(c)
-		}
-		case []HttpFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*HttpContext): {
-			ctx.handler(c)
-		}
-		case []func(*HttpContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-
-	//handler中的error
-	//用数组保证原始注册顺序
-	for _,name := range module.errorHandlerNames {
-		ctx.handler(module.errorHandlers[name])
-	}
-
-	//最后是默认error中间件
-	ctx.handler(module.errorDefaultHandler)
-
-	ctx.Code = 500
-
-	ctx.Next()
-}
-
-
 //路由执行，failed
 func (module *httpModule) contextFailed(ctx *HttpContext) {
 	//清理执行线
@@ -1992,49 +1794,6 @@ func (module *httpModule) contextFailed(ctx *HttpContext) {
 	ctx.Next()
 }
 
-
-//路由执行，exist 就是 item不存在
-func (module *httpModule) contextNone(ctx *HttpContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有None，就自定义处理
-	if v,ok := ctx.Config[KeyMapNone]; ok {
-		switch c := v.(type) {
-		case HttpFunc: {
-			ctx.handler(c)
-		}
-		case []HttpFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*HttpContext): {
-			ctx.handler(c)
-		}
-		case []func(*HttpContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-
-	//handler中的failed
-	//用数组保证原始注册顺序
-	for _,name := range module.noneHandlerNames {
-		ctx.handler(module.noneHandlers[name])
-	}
-
-	//最后是默认None中间件
-	ctx.handler(module.noneDefaultHandler)
-
-	ctx.Code = 404
-
-	ctx.Next()
-}
 
 //路由执行，denied
 func (module *httpModule) contextDenied(ctx *HttpContext) {
@@ -2094,17 +1853,11 @@ func (module *httpModule) contextDenied(ctx *HttpContext) {
 func (module *httpModule) foundDefaultHandler(ctx *HttpContext) {
 	ctx.Text("http not found")
 }
-func (module *httpModule) errorDefaultHandler(ctx *HttpContext) {
-	ctx.Text(fmt.Sprintf("http error %v", ctx.Wrong))
-}
 func (module *httpModule) failedDefaultHandler(ctx *HttpContext) {
-	ctx.Text(fmt.Sprintf("http failed %v", ctx.Wrong))
-}
-func (module *httpModule) noneDefaultHandler(ctx *HttpContext) {
-	ctx.Text(fmt.Sprintf("http none %v", ctx.Wrong))
+	ctx.Text(fmt.Sprintf("http failed %v", ctx.Error))
 }
 func (module *httpModule) deniedDefaultHandler(ctx *HttpContext) {
-	ctx.Text(fmt.Sprintf("http denied %v", ctx.Wrong))
+	ctx.Text(fmt.Sprintf("http denied %v", ctx.Error))
 }
 /* 默认处理器 end */
 
@@ -2442,29 +2195,15 @@ func (ctx *HttpContext) Next() {
 func (ctx *HttpContext) Found() {
 	ctx.Module.contextFound(ctx)
 }
-//返回错误
-func (ctx *HttpContext) Error(err *Error) {
-	ctx.Wrong = err
-	ctx.Module.contextError(ctx)
-}
-
-//下面方法应该私有吧。其实在请求中用不到这两
-
-
-//失败, 就是参数处理失败为主
-func (ctx *HttpContext) failed(err *Error) {
-	ctx.Wrong = err
+//返回错误，args,item,data时都发生
+func (ctx *HttpContext) Failed(err *Error) {
+	ctx.Error = err
 	ctx.Module.contextFailed(ctx)
 }
-//拒绝,主要是 auth
-func (ctx *HttpContext) denied(err *Error) {
-	ctx.Wrong = err
+//auth失败时
+func (ctx *HttpContext) Denied(err *Error) {
+	ctx.Error = err
 	ctx.Module.contextDenied(ctx)
-}
-//不存在，item 不存在时，应该和found一样
-func (ctx *HttpContext) none(err *Error) {
-	ctx.Wrong = err
-	ctx.Module.contextNone(ctx)
 }
 /* 上下文处理器 end */
 
@@ -2611,7 +2350,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v)
 				if e != nil {
 					//出错了
-					ctx.failed(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2626,7 +2365,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, c, d, v)
 				if e != nil {
 					//出错了
-					ctx.failed(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2657,7 +2396,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v)
 				if e != nil {
 					//出错了
-					ctx.failed(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2709,7 +2448,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, newConfig, newData, v)
 			if e != nil {
 				//出错了
-				ctx.failed(e)
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2724,7 +2463,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, c, d, v)
 			if e != nil {
 				//出错了
-				ctx.failed(e)
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2758,7 +2497,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, newConfig, newData, v)
 			if e != nil {
 				//出错了
-				ctx.failed(e)
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data

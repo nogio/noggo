@@ -44,8 +44,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]TriggerFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+		foundHandlers, failedHandlers map[string]TriggerFunc
+		foundHandlerNames, failedHandlerNames []string
 
 
 
@@ -76,13 +76,12 @@ type (
 		Value	Map			//所有请求过来的原始参数汇总
 		Local	Map			//在ctx中传递数据用的
 		Item	Map			//单条记录查询对象
-		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
 
 		//响应相关
 		Body	Any			//响应内容
 
-		Wrong	*Error		//错误信息
+		Error	*Error		//错误信息
 	}
 )
 
@@ -261,24 +260,6 @@ func (global *triggerGlobal) FoundHandler(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.foundHandlers[name] = call
 }
-func (global *triggerGlobal) ErrorHandler(name string, call TriggerFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.errorHandlers == nil {
-		global.errorHandlers = make(map[string]TriggerFunc)
-	}
-	if global.errorHandlerNames == nil {
-		global.errorHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.errorHandlers[name]; ok == false {
-		global.errorHandlerNames = append(global.errorHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.errorHandlers[name] = call
-}
 func (global *triggerGlobal) FailedHandler(name string, call TriggerFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
@@ -297,27 +278,6 @@ func (global *triggerGlobal) FailedHandler(name string, call TriggerFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.failedHandlers[name] = call
 }
-func (global *triggerGlobal) DeniedHandler(name string, call TriggerFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.deniedHandlers == nil {
-		global.deniedHandlers = make(map[string]TriggerFunc)
-	}
-	if global.deniedHandlerNames == nil {
-		global.deniedHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.deniedHandlers[name]; ok == false {
-		global.deniedHandlerNames = append(global.deniedHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.deniedHandlers[name] = call
-}
-/* 注册处理器 end */
-
-
 
 
 
@@ -334,7 +294,7 @@ func (global *triggerGlobal) newTriggerContext(name string, value Map) (*Trigger
 
 		Name: name, Config: Map{}, Branchs:[]Map{},
 
-		Value: value, Local: Map{}, Item: Map{}, Auth: Map{}, Args: Map{},
+		Value: value, Local: Map{}, Item: Map{}, Args: Map{},
 	}
 }
 
@@ -486,9 +446,6 @@ func (global *triggerGlobal) contextExecute(ctx *TriggerContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		//if _,ok := ctx.Config[KeyMapAuth]; ok {
-		//	ctx.handler(global.contextAuth)
-		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -552,8 +509,8 @@ func (global *triggerGlobal) contextBranch(ctx *TriggerContext) {
 
 
 	/*
-	//先不复制了吧，因为顶级的，在已经处理过 params,args,auth等的东西，再复制会重复处理
-	//而且复制的话， 还得判断auth, item的子级map， 合并到一起
+	//先不复制了吧，因为顶级的，在已经处理过 params,args等的东西，再复制会重复处理
+	//而且复制的话， 还得判断, item的子级map， 合并到一起
 	for k,v := range ctx.Route {
 		if k != "uri" && k != "match" && k != "route" && k != "branch" {
 			routing[k] = v
@@ -603,9 +560,6 @@ func (global *triggerGlobal) contextBranch(ctx *TriggerContext) {
 		if _,ok := ctx.Config[KeyMapArgs]; ok {
 			ctx.handler(global.contextArgs)
 		}
-		//if _,ok := ctx.Config[KeyMapAuth]; ok {
-		//	ctx.handler(global.contextAuth)
-		//}
 		if _,ok := ctx.Config[KeyMapItem]; ok {
 			ctx.handler(global.contextItem)
 		}
@@ -809,48 +763,6 @@ func (global *triggerGlobal) contextFound(ctx *TriggerContext) {
 }
 
 
-//路由执行，error
-func (global *triggerGlobal) contextError(ctx *TriggerContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapError]; ok {
-		switch c := v.(type) {
-		case TriggerFunc: {
-			ctx.handler(c)
-		}
-		case []TriggerFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*TriggerContext): {
-			ctx.handler(c)
-		}
-		case []func(*TriggerContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-
-	//handler中的error
-	//用数组保证原始注册顺序
-	for _,name := range global.errorHandlerNames {
-		ctx.handler(global.errorHandlers[name])
-	}
-
-	//最后是默认error中间件
-	ctx.handler(global.errorDefaultHandler)
-
-	ctx.Next()
-}
-
-
 //路由执行，failed
 func (global *triggerGlobal) contextFailed(ctx *TriggerContext) {
 	//清理执行线
@@ -891,49 +803,6 @@ func (global *triggerGlobal) contextFailed(ctx *TriggerContext) {
 
 	ctx.Next()
 }
-
-
-
-//路由执行，denied
-func (global *triggerGlobal) contextDenied(ctx *TriggerContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapDenied]; ok {
-		switch c := v.(type) {
-		case TriggerFunc: {
-			ctx.handler(c)
-		}
-		case []TriggerFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*TriggerContext): {
-			ctx.handler(c)
-		}
-		case []func(*TriggerContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//handler中的denied
-	//用数组保证原始注册顺序
-	for _,name := range global.deniedHandlerNames {
-		ctx.handler(global.deniedHandlers[name])
-	}
-
-	//最后是默认denied中间件
-	ctx.handler(global.deniedDefaultHandler)
-
-	ctx.Next()
-}
-
 
 
 /*
@@ -998,24 +867,10 @@ func (global *triggerGlobal) foundDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
 	//因为目前，触发器不需要给调用者响应信息
 }
-func (global *triggerGlobal) errorDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
-	//因为目前，触发器不需要给调用者响应信息
-}
 func (global *triggerGlobal) failedDefaultHandler(ctx *TriggerContext) {
 	//触发器中，这些好像不需要处理
 	//因为目前，触发器不需要给调用者响应信息
 }
-func (global *triggerGlobal) deniedDefaultHandler(ctx *TriggerContext) {
-	//触发器中，这些好像不需要处理
-	//因为目前，触发器不需要给调用者响应信息
-}
-/* 默认处理器 end */
-
-
-
-
-
 
 
 
@@ -1094,24 +949,11 @@ func (ctx *TriggerContext) Next() {
 func (ctx *TriggerContext) Found() {
 	ctx.Global.contextFound(ctx)
 }
-//返回错误
-func (ctx *TriggerContext) Error(err *Error) {
-	ctx.Wrong = err
-	ctx.Global.contextError(ctx)
-}
-
-//失败, 就是参数处理失败为主
+//失败,
 func (ctx *TriggerContext) Failed(err *Error) {
-	ctx.Wrong = err
+	ctx.Error = err
 	ctx.Global.contextFailed(ctx)
 }
-//拒绝,主要是 auth
-func (ctx *TriggerContext) Denied(err *Error) {
-	ctx.Wrong = err
-	ctx.Global.contextFailed(ctx)
-}
-/* 上下文处理器 end */
-
 
 
 
