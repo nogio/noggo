@@ -9,5 +9,6 @@ package bases
 import (
 	_ "./consts"
 	_ "./cryptos"
+	_ "./defines"
 	_ "./types"
 )

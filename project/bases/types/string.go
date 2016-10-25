@@ -14,7 +14,6 @@ func init() {
 
 	noggo.Mapping.Type("string", Map{
 		"name": "字符串", "text": "字符串",
-		"type": []string{ "string" },
 		"valid": func(value Any, config Map) bool {
 			switch v := value.(type) {
 			case string:
@@ -41,7 +40,6 @@ func init() {
 
 	noggo.Mapping.Type("[string]", Map{
 		"name": "字符数组", "text": "字符数组",
-		"type": []string{ "[string]" },
 		"valid": func(value Any, config Map) bool {
 			switch v := value.(type) {
 			case []string:

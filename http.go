@@ -2006,17 +2006,6 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 
 
 	/*
-	"enum": func(data,model,field string,v Any) (template.HTML) {
-		html := ""
-
-		value := fmt.Sprintf("%v", v)
-
-		enums := Data.Enums(data,model,field)
-		if v,ok := enums[value]; ok {
-			html = fmt.Sprintf("%v", v)
-		}
-		return template.HTML(html)
-	},
 	"status":  func(data,model string, value Any) template.HTML {
 		html := ""
 
@@ -2081,6 +2070,17 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 			},
 			"signer": func(key string) Any {
 				return ctx.Sign.Name(key)
+			},
+			"enum": func(data,model,field string,v Any) (string) {
+				html := ""
+
+				value := fmt.Sprintf("%v", v)
+
+				enums := Data.Enums(data,model,field)
+				if v,ok := enums[value]; ok {
+					html = fmt.Sprintf("%v", v)
+				}
+				return html
 			},
 		},
 	}

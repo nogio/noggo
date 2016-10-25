@@ -234,6 +234,29 @@ func (global *dataGlobal) Field(base, model string, fields []string, maps ...Map
 }
 
 
+//取模型的枚举定义
+func (global *dataGlobal) Enums(data, model, field string) (Map) {
+
+	if Data.models[data] != nil {
+		dataConfig := Data.models[data]
+		if dataConfig[model] != nil {
+			modelConfig := dataConfig[model]
+			if modelConfig["fields"] != nil {
+				fields := modelConfig["fields"].(Map)
+				if fields[field] != nil {
+					fieldConfig := fields[field].(Map)
+					if fieldConfig["enum"] != nil {
+						return fieldConfig["enum"].(Map)
+					}
+				}
+			}
+		}
+	}
+
+	return Map{}
+}
+
+
 
 
 

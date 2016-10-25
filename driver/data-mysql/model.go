@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 	"errors"
+	"time"
 )
 
 type (
@@ -60,8 +61,9 @@ func (model *MysqlModel) Create(data Map) (Map,error) {
 			return nil,err
 		} else {
 
-			sql := fmt.Sprintf("INSERT INTO `%s`.`%s` (`%s`) VALUES (%s)", model.schema, model.object, strings.Join(keys, "`,`"), strings.Join(tags, `,`), model.key)
+			sql := fmt.Sprintf("INSERT INTO `%s`.`%s` (`%s`) VALUES (%s)", model.schema, model.object, strings.Join(keys, "`,`"), strings.Join(tags, `,`))
 			result,err := tx.Exec(sql, vals...)
+			noggo.Logger.Debug("create", err, sql)
 			if err != nil {
 				return nil,errors.New("数据：插入失败 " + err.Error())
 			} else {
@@ -608,6 +610,9 @@ func (model *MysqlModel) Query(args ...Map) ([]Map,error) {
 							switch v := values[i].(type) {
 							case []byte: {
 								m[n] = string(v)
+							}
+							case time.Time: {
+								m[n] = v
 							}
 							default:
 								m[n] = v

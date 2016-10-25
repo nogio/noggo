@@ -14,7 +14,6 @@ func init() {
 
 	noggo.Mapping.Type("enum", Map{
 		"name": "枚举", "text": "枚举",
-		"type": []string{ "enum" },
 		"valid": func(value Any, config Map) bool {
 
 			sv := fmt.Sprintf("%v", value)
@@ -35,8 +34,7 @@ func init() {
 
 
 	noggo.Mapping.Type("[enum]", Map{
-		"name": "枚举", "text": "枚举",
-		"type": []string{ "[enum]" },
+		"name": "枚举数组", "text": "枚举数组",
 		"valid": func(value Any, config Map) bool {
 
 			vals := []string{}

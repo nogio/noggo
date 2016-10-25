@@ -13,7 +13,6 @@ func init() {
 
 	noggo.Mapping.Type("int", Map{
 		"name": "整型", "text": "整型",
-		"type": []string{ "int", "number" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
@@ -69,7 +68,6 @@ func init() {
 
 	noggo.Mapping.Type("[int]", Map{
 		"name": "整型数组", "text": "整型数组",
-		"type": []string{ "[int]", "[number]" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {

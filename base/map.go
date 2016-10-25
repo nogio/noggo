@@ -1,3 +1,6 @@
 package base
 
-type Map map[string]Any
+type (
+	Map         map[string]Any
+	MapList     []Map
+)

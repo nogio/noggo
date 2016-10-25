@@ -60,7 +60,7 @@ func Exit() {
 	Session.exit()
 	Logger.exit()
 
-	Sugar.init()
+	Sugar.exit()
 }
 
 

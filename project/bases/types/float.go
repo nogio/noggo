@@ -13,7 +13,6 @@ func init() {
 
 	noggo.Mapping.Type("float", Map{
 		"name": "浮点型", "text": "布尔型",
-		"type": []string{ "float", "double" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {

@@ -11,7 +11,6 @@ func init() {
 
 	noggo.Mapping.Type("date", Map{
 		"name": "日期时间", "text": "日期时间",
-		"type": []string{ "date" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
@@ -32,7 +31,6 @@ func init() {
 
 	noggo.Mapping.Type("[date]", Map{
 		"name": "日期时间数组", "text": "日期时间数组",
-		"type": []string{ "[date]" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {

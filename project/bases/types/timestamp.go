@@ -10,7 +10,6 @@ func init() {
 
 	noggo.Mapping.Type("timestamp", Map{
 		"name": "时间戳", "text": "时间戳",
-		"type": []string{ "timestamp" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
@@ -41,7 +40,6 @@ func init() {
 
 	noggo.Mapping.Type("[timestamp]", Map{
 		"name": "时间戳数组", "text": "时间戳数组",
-		"type": []string{ "[timestamp]" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
