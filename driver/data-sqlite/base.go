@@ -295,6 +295,7 @@ func (base *SqliteBase) building(args ...Map) (string,[]interface{},string,error
 
 		//否则是多个map,单个为 与, 多个为 或
 		for _,m := range args {
+			ands := []string{}
 			for k,v := range m {
 
 
@@ -308,9 +309,6 @@ func (base *SqliteBase) building(args ...Map) (string,[]interface{},string,error
 					}
 
 				} else {
-
-
-					ands := []string{}
 
 					//v要处理一下如果是map要特别处理
 					//key做为操作符，比如 > < >= 等
@@ -334,10 +332,11 @@ func (base *SqliteBase) building(args ...Map) (string,[]interface{},string,error
 						}
 					}
 
-					querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
 				}
 
-
+			}
+			if len(ands) > 0 {
+				querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
 			}
 		}
 

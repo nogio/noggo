@@ -1511,7 +1511,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 								err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 							}
 
-							ctx.Failed(err)
+							ctx.Denied(err)
 							return;
 						}
 					} else {
@@ -1537,7 +1537,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 					err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 				}
 
-				ctx.Failed(err)
+				ctx.Denied(err)
 				return;
 
 			}
@@ -2295,6 +2295,66 @@ func (ctx *HttpContext) View(view string, models ...Map) {
 
 
 
+func (ctx *HttpContext) Goback() {
+	ctx.Goto(ctx.Url.Back())
+}
+func (ctx *HttpContext) Golast() {
+	ctx.Goto(ctx.Url.Last())
+}
+//跳转到路由
+func (ctx *HttpContext) Route(name string, args ...Map) {
+	ctx.Goto(ctx.Url.Route(name, args...))
+}
+//跳转到路由
+func (ctx *HttpContext) Routo(site,name string, args ...Map) {
+	ctx.Goto(ctx.Url.Routo(site, name, args...))
+}
+
+
+
+func (ctx *HttpContext) Redirect(url string) {
+	ctx.Goto(url)
+}
+
+func (ctx *HttpContext) Alert(text string, urls ...string) {
+
+	e := Const.NewLangStateError(ctx.Lang, text)
+	if e != nil {
+		text = e.Text
+	}
+
+	if len(urls) > 0 {
+		text = fmt.Sprintf(`<script type="text/javascript">alert("%s"); location.href="%s";</script>`, text, urls[0])
+	} else {
+		text = fmt.Sprintf(`<script type="text/javascript">alert("%s"); history.back();</script>`, text)
+	}
+	ctx.Html(text)
+}
+//展示通用的提示页面
+func (ctx *HttpContext) Show(tttt, text string, urls ...string) {
+
+	m := Map{
+		"type": tttt,
+		"text": text,
+		"url": "",
+	}
+	e := Const.NewLangStateError(ctx.Lang, text)
+	if e != nil {
+		m["text"] = e.Text
+	}
+	if len(urls) > 0 {
+		m["url"] = urls[0]
+	}
+
+	ctx.View("show", m)
+}
+/* 上下文响应器 end */
+
+
+
+
+
+
 
 //专为接口准备的方法
 
@@ -2559,6 +2619,58 @@ func (ctx *HttpContext) Ip() string {
 	}
 	return ip
 }
+
+//通用方法
+func (ctx *HttpContext) Header(key string, vals ...string) string {
+
+	if len(vals) > 0 {
+		//设置header
+		ctx.Res.Header().Set(key, vals[0])
+		return vals[0]
+	} else {
+		//读header
+		return ctx.Req.Header.Get(key)
+	}
+	return ""
+}
+
+//通用方法
+func (ctx *HttpContext) Cookie(key string, vals ...Any) string {
+
+	if len(vals) > 0 {
+		//设置header
+		switch val := vals[0].(type) {
+			case http.Cookie:
+				val.Value = url.QueryEscape(val.Value)
+				if ctx.Node.session.sessionConfig.Expiry > 0 {
+					val.MaxAge = int(ctx.Node.session.sessionConfig.Expiry)
+				}
+				if ctx.Node.Config.Domain != "" {
+					val.Domain = ctx.Node.Config.Domain
+				}
+				http.SetCookie(ctx.Res, &val)
+			case string:
+				cookie := http.Cookie{ Name: key, Value: url.QueryEscape(val), Path: "/", HttpOnly: true }
+				if ctx.Node.session.sessionConfig.Expiry > 0 {
+					cookie.MaxAge = int(ctx.Node.session.sessionConfig.Expiry)
+				}
+				if ctx.Node.Config.Domain != "" {
+					cookie.Domain = ctx.Node.Config.Domain
+				}
+				http.SetCookie(ctx.Res, &cookie)
+			default:
+				return ""
+		}
+	} else {
+		//读cookie
+		c,e := ctx.Req.Cookie(key)
+		if e == nil {
+			return c.Value
+		}
+	}
+	return ""
+}
+
 
 
 

@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	BACKURL = "_go_"
+	BACKURL = "_back_"
 )
 
 type (
@@ -358,7 +358,8 @@ func (url *httpUrl) Back() string {
 	} else if url.ctx.Req.Header.Get("referer") != "" {
 		return url.ctx.Req.Header.Get("referer")
 	} else {
-		return "/"
+		//都没有，就是当前URL
+		return url.Current()
 	}
 }
 
@@ -374,4 +375,13 @@ func (url *httpUrl) Last() string {
 	} else {
 		return "/"
 	}
+}
+
+func (url *httpUrl) Current() string {
+	if url.ctx == nil {
+		return "/"
+	}
+
+	//获取点节URL
+	return fmt.Sprintf("%s%s", url.Node(url.ctx.Node.Name), url.ctx.Req.URL.RequestURI())
 }
