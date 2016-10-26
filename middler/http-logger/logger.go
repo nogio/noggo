@@ -13,7 +13,7 @@ func Middler() (noggo.HttpFunc) {
 	return func(ctx *noggo.HttpContext) {
 		begin := time.Now()
 		ctx.Next()
-		noggo.Logger.Info(ctx.Ip(), ctx.Id, ctx.Method, ctx.Path, ctx.Code, time.Now().Sub(begin))
+		noggo.Logger.Info(ctx.Ip(), ctx.Id, ctx.Method, ctx.Node.Name, ctx.Path, ctx.Code, time.Now().Sub(begin))
 	}
 }
 

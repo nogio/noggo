@@ -110,7 +110,10 @@ func (con *DefaultQueueConnect) StartConsumer() error {
 	//订阅消息
 	for name,line := range con.names {
 		for i:=0;i<line;i++ {
-			go con.consuming(name)
+			//用局部变量，以免name在循环后被修改，可能有问题
+			//事件注册时，也有同样的问题
+			queueName := name
+			go con.consuming(queueName)
 		}
 	}
 

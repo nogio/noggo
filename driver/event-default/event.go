@@ -114,12 +114,18 @@ func (con *DefaultEventConnect) Register(name string) error {
 func (con *DefaultEventConnect) StartSubscriber() error {
 	//订阅消息
 	for _,name := range con.names {
+
+		//一定要用一个局部变量
+		//因为name循环的， 在加调的时候name已经改变
+		//回调时候就会有问题
+		eventName := name
+
 		msg.Sub(name, func(value Map) {
 
 			//新建计划
 			id := NewMd5Id()
 			event := EventData{
-				Name: name, Value: Map{},
+				Name: eventName, Value: Map{},
 			}
 
 			//保存计划

@@ -11,6 +11,7 @@ import (
 	"crypto/sha1"
 	"encoding/xml"
 	"io"
+	"strings"
 )
 
 
@@ -184,7 +185,7 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 						msg := Map{
 							"hash": hash,
 							"filename": filename,
-							"extension": extension,
+							"extension": strings.ToLower(extension),
 							"mimetype": mimetype,
 							"length": length,
 							"tempfile": tempfile,
@@ -239,8 +240,6 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 					}
 
 					//单个单个。 多个数组
-
-
 					if len(files) > 1 {
 						ctx.Upload[k] = files
 						ctx.Value[k] = files
