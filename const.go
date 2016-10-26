@@ -183,8 +183,6 @@ func (global *constGlobal) StateStrings(args ...string) (Map) {
 
 
 
-
-
 //注册Regular
 func (global *constGlobal) Regular(name string, value Any) {
 	if global.regulars == nil {

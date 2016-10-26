@@ -4,7 +4,6 @@ package noggo
 import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo/driver"
-	"fmt"
 )
 
 
@@ -28,26 +27,6 @@ func (global *sugarGlobal) exit() {
 	//没东西需要处理
 }
 
-
-
-
-
-//返回状态字定以及字串
-func (global *sugarGlobal) States(args ...string) (Map) {
-	m := Map{}
-
-	if len(args) > 0 {
-		for _,n := range args {
-			m[fmt.Sprintf("%d", Const.StateCode(n))] = Const.LangString(n)
-		}
-	} else {
-		for k,v := range Const.states {
-			m[fmt.Sprintf("%d", v)] = Const.LangString(k)
-		}
-	}
-
-	return m
-}
 
 
 

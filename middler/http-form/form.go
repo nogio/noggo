@@ -12,6 +12,7 @@ import (
 	"encoding/xml"
 	"io"
 	"strings"
+	"regexp"
 )
 
 
@@ -253,6 +254,60 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 			}
 		}
 
+		//对value进行json的处理，如下
+		//user[id] user[name] 解析为     user: { id, name }
+		//多个以上的，则解析为 user: [{id,name},{id,name}]
+
+		jsons := map[string]Map{}
+		lists := map[string][]Map{}
+
+
+		for k,v := range ctx.Value {
+			regx := regexp.MustCompile(`^([a-zA-Z0-9_-]+)\[([a-zA-Z0-9_-]+)\]$`)
+			if regx.MatchString(k) {
+
+				matchs := regx.FindAllStringSubmatch(k, -1)
+				if matchs != nil && len(matchs) > 0 && len(matchs[0]) > 0 {
+
+					obj,key := matchs[0][1],matchs[0][2]
+
+					//如果值是string，就是单个实体
+					//如果值是[]string，就是实体数组
+					switch sv := v.(type) {
+					case string:
+						if jsons[obj] != nil {
+							jsons[obj][key] = sv
+						} else {
+							jsons[obj] = Map{
+								key: sv,
+							}
+						}
+					case []string:
+						if lists[obj] != nil {
+							maps := lists[obj]
+							for svIndex,svVal := range sv {
+								maps[svIndex][key] = svVal
+							}
+						} else {
+							maps := []Map{}
+							for _,svVal := range sv {
+								maps = append(maps,Map{
+									key: svVal,
+								})
+							}
+							lists[obj] = maps
+						}
+					}
+				}
+			}
+		}
+
+		for k,v := range jsons {
+			ctx.Value[k] = v
+		}
+		for k,v := range lists {
+			ctx.Value[k] = v
+		}
 
 		ctx.Next()
 

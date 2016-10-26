@@ -26,7 +26,7 @@ func init() {
 			"data": Map{
 				"msg": Map{ "type": "string", "must": true, "name": "消息", "text": "消息" },
 			},
-			"state": noggo.Sugar.States("ok", "no"),
+			"state": noggo.Const.StateStrings("ok", "no"),
 			"action": func(ctx *noggo.HttpContext) {
 				ctx.Json(Map{ "msg": "hahaha", "url": ctx.Url.Route("test") })
 			},

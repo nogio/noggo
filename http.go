@@ -1123,7 +1123,6 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 		})
 
 
-
 		//正则匹配当前URL，是否从域名开始匹配
 		//忽略query部分
 		url := ctx.Path
