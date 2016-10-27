@@ -46,7 +46,8 @@ func (base *MysqlBase) Model(name string) (driver.DataModel) {
 	if config,ok := base.models[name]; ok {
 
 		//模式，表名
-		schema, object, key, fields := "public", name, "id", Map{}
+		//模式默认等于库名，而不是public，万恶的MYSQL
+		schema, object, key, fields := base.name, name, "id", Map{}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
@@ -269,6 +270,30 @@ func (base *MysqlBase) packing(value Map) (Map) {
 				newValue[k] = string(b)
 			} else {
 				newValue[k] = "{}"
+			}
+		}
+		case []Map: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
+			}
+		}
+		case MapList: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
+			}
+		}
+		case []map[string]interface{}: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
 			}
 		}
 		default:

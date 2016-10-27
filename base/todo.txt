@@ -17,3 +17,7 @@
 	数据层接口返回[]Map改为 MapList
 	数据层Limit接口返回多加一个count(int64)
 	数据层所有驱动，当返回err时，应给一个默认数组，而不是给nil
+
+20161027
+	item中间件要修改下，在execute前执行，branch前不执行，execute前需合并顶级item配置到子级，并且value要改成args，考虑到args加解密，而且非http，只有args
+

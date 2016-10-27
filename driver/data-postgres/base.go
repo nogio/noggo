@@ -271,6 +271,30 @@ func (base *PostgresBase) packing(value Map) (Map) {
 				newValue[k] = "{}"
 			}
 		}
+		case []Map: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
+			}
+		}
+		case MapList: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
+			}
+		}
+		case []map[string]interface{}: {
+			b,e := json.Marshal(t);
+			if e == nil {
+				newValue[k] = string(b)
+			} else {
+				newValue[k] = "[]"
+			}
+		}
 		default:
 			newValue[k] = t
 		}
