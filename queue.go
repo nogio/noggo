@@ -37,8 +37,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames map[string][]string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]map[string]QueueFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames map[string][]string
+		foundHandlers, errorHandlers map[string]map[string]QueueFunc
+		foundHandlerNames, errorHandlerNames map[string][]string
 
 		//全局为发布者
 		queueConnects    map[string]driver.QueueConnect
@@ -392,84 +392,6 @@ func (global *queueGlobal) ErrorHandler(name string, call QueueFunc) {
 
 
 
-//失败处理器
-func (global *queueGlobal) FailedHandler(name string, call QueueFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.failedHandlers == nil {
-		global.failedHandlers = map[string]map[string]QueueFunc{}
-	}
-	if global.failedHandlerNames == nil {
-		global.failedHandlerNames =  map[string][]string{}
-	}
-
-
-	//节点
-	nodeName := ConstNodeGlobal
-	if Current != "" {
-		nodeName = Current
-	}
-
-
-	//如果节点配置不存在，创建
-	if global.failedHandlers[nodeName] == nil {
-		global.failedHandlers[nodeName] = map[string]QueueFunc{}
-	}
-	if global.failedHandlerNames[nodeName] == nil {
-		global.failedHandlerNames[nodeName] = []string{}
-	}
-
-
-
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.failedHandlers[nodeName][name]; ok == false {
-		global.failedHandlerNames[nodeName] = append(global.failedHandlerNames[nodeName], name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.failedHandlers[nodeName][name] = call
-}
-
-//拒绝处理器
-func (global *queueGlobal) DeniedHandler(name string, call QueueFunc) {
-	global.mutex.Lock()
-	defer global.mutex.Unlock()
-
-	if global.deniedHandlers == nil {
-		global.deniedHandlers = map[string]map[string]QueueFunc{}
-	}
-	if global.deniedHandlerNames == nil {
-		global.deniedHandlerNames =  map[string][]string{}
-	}
-
-
-	//节点
-	nodeName := ConstNodeGlobal
-	if Current != "" {
-		nodeName = Current
-	}
-
-
-	//如果节点配置不存在，创建
-	if global.deniedHandlers[nodeName] == nil {
-		global.deniedHandlers[nodeName] = map[string]QueueFunc{}
-	}
-	if global.deniedHandlerNames[nodeName] == nil {
-		global.deniedHandlerNames[nodeName] = []string{}
-	}
-
-
-
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := global.deniedHandlers[nodeName][name]; ok == false {
-		global.deniedHandlerNames[nodeName] = append(global.deniedHandlerNames[nodeName], name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	global.deniedHandlers[nodeName][name] = call
-}
-
 
 
 
@@ -574,8 +496,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, errorHandlers, failedHandlers, deniedHandlers map[string]QueueFunc
-		foundHandlerNames, errorHandlerNames, failedHandlerNames, deniedHandlerNames []string
+		foundHandlers, errorHandlers map[string]QueueFunc
+		foundHandlerNames, errorHandlerNames []string
 	}
 
 	//队列上下文
@@ -833,42 +755,6 @@ func (module *queueModule) ErrorHandler(name string, call QueueFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	module.errorHandlers[name] = call
 }
-func (module *queueModule) FailedHandler(name string, call QueueFunc) {
-	module.mutex.Lock()
-	defer module.mutex.Unlock()
-
-	if module.failedHandlers == nil {
-		module.failedHandlers = make(map[string]QueueFunc)
-	}
-	if module.failedHandlerNames == nil {
-		module.failedHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := module.failedHandlers[name]; ok == false {
-		module.failedHandlerNames = append(module.failedHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	module.failedHandlers[name] = call
-}
-func (module *queueModule) DeniedHandler(name string, call QueueFunc) {
-	module.mutex.Lock()
-	defer module.mutex.Unlock()
-
-	if module.deniedHandlers == nil {
-		module.deniedHandlers = make(map[string]QueueFunc)
-	}
-	if module.deniedHandlerNames == nil {
-		module.deniedHandlerNames = make([]string, 0)
-	}
-
-	//如果没有注册个此name，才加入数组
-	if _,ok := module.deniedHandlers[name]; ok == false {
-		module.deniedHandlerNames = append(module.deniedHandlerNames, name)
-	}
-	//函数直接写， 因为可以使用同名替换现有的
-	module.deniedHandlers[name] = call
-}
 /* 注册处理器 end */
 
 
@@ -1007,50 +893,6 @@ func newQueueModule(node *Noggo) (*queueModule) {
 			}
 		}
 	}
-
-
-	//节点 失败处理器
-	nodeFailedHandlers, nodeFailedHandlersOK := Queue.failedHandlers[node.Name];
-	nodeFailedHandlerNames, nodeFailedHandlerNamesOK := Queue.failedHandlerNames[node.Name];
-	if nodeFailedHandlersOK && nodeFailedHandlerNamesOK {
-		for _,n := range nodeFailedHandlerNames {
-			module.FailedHandler(n, nodeFailedHandlers[n])
-		}
-	}
-	//全局 失败处理器
-	failedHandlers, failedHandlersOK := Queue.failedHandlers[ConstNodeGlobal];
-	failedHandlerNames, failedHandlerNamesOK := Queue.failedHandlerNames[ConstNodeGlobal];
-	if failedHandlersOK && failedHandlerNamesOK {
-		for _,n := range failedHandlerNames {
-			//不存在才注册，这样全局不会替换节点的处理器
-			if _,ok := module.failedHandlers[n]; ok == false {
-				module.FailedHandler(n, failedHandlers[n])
-			}
-		}
-	}
-
-
-
-	//节点 请求拦截器
-	nodeDeniedHandlers, nodeDeniedHandlersOK := Queue.deniedHandlers[node.Name];
-	nodeDeniedHandlerNames, nodeDeniedHandlerNamesOK := Queue.deniedHandlerNames[node.Name];
-	if nodeDeniedHandlersOK && nodeDeniedHandlerNamesOK {
-		for _,n := range nodeDeniedHandlerNames {
-			module.DeniedHandler(n, nodeDeniedHandlers[n])
-		}
-	}
-	//全局 请求拦截器
-	deniedHandlers, deniedHandlersOK := Queue.deniedHandlers[ConstNodeGlobal];
-	deniedHandlerNames, deniedHandlerNamesOK := Queue.deniedHandlerNames[ConstNodeGlobal];
-	if deniedHandlersOK && deniedHandlerNamesOK {
-		for _,n := range deniedHandlerNames {
-			//不存在才注册，这样全局不会替换节点的处理器
-			if _,ok := module.deniedHandlers[n]; ok == false {
-				module.DeniedHandler(n, deniedHandlers[n])
-			}
-		}
-	}
-
 
 	return module
 }
@@ -1377,7 +1219,7 @@ func (module *queueModule) contextArgs(ctx *QueueContext) {
 	//所有值都会放在 module.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
-		ctx.Failed(err)
+		ctx.Error(err)
 	} else {
 		ctx.Next()
 	}
@@ -1410,7 +1252,7 @@ func (module *queueModule) contextItem(ctx *QueueContext) {
 				}
 				err := Const.NewTypeStateError(k, state, name)
 				//查询不到东西，也要失败， 接口访问失败
-				ctx.Failed(err)
+				ctx.Error(err)
 				return
 			} else {
 
@@ -1430,7 +1272,7 @@ func (module *queueModule) contextItem(ctx *QueueContext) {
 						}
 						err := Const.NewTypeStateError(k, state, name)
 
-						ctx.Failed(err)
+						ctx.Error(err)
 						return;
 					} else {
 						saveMap[k] = item
@@ -1562,90 +1404,6 @@ func (module *queueModule) contextError(ctx *QueueContext) {
 }
 
 
-//路由执行，failed
-func (module *queueModule) contextFailed(ctx *QueueContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapFailed]; ok {
-		switch c := v.(type) {
-		case QueueFunc: {
-			ctx.handler(c)
-		}
-		case []QueueFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*QueueContext): {
-			ctx.handler(c)
-		}
-		case []func(*QueueContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-
-	//handler中的failed
-	//用数组保证原始注册顺序
-	for _,name := range module.failedHandlerNames {
-		ctx.handler(module.failedHandlers[name])
-	}
-
-	//最后是默认failed中间件
-	ctx.handler(module.failedDefaultHandler)
-
-	ctx.Next()
-}
-
-
-
-//路由执行，denied
-func (module *queueModule) contextDenied(ctx *QueueContext) {
-	//清理执行线
-	ctx.cleanup()
-
-	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapDenied]; ok {
-		switch c := v.(type) {
-		case QueueFunc: {
-			ctx.handler(c)
-		}
-		case []QueueFunc: {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		case func(*QueueContext): {
-			ctx.handler(c)
-		}
-		case []func(*QueueContext): {
-			for _,v := range c {
-				ctx.handler(v)
-			}
-		}
-		default:
-		}
-	}
-
-	//handler中的denied
-	//用数组保证原始注册顺序
-	for _,name := range module.deniedHandlerNames {
-		ctx.handler(module.deniedHandlers[name])
-	}
-
-	//最后是默认denied中间件
-	ctx.handler(module.deniedDefaultHandler)
-
-	ctx.Next()
-}
-
-
 
 /*
 	队列模块方法 end
@@ -1701,12 +1459,6 @@ func (module *queueModule) foundDefaultHandler(ctx *QueueContext) {
 	ctx.res.Finish(ctx.Id)
 }
 func (module *queueModule) errorDefaultHandler(ctx *QueueContext) {
-	ctx.res.Finish(ctx.Id)
-}
-func (module *queueModule) failedDefaultHandler(ctx *QueueContext) {
-	ctx.res.Finish(ctx.Id)
-}
-func (module *queueModule) deniedDefaultHandler(ctx *QueueContext) {
 	ctx.res.Finish(ctx.Id)
 }
 /* 默认处理器 end */
@@ -1797,17 +1549,6 @@ func (ctx *QueueContext) Found() {
 func (ctx *QueueContext) Error(err *Error) {
 	ctx.Wrong = err
 	ctx.Module.contextError(ctx)
-}
-
-//失败, 就是参数处理失败为主
-func (ctx *QueueContext) Failed(err *Error) {
-	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
-}
-//拒绝,主要是 auth
-func (ctx *QueueContext) Denied(err *Error) {
-	ctx.Wrong = err
-	ctx.Module.contextFailed(ctx)
 }
 /* 上下文处理器 end */
 

@@ -12,7 +12,7 @@ func init() {
 	})
 
 	//错误处理
-	noggo.Http.FailedHandler("error", func(ctx *noggo.HttpContext) {
+	noggo.Http.ErrorHandler("error", func(ctx *noggo.HttpContext) {
 		ctx.Text("http error")
 	})
 	//拒绝处理

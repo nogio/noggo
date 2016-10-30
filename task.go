@@ -49,8 +49,8 @@ type (
 		requestFilterNames, executeFilterNames, responseFilterNames []string
 
 		//处理器们
-		foundHandlers, failedHandlers map[string]TaskFunc
-		foundHandlerNames, failedHandlerNames []string
+		foundHandlers, errorHandlers map[string]TaskFunc
+		foundHandlerNames, errorHandlerNames []string
 
 
 
@@ -94,7 +94,7 @@ type (
 		//响应相关
 		Body	Any			//响应内容
 
-		Error	*Error		//错误信息
+		Wrong	*Error		//错误信息
 	}
 )
 
@@ -329,23 +329,23 @@ func (global *taskGlobal) FoundHandler(name string, call TaskFunc) {
 	//函数直接写， 因为可以使用同名替换现有的
 	global.foundHandlers[name] = call
 }
-func (global *taskGlobal) FailedHandler(name string, call TaskFunc) {
+func (global *taskGlobal) ErrorHandler(name string, call TaskFunc) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
-	if global.failedHandlers == nil {
-		global.failedHandlers = make(map[string]TaskFunc)
+	if global.errorHandlers == nil {
+		global.errorHandlers = make(map[string]TaskFunc)
 	}
-	if global.failedHandlerNames == nil {
-		global.failedHandlerNames = make([]string, 0)
+	if global.errorHandlerNames == nil {
+		global.errorHandlerNames = make([]string, 0)
 	}
 
 	//如果没有注册个此name，才加入数组
-	if _,ok := global.failedHandlers[name]; ok == false {
-		global.failedHandlerNames = append(global.failedHandlerNames, name)
+	if _,ok := global.errorHandlers[name]; ok == false {
+		global.errorHandlerNames = append(global.errorHandlerNames, name)
 	}
 	//函数直接写， 因为可以使用同名替换现有的
-	global.failedHandlers[name] = call
+	global.errorHandlers[name] = call
 }
 /* 注册处理器 end */
 
@@ -699,7 +699,7 @@ func (global *taskGlobal) contextArgs(ctx *TaskContext) {
 	//所有值都会放在 global.Value 中
 	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
 	if err != nil {
-		ctx.Failed(err)
+		ctx.Error(err)
 	} else {
 		ctx.Next()
 	}
@@ -732,7 +732,7 @@ func (global *taskGlobal) contextItem(ctx *TaskContext) {
 				}
 				err := Const.NewTypeStateError(k, state, name)
 				//查询不到东西，也要失败， 接口访问失败
-				ctx.Failed(err)
+				ctx.Error(err)
 				return
 			} else {
 
@@ -752,7 +752,7 @@ func (global *taskGlobal) contextItem(ctx *TaskContext) {
 						}
 						err := Const.NewTypeStateError(k, state, name)
 
-						ctx.Failed(err)
+						ctx.Error(err)
 						return;
 					} else {
 						saveMap[k] = item
@@ -843,13 +843,13 @@ func (global *taskGlobal) contextFound(ctx *TaskContext) {
 
 
 
-//路由执行，failed
-func (global *taskGlobal) contextFailed(ctx *TaskContext) {
+//路由执行，error
+func (global *taskGlobal) contextError(ctx *TaskContext) {
 	//清理执行线
 	ctx.cleanup()
 
 	//如果路由配置中有found，就自定义处理
-	if v,ok := ctx.Config[KeyMapFailed]; ok {
+	if v,ok := ctx.Config[KeyMapError]; ok {
 		switch c := v.(type) {
 		case TaskFunc: {
 			ctx.handler(c)
@@ -872,14 +872,14 @@ func (global *taskGlobal) contextFailed(ctx *TaskContext) {
 	}
 
 
-	//handler中的failed
+	//handler中的error
 	//用数组保证原始注册顺序
-	for _,name := range global.failedHandlerNames {
-		ctx.handler(global.failedHandlers[name])
+	for _,name := range global.errorHandlerNames {
+		ctx.handler(global.errorHandlers[name])
 	}
 
-	//最后是默认failed中间件
-	ctx.handler(global.failedDefaultHandler)
+	//最后是默认error中间件
+	ctx.handler(global.errorDefaultHandler)
 
 	ctx.Next()
 }
@@ -955,7 +955,7 @@ func (global *taskGlobal) foundDefaultHandler(ctx *TaskContext) {
 	//当找不到任务时，应当通知驱动，完成此任务，以免重复调用
 	ctx.res.Finish(ctx.Id)
 }
-func (global *taskGlobal) failedDefaultHandler(ctx *TaskContext) {
+func (global *taskGlobal) errorDefaultHandler(ctx *TaskContext) {
 	//出错，此任务就完成了
 	ctx.res.Finish(ctx.Id)
 }
@@ -1044,9 +1044,9 @@ func (ctx *TaskContext) Found() {
 	ctx.Global.contextFound(ctx)
 }
 //失败, 就是参数处理失败为主
-func (ctx *TaskContext) Failed(err *Error) {
-	ctx.Error = err
-	ctx.Global.contextFailed(ctx)
+func (ctx *TaskContext) Error(err *Error) {
+	ctx.Wrong = err
+	ctx.Global.contextError(ctx)
 }
 /* 上下文处理器 end */
 

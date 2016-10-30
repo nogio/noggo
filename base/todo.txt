@@ -4,10 +4,10 @@
 
 
 20161024
-	HTTP模块加了 删除了 error,denied,none处理器，
-	Triiger  也删了
-	Task  也删了
-	其它的模块还没处理
+	HTTP模块加了 删除了 failed,denied处理器   (ok161030)
+	Triiger  也删了    (ok161030)
+	Task  也删了       (ok161030)
+	其它的模块还没处理   (ok161030)
 
 20161025
 	event传参有问题，解析错误

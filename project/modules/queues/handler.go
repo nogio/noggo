@@ -15,14 +15,4 @@ func init() {
 	noggo.Queue.ErrorHandler("error", func(ctx *noggo.QueueContext) {
 		ctx.Finish()
 	})
-
-	//失败处理
-	noggo.Queue.FailedHandler("failed", func(ctx *noggo.QueueContext) {
-		ctx.Finish()
-	})
-
-	//拒绝处理
-	noggo.Queue.DeniedHandler("denied", func(ctx *noggo.QueueContext) {
-		ctx.Finish()
-	})
 }

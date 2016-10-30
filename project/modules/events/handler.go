@@ -10,19 +10,11 @@ func init() {
 	noggo.Event.FoundHandler("found", func(ctx *noggo.EventContext) {
 		ctx.Finish()
 	})
-
 	//错误处理
 	noggo.Event.ErrorHandler("error", func(ctx *noggo.EventContext) {
-		ctx.Finish()
-	})
 
-	//失败处理
-	noggo.Event.FailedHandler("failed", func(ctx *noggo.EventContext) {
-		ctx.Finish()
-	})
+		noggo.Logger.Debug(ctx.Name, "event.error", ctx.Wrong.Text)
 
-	//拒绝处理
-	noggo.Event.DeniedHandler("denied", func(ctx *noggo.EventContext) {
 		ctx.Finish()
 	})
 }

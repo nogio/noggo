@@ -19,7 +19,7 @@ func init() {
 
 
 	noggo.Http.Route("test", Map{
-		"uri": "/testhahahaa",
+		"uri": "/test",
 		"route": Map{
 			"name": "测试路由", "text": "测试路由", "coded": true,
 			//"args": noggo.Data.Fields("main", "test"),
@@ -28,6 +28,18 @@ func init() {
 			},
 			"state": noggo.Const.StateStrings("ok", "no"),
 			"action": func(ctx *noggo.HttpContext) {
+
+				noggo.Event.Publish("test.a", Map{ "msg": "消息11111" })
+				noggo.Event.Publish("test.a", Map{ "msg": "消息222" })
+				noggo.Event.Publish("test.a", Map{ "msg": "消息3333" })
+				noggo.Event.Publish("test.a", Map{ "msg": "消息4444" })
+
+				noggo.Event.Publish("test.b", Map{ "id": 1 })
+				noggo.Event.Publish("test.b", Map{ "id": 2 })
+				noggo.Event.Publish("test.b", Map{ "id": 3 })
+				noggo.Event.Publish("test.b", Map{ "id": 4 })
+
+
 				ctx.Json(Map{ "msg": "hahaha", "url": ctx.Url.Route("test") })
 			},
 		},

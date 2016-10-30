@@ -12,6 +12,7 @@ import (
 	"errors"
 	"time"
 	"sync"
+	"github.com/nogio/noggo"
 )
 
 
@@ -121,6 +122,8 @@ func (con *DefaultEventConnect) StartSubscriber() error {
 		eventName := name
 
 		msg.Sub(name, func(value Map) {
+
+			noggo.Logger.Debug("event","msg","sub", value)
 
 			//新建计划
 			id := NewMd5Id()
