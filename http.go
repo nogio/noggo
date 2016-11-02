@@ -1243,7 +1243,7 @@ func (module *httpModule) contextResponse(ctx *HttpContext) {
 	//清理执行线
 	ctx.cleanup()
 
-	//filter中的request
+	//filter中的response
 	//用数组保证原始注册顺序
 	for _,name := range module.responseFilterNames {
 		ctx.handler(module.responseFilters[name])
@@ -1745,7 +1745,6 @@ func (module *httpModule) contextFound(ctx *HttpContext) {
 	ctx.handler(module.foundDefaultHandler)
 
 	ctx.Code = 404
-
 	ctx.Next()
 }
 
@@ -1789,7 +1788,6 @@ func (module *httpModule) contextError(ctx *HttpContext) {
 	ctx.handler(module.errorDefaultHandler)
 
 	ctx.Code = 500
-
 	ctx.Next()
 }
 
