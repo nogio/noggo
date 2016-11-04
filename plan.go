@@ -12,17 +12,20 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"time"
-	"github.com/nogio/noggo/driver"
 )
 
 
-type (
+// plan driver begin
 
-	/*
+
+type (
 	//计划驱动
 	PlanDriver interface {
-		Connect(config Map) (PlanConnect)
+		Connect(config Map) (PlanConnect,error)
 	}
+
+	PlanHandler func(*PlanRequest, PlanResponse)
+
 	//计划连接
 	PlanConnect interface {
 		//打开连接
@@ -30,24 +33,44 @@ type (
 		//关闭连接
 		Close() error
 
+		//注册回调
+		Accept(PlanHandler) error
+
 		//注册计划
-		Accept(name,time string, call func()) error
-		//删除计划
-		Remove(id string) error
-		//清空计划
-		Clear() error
+		Register(name string, time string) error
 
 		//开始计划
 		Start() error
-		//停止计划
-		Stop() error
 	}
-	*/
+
+
+	//计划请求实体
+	PlanRequest struct {
+		Id string
+		Name string
+		Time string
+		Value Map
+	}
+
+	//计划响应接口
+	PlanResponse interface {
+		//完成
+		Finish(id string) error
+		//重新开始
+		Replan(id string, delay time.Duration) error
+	}
+)
+
+// plan driver end
+
+
+
+type (
 	//计划全局容器
 	planGlobal	struct {
 		mutex sync.Mutex
 		//驱动
-		drivers map[string]driver.PlanDriver
+		drivers map[string]PlanDriver
 
 		//中间件
 		middlers    map[string]PlanFunc
@@ -69,7 +92,7 @@ type (
 )
 
 //计划：连接驱动
-func (module *planGlobal) connect(config *planConfig) (driver.PlanConnect,error) {
+func (module *planGlobal) connect(config *planConfig) (PlanConnect,error) {
 	if planDriver,ok := module.drivers[config.Driver]; ok {
 		return planDriver.Connect(config.Config)
 	} else {
@@ -79,12 +102,12 @@ func (module *planGlobal) connect(config *planConfig) (driver.PlanConnect,error)
 
 
 //注册计划驱动
-func (global *planGlobal) Driver(name string, config driver.PlanDriver) {
+func (global *planGlobal) Driver(name string, config PlanDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]driver.PlanDriver{}
+		global.drivers = map[string]PlanDriver{}
 	}
 
 	if config == nil {
@@ -412,11 +435,11 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 
 		//计划配置与连接
 		planConfig	*planConfig
-		planConnect	driver.PlanConnect
+		planConnect	PlanConnect
 
 
 		//所在节点
@@ -446,8 +469,8 @@ type (
 		nexts []PlanFunc		//方法列表
 		next int				//下一个索引
 
-		req *driver.PlanRequest
-		res driver.PlanResponse
+		req *PlanRequest
+		res PlanResponse
 
 		//基础
 		Id	string			//Session Id  会话时使用
@@ -851,7 +874,7 @@ func newPlanModule(node *Noggo) (*planModule) {
 
 //创建Plan上下文
 //func (module *planModule) newPlanContext(id string, name string, time string, value Map) (*PlanContext) {
-func (module *planModule) newPlanContext(req *driver.PlanRequest, res driver.PlanResponse) (*PlanContext) {
+func (module *planModule) newPlanContext(req *PlanRequest, res PlanResponse) (*PlanContext) {
 	return &PlanContext{
 		Node: module.node, Module: module,
 		next: -1, nexts: []PlanFunc{},
@@ -868,7 +891,7 @@ func (module *planModule) newPlanContext(req *driver.PlanRequest, res driver.Pla
 
 //计划Plan  请求开始
 //func (module *planModule) servePlan(id string, name string, time string, value Map) {
-func (module *planModule) servePlan(req *driver.PlanRequest, res driver.PlanResponse) {
+func (module *planModule) servePlan(req *PlanRequest, res PlanResponse) {
 
 	ctx := module.newPlanContext(req, res)
 

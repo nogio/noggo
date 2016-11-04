@@ -9,18 +9,19 @@ package noggo
 
 
 import (
-	//. "github.com/nogio/noggo/base"
+	. "github.com/nogio/noggo/base"
 	"sync"
-	"github.com/nogio/noggo/driver"
 )
 
 
-type (
 
-	/*
+//logger driver begin
+
+
+type (
 	//日志驱动
 	LoggerDriver interface {
-		Connect(config Map) (LoggerConnect)
+		Connect(config Map) (LoggerConnect,error)
 	}
 	//日志连接
 	LoggerConnect interface {
@@ -36,19 +37,25 @@ type (
 		//输出错误
 		Error(args ...interface{})
 	}
-	*/
+)
 
+
+//logger driver end
+
+
+
+type (
 
 	//日志模块
 	loggerGlobal struct {
 		mutex sync.Mutex
 
 		//日志驱动容器
-		drivers map[string]driver.LoggerDriver
+		drivers map[string]LoggerDriver
 
 		//日志配置，日志连接
 		loggerConfig *loggerConfig
-		loggerConnect driver.LoggerConnect
+		loggerConnect LoggerConnect
 	}
 )
 
@@ -58,7 +65,7 @@ type (
 
 
 //注册日志驱动
-func (global *loggerGlobal) Driver(name string, config driver.LoggerDriver) {
+func (global *loggerGlobal) Driver(name string, config LoggerDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
@@ -72,7 +79,7 @@ func (global *loggerGlobal) Driver(name string, config driver.LoggerDriver) {
 
 
 //连接驱动
-func (global *loggerGlobal) connect(config *loggerConfig) (driver.LoggerConnect,error) {
+func (global *loggerGlobal) connect(config *loggerConfig) (LoggerConnect,error) {
 	if loggerDriver,ok := global.drivers[config.Driver]; ok {
 		return loggerDriver.Connect(config.Config)
 	} else {

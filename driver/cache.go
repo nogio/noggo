@@ -10,41 +10,19 @@
 package driver
 
 import (
-	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver/cache-default"
 )
 
-type (
-	//缓存驱动
-	CacheDriver interface {
-		Connect(config Map) (CacheConnect,error)
-	}
-	//缓存连接
-	CacheConnect interface {
-		//打开连接
-		Open() error
-		//关闭连接
-		Close() error
-
-		//获取数据库对象
-		Base(string) (CacheBase,error)
-	}
-
-	CacheValueFunc func(Any)(Any)
 
 
-	//缓存库
-	CacheBase interface {
-		//查询缓存，自带值包装函数
-		Get(key string) (Any,error)
-		//更新缓存数据，不存在则创建，存在就更新
-		Set(key string, val Any, exp int64) error
-		//删除缓存
-		Del(key string) error
+//默认缓存引擎
+func CacheDefault() (noggo.CacheDriver) {
+	return cache_default.Driver()
+}
 
-		//获取keys
-		Keys(prefixs ...string) ([]string,error)
 
-		//清空
-		Empty(prefixs ...string) (error)
-	}
-)
+//内存缓存引擎，就是默认驱动
+func CacheMemory() (noggo.CacheDriver) {
+	return cache_default.Driver()
+}

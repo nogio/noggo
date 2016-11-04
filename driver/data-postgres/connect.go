@@ -2,7 +2,7 @@ package data_postgres
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"database/sql"
 	"errors"
 )
@@ -18,6 +18,7 @@ type (
 		url string
 		//模型
 		models  map[string]Map
+		views  map[string]Map
 	}
 )
 
@@ -47,6 +48,17 @@ func (conn *PostgresConnect) Model(name string, config Map) {
 	conn.models[name] = config
 }
 
-func (conn *PostgresConnect) Base(name string, cache driver.CacheBase) (driver.DataBase,error) {
-	return &PostgresBase{name, conn, conn.models, conn.db, nil, cache, false},nil
+func (conn *PostgresConnect) View(name string, config Map) {
+	conn.views[name] = config
+}
+
+func (conn *PostgresConnect) Base(name string, cache noggo.CacheBase) (noggo.DataBase,error) {
+	return &PostgresBase{name, conn, conn.models, conn.views, conn.db, nil, cache, true, false},nil
+}
+
+
+
+//来来来，构建数据结构
+func (conn *PostgresConnect) Build() error {
+	return nil
 }

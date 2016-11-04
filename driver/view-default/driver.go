@@ -4,7 +4,7 @@ package view_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 )
 
 
@@ -24,7 +24,7 @@ type (
 
 
 //返回驱动
-func Driver(roots ...string) (driver.ViewDriver) {
+func Driver(roots ...string) (noggo.ViewDriver) {
 	root := "views"
 	if len(roots) > 0 {
 		root = roots[0]
@@ -46,7 +46,7 @@ func Driver(roots ...string) (driver.ViewDriver) {
 
 
 //连接驱动
-func (driver *DefaultViewDriver) Connect(config Map) (driver.ViewConnect,error) {
+func (driver *DefaultViewDriver) Connect(config Map) (noggo.ViewConnect,error) {
 	return &DefaultViewConnect{
 		config: config, root: driver.root,
 	},nil
@@ -77,8 +77,7 @@ func (connect *DefaultViewConnect) Close() error {
 
 
 //解析VIEW
-//func (connect *DefaultViewConnect) Parse(node string, helpers Map, data Map, name string, model Map) (error,string) {
-func (connect *DefaultViewConnect) Parse(parse *driver.ViewParse) (string,error) {
+func (connect *DefaultViewConnect) Parse(parse *noggo.ViewParse) (string,error) {
 	view := newDefaultView(connect.root, parse)
 	return view.Parse()
 }

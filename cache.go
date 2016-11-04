@@ -2,29 +2,75 @@ package noggo
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"sync"
 	"errors"
 )
 
+
+
+// 缓存驱动接口定义 begin
+type (
+	//缓存驱动
+	CacheDriver interface {
+		Connect(config Map) (CacheConnect,error)
+	}
+	//缓存连接
+	CacheConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close() error
+		//获取数据库对象
+		Base(string) (CacheBase,error)
+	}
+
+	//缓存库
+	CacheBase interface {
+		Close() error
+
+
+		//查询缓存，自带值包装函数
+		Get(key string) (Any,error)
+		//更新缓存数据，不存在则创建，存在就更新
+		Set(key string, val Any, exp int64) error
+		//删除缓存
+		Del(key string) error
+		//清空缓存，如传prefix则表示清空固定前缀的缓存
+		Empty(prefixs ...string) (error)
+		//获取keys
+		Keys(prefixs ...string) ([]string,error)
+
+	}
+)
+// 缓存驱动接口定义 end
+
+
+
+
+
+
+
+
+
 type (
 	cacheGlobal struct {
 		mutex       sync.Mutex
-		drivers     map[string]driver.CacheDriver
+		drivers     map[string]CacheDriver
 
-		connects    map[string]driver.CacheConnect
+		connects    map[string]CacheConnect
 	}
 )
 
 
 
 //注册缓存驱动
-func (global *cacheGlobal) Driver(name string, config driver.CacheDriver) {
+func (global *cacheGlobal) Driver(name string, config CacheDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
+
 	if global.drivers == nil {
-		global.drivers = map[string]driver.CacheDriver{}
+		global.drivers = map[string]CacheDriver{}
 	}
 
 	if config == nil {
@@ -35,7 +81,7 @@ func (global *cacheGlobal) Driver(name string, config driver.CacheDriver) {
 
 
 //连接驱动
-func (global *cacheGlobal) connect(config *cacheConfig) (driver.CacheConnect,error) {
+func (global *cacheGlobal) connect(config *cacheConfig) (CacheConnect,error) {
 	if cacheDriver,ok := global.drivers[config.Driver]; ok {
 		return cacheDriver.Connect(config.Config)
 	} else {
@@ -86,7 +132,7 @@ func (global *cacheGlobal) exitCache() {
 
 
 //返回缓存Base对象
-func (global *cacheGlobal) Base(name string) (driver.CacheBase) {
+func (global *cacheGlobal) Base(name string) (CacheBase) {
 	if conn,ok := global.connects[name]; ok {
 		db,err := conn.Base(name)
 		if err == nil {
@@ -104,6 +150,9 @@ func (global *cacheGlobal) Base(name string) (driver.CacheBase) {
 type (
 	noCacheBase struct {}
 )
+func (base *noCacheBase) Close() (error) {
+	return nil
+}
 func (base *noCacheBase) Get(key string) (Any,error) {
 	return nil,errors.New("无缓存")
 }

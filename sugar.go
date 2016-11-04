@@ -3,7 +3,6 @@ package noggo
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 )
 
 
@@ -43,31 +42,31 @@ func (global *sugarGlobal) exit() {
 //方便注册各种驱动
 func Driver(name string, drv Any) {
 	switch v := drv.(type) {
-	case driver.LoggerDriver:
+	case LoggerDriver:
 		Logger.Driver(name, v)
-	case driver.SessionDriver:
+	case SessionDriver:
 		Session.Driver(name, v)
 
 		//触发器没有驱动
-	case driver.TaskDriver:
+	case TaskDriver:
 		Task.Driver(name, v)
 
-	case driver.PlanDriver:
+	case PlanDriver:
 		Plan.Driver(name, v)
-	case driver.EventDriver:
+	case EventDriver:
 		Event.Driver(name, v)
-	case driver.QueueDriver:
+	case QueueDriver:
 		Queue.Driver(name, v)
 
 
-	case driver.CacheDriver:
+	case CacheDriver:
 		Cache.Driver(name, v)
-	case driver.DataDriver:
+	case DataDriver:
 		Data.Driver(name, v)
 
-	case driver.HttpDriver:
+	case HttpDriver:
 		Http.Driver(name, v)
-	case driver.ViewDriver:
+	case ViewDriver:
 		View.Driver(name, v)
 
 	default:

@@ -12,19 +12,48 @@
 package noggo
 
 import (
-	//. "github.com/nogio/noggo/base"
+	. "github.com/nogio/noggo/base"
 	"sync"
-	"github.com/nogio/noggo/driver"
 )
+
+
+// session driver begin
+
+type (
+	//会话驱动
+	SessionDriver interface {
+		Connect(config Map) (SessionConnect,error)
+	}
+	//会话连接
+	SessionConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close() error
+
+
+		//查询会话，不存在就创建新的返回
+		Entity(id string, expiry int64) (Map,error)
+		//更新会话数据，不存在则创建，存在就更新
+		Update(id string, value Map, expiry int64) error
+		//删除会话
+		Remove(id string) error
+	}
+)
+
+
+// session driver end
+
+
 
 type (
 	//会话全局
 	sessionGlobal struct {
 		mutex sync.Mutex
-		drivers         map[string]driver.SessionDriver
+		drivers         map[string]SessionDriver
 
 		sessionConfig   *sessionConfig
-		sessionConnect  driver.SessionConnect
+		sessionConnect  SessionConnect
 	}
 )
 
@@ -36,12 +65,12 @@ type (
 
 
 //注册会话驱动
-func (global *sessionGlobal) Driver(name string, config driver.SessionDriver) {
+func (global *sessionGlobal) Driver(name string, config SessionDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]driver.SessionDriver{}
+		global.drivers = map[string]SessionDriver{}
 	}
 
 	if config == nil {
@@ -52,7 +81,7 @@ func (global *sessionGlobal) Driver(name string, config driver.SessionDriver) {
 
 
 //连接驱动
-func (global *sessionGlobal) connect(config *sessionConfig) (driver.SessionConnect,error) {
+func (global *sessionGlobal) connect(config *sessionConfig) (SessionConnect,error) {
 	if sessionDriver,ok := global.drivers[config.Driver]; ok {
 		return sessionDriver.Connect(config.Config)
 	} else {
@@ -109,7 +138,7 @@ type (
 	sessionModule struct {
 		node	*Noggo
 		sessionConfig   *sessionConfig
-		sessionConnect  driver.SessionConnect
+		sessionConnect  SessionConnect
 	}
 )
 

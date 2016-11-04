@@ -11,10 +11,58 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"time"
-	"github.com/nogio/noggo/driver"
 	"errors"
 )
 
+// queue driver begin
+type (
+	//队列驱动
+	QueueDriver interface {
+		Connect(Map) (QueueConnect,error)
+	}
+	//队列处理器
+	QueueHandler func(*QueueRequest, QueueResponse)
+
+	//队列连接
+	QueueConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close() error
+
+
+		//注册回调
+		Accept(QueueHandler) error
+		//注册队列
+		Register(name string, line int) error
+		//开始消费者
+		StartConsumer() error
+
+
+		//开始生产者
+		StartProducer() error
+		//发布消息
+		Publish(name string, value Map) error
+		//发布延时消息
+		DeferredPublish(name string, delay time.Duration, value Map) error
+	}
+
+
+	//队列请求实体
+	QueueRequest struct {
+		Id string
+		Name string
+		Value Map
+	}
+	//队列响应接口
+	QueueResponse interface {
+		//完成
+		Finish(id string) error
+		//重新开始
+		Requeue(id string, delay time.Duration) error
+	}
+)
+// queue driver end
 
 type (
 
@@ -22,7 +70,7 @@ type (
 	queueGlobal	struct {
 		mutex sync.Mutex
 		//驱动
-		drivers map[string]driver.QueueDriver
+		drivers map[string]QueueDriver
 
 		//中间件
 		middlers    map[string]QueueFunc
@@ -41,13 +89,13 @@ type (
 		foundHandlerNames, errorHandlerNames map[string][]string
 
 		//全局为发布者
-		queueConnects    map[string]driver.QueueConnect
+		queueConnects    map[string]QueueConnect
 	}
 
 )
 
 //队列：连接驱动
-func (module *queueGlobal) connect(config *queueConfig) (driver.QueueConnect,error) {
+func (module *queueGlobal) connect(config *queueConfig) (QueueConnect,error) {
 	if queueDriver,ok := module.drivers[config.Driver]; ok {
 		return queueDriver.Connect(config.Config)
 	} else {
@@ -57,12 +105,12 @@ func (module *queueGlobal) connect(config *queueConfig) (driver.QueueConnect,err
 
 
 //注册队列驱动
-func (global *queueGlobal) Driver(name string, config driver.QueueDriver) {
+func (global *queueGlobal) Driver(name string, config QueueDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]driver.QueueDriver{}
+		global.drivers = map[string]QueueDriver{}
 	}
 
 	if config == nil {
@@ -475,11 +523,11 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 
 		//队列配置与连接
 		//queueConfig	*queueConfig
-		queueConnects	map[string]driver.QueueConnect
+		queueConnects	map[string]QueueConnect
 
 
 		//所在节点
@@ -509,8 +557,8 @@ type (
 		nexts []QueueFunc		//方法列表
 		next int				//下一个索引
 
-		req *driver.QueueRequest
-		res driver.QueueResponse
+		req *QueueRequest
+		res QueueResponse
 
 		//基础
 		Id	string			//Session Id  会话时使用
@@ -767,7 +815,7 @@ func (module *queueModule) ErrorHandler(name string, call QueueFunc) {
 //创建队列模块
 func newQueueModule(node *Noggo) (*queueModule) {
 	module := &queueModule{
-		node: node, queueConnects: map[string]driver.QueueConnect{},
+		node: node, queueConnects: map[string]QueueConnect{},
 	}
 
 	//复制路由，拦截器，处理器
@@ -916,7 +964,7 @@ func newQueueModule(node *Noggo) (*queueModule) {
 
 //创建Queue上下文
 //func (module *queueModule) newQueueContext(id string, name string, time string, value Map) (*QueueContext) {
-func (module *queueModule) newQueueContext(req *driver.QueueRequest, res driver.QueueResponse) (*QueueContext) {
+func (module *queueModule) newQueueContext(req *QueueRequest, res QueueResponse) (*QueueContext) {
 	return &QueueContext{
 		Node: module.node, Module: module,
 		next: -1, nexts: []QueueFunc{},
@@ -933,7 +981,7 @@ func (module *queueModule) newQueueContext(req *driver.QueueRequest, res driver.
 
 //队列Queue  请求开始
 //func (module *queueModule) serveQueue(id string, name string, time string, value Map) {
-func (module *queueModule) serveQueue(req *driver.QueueRequest, res driver.QueueResponse) {
+func (module *queueModule) serveQueue(req *QueueRequest, res QueueResponse) {
 
 	ctx := module.newQueueContext(req, res)
 

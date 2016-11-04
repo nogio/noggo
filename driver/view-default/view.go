@@ -4,7 +4,7 @@ package view_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"errors"
 	"fmt"
 	"html/template"
@@ -20,7 +20,7 @@ import (
 type (
 	DefaultView struct {
 		root    string  //根目录
-		parse   *driver.ViewParse
+		parse   *noggo.ViewParse
 
 		engine *template.Template
 		helper template.FuncMap
@@ -37,7 +37,7 @@ type (
 	}
 )
 
-func newDefaultView(root string, parse *driver.ViewParse) (*DefaultView) {
+func newDefaultView(root string, parse *noggo.ViewParse) (*DefaultView) {
 	view := &DefaultView{ root: root, parse: parse }
 	view.metas = []string{}
 	view.styles = []string{}
@@ -263,6 +263,7 @@ func newDefaultView(root string, parse *driver.ViewParse) (*DefaultView) {
 			if len(view.scripts) > 0 {
 				html = strings.Join(view.scripts, "\n")
 			}
+
 			return template.HTML(html)
 		},
 

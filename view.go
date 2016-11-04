@@ -9,18 +9,29 @@ package noggo
 
 import (
 	"sync"
-	"github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	. "github.com/nogio/noggo/base"
 )
 
 
+// view driver begin
+
+
 type (
-	/*
 	//视图驱动
 	ViewDriver interface {
-		Connect(config Map) (ViewConnect)
+		Connect(config Map) (ViewConnect,error)
 	}
-	ViewAcceptFunc func(string,string,time.Duration,Map)
+
+	ViewParse struct {
+		Node    string  //当前节点
+		Lang    string  //当前语言
+		Charset string  //当前字符集
+		Data    Map     //ctx.Data
+		View    string  //视图文件
+		Model   Map     //视图模型
+		Helpers Map     //工具方法
+	}
+
 	//视图连接
 	ViewConnect interface {
 		//打开连接
@@ -28,29 +39,33 @@ type (
 		//关闭连接
 		Close() error
 
-		//帮助VIEW函数
-		Helper(name string, helper base.Any) error
-
 		//解析
-		Parse(ctx *HttpContext, view string, model Map, data Map) (error,string)
+		Parse(*ViewParse) (string,error)
 	}
-	*/
+)
+
+
+// view driver end
+
+
+
+type (
 
 	//视图模块
 	viewGlobal struct {
 		mutex sync.Mutex
 
 		//视图驱动
-		drivers map[string]driver.ViewDriver
+		drivers map[string]ViewDriver
 
 		//视图函数库
-		//因为可能各种各样的函数，所以用base.Any类型
-		helpers map[string]base.Any
+		//因为可能各种各样的函数，所以用Any类型
+		helpers map[string]Any
 
 
 		//日志配置，日志连接
 		viewConfig *viewConfig
-		viewConnect driver.ViewConnect
+		viewConnect ViewConnect
 
 	}
 )
@@ -58,7 +73,7 @@ type (
 
 
 //连接驱动
-func (global *viewGlobal) connect(config *viewConfig) (driver.ViewConnect,error) {
+func (global *viewGlobal) connect(config *viewConfig) (ViewConnect,error) {
 	if viewDriver,ok := global.drivers[config.Driver]; ok {
 		return viewDriver.Connect(config.Config)
 	} else {
@@ -67,7 +82,7 @@ func (global *viewGlobal) connect(config *viewConfig) (driver.ViewConnect,error)
 }
 
 //注册视图驱动
-func (global *viewGlobal) Driver(name string, config driver.ViewDriver) {
+func (global *viewGlobal) Driver(name string, config ViewDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
@@ -78,13 +93,13 @@ func (global *viewGlobal) Driver(name string, config driver.ViewDriver) {
 	//框架有可能自带几种默认驱动，并且是默认注册的，用户可以自行注册替换
 	global.drivers[name] = config
 }
-func (global *viewGlobal) Helper(name string, helper base.Any) {
+func (global *viewGlobal) Helper(name string, helper Any) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 
 	if global.helpers == nil {
-		global.helpers = map[string]base.Any{}
+		global.helpers = map[string]Any{}
 	}
 
 	if helper == nil {

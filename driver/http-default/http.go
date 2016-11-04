@@ -2,8 +2,8 @@ package http_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"net/http"
+	"github.com/nogio/noggo"
 )
 
 
@@ -14,14 +14,14 @@ type (
 	//连接
 	DefaultHttpConnect struct {
 		config Map
-		handler driver.HttpHandler    //func(req *http.Request, res http.ResponseWriter)
+		handler noggo.HttpHandler    //func(req *http.Request, res http.ResponseWriter)
 		server *http.Server
 	}
 )
 
 
 //返回驱动
-func Driver() (driver.HttpDriver) {
+func Driver() (noggo.HttpDriver) {
 	return &DefaultHttpDriver{}
 }
 
@@ -30,7 +30,7 @@ func Driver() (driver.HttpDriver) {
 
 
 //连接
-func (drv *DefaultHttpDriver) Connect(config Map) (driver.HttpConnect,error) {
+func (drv *DefaultHttpDriver) Connect(config Map) (noggo.HttpConnect,error) {
 	return &DefaultHttpConnect{
 		config: config,
 	},nil
@@ -63,7 +63,7 @@ func (connect *DefaultHttpConnect) Close() error {
 
 
 //Start 应该不要阻塞线程
-func (connect *DefaultHttpConnect) Accept(handler driver.HttpHandler) error {
+func (connect *DefaultHttpConnect) Accept(handler noggo.HttpHandler) error {
 	connect.handler = handler
 	return nil
 }

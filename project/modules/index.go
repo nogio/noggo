@@ -16,6 +16,8 @@ package modules
 
 import (
 	"github.com/nogio/noggo"
+	_ "./tasks"
+	_ "./triggers"
 	_ "./events"
 	_ "./https"
 	_ "./plans"

@@ -12,9 +12,61 @@ import (
 	"time"
 	"sync"
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"errors"
 )
+
+
+
+// task driver begin
+
+
+type (
+	//任务驱动
+	TaskDriver interface {
+		Connect(config Map) (TaskConnect,error)
+	}
+
+	//回调函数
+	TaskHandler func(*TaskRequest, TaskResponse)
+
+	//任务连接
+	TaskConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close() error
+
+		//注册任务
+		Register(string) error
+
+		//注册回调
+		Accept(TaskHandler) error
+
+		//开始任务
+		Start() error
+
+		//触发任务
+		After(name string, delay time.Duration, value Map) error
+	}
+
+	//任务请求实体
+	TaskRequest struct {
+		Id string
+		Name string
+		Delay time.Duration
+		Value Map
+	}
+
+	//任务响应接口
+	TaskResponse interface {
+		//完成任务
+		Finish(id string) error
+		//重新开始任务
+		Retask(id string, delay time.Duration) error
+	}
+)
+
+// task driver end
 
 
 type (
@@ -34,7 +86,7 @@ type (
 		mutex sync.Mutex
 
 		//任务驱动容器
-		drivers map[string]driver.TaskDriver
+		drivers map[string]TaskDriver
 
 		//中间件
 		middlers    map[string]TaskFunc
@@ -57,10 +109,10 @@ type (
 
 		//会话配置与连接
 		sessionConfig   *sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 		//日志配置，日志连接
 		taskConfig  *taskConfig
-		taskConnect driver.TaskConnect
+		taskConnect TaskConnect
 	}
 
 	//任务上下文
@@ -71,8 +123,8 @@ type (
 		nexts []TaskFunc		//方法列表
 		next int				//下一个索引
 
-		req *driver.TaskRequest
-		res driver.TaskResponse
+		req *TaskRequest
+		res TaskResponse
 
 		//基础
 		Id	string			//Session Id  会话时使用
@@ -106,7 +158,7 @@ type (
 
 
 //连接驱动
-func (global *taskGlobal) connect(config *taskConfig) (driver.TaskConnect,error) {
+func (global *taskGlobal) connect(config *taskConfig) (TaskConnect,error) {
 	if taskDriver,ok := global.drivers[config.Driver]; ok {
 		return taskDriver.Connect(config.Config)
 	} else {
@@ -115,7 +167,7 @@ func (global *taskGlobal) connect(config *taskConfig) (driver.TaskConnect,error)
 }
 
 //注册任务驱动
-func (global *taskGlobal) Driver(name string, config driver.TaskDriver) {
+func (global *taskGlobal) Driver(name string, config TaskDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
@@ -360,7 +412,7 @@ func (global *taskGlobal) ErrorHandler(name string, call TaskFunc) {
 
 //创建Task上下文
 //func (global *taskGlobal) newTaskContext(id string, name string, delay time.Duration, value Map) (*TaskContext) {
-func (global *taskGlobal) newTaskContext(req *driver.TaskRequest, res driver.TaskResponse) (*TaskContext) {
+func (global *taskGlobal) newTaskContext(req *TaskRequest, res TaskResponse) (*TaskContext) {
 	return &TaskContext{
 		Global: global,
 		next: -1, nexts: []TaskFunc{},
@@ -376,7 +428,7 @@ func (global *taskGlobal) newTaskContext(req *driver.TaskRequest, res driver.Tas
 
 //任务Task  请求开始
 //func (global *taskGlobal) serveTask(id string, name string, delay time.Duration, value Map) {
-func (global *taskGlobal) serveTask(req *driver.TaskRequest, res driver.TaskResponse) {
+func (global *taskGlobal) serveTask(req *TaskRequest, res TaskResponse) {
 	ctx := global.newTaskContext(req, res)
 
 	//请求处理

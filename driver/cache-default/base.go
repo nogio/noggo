@@ -12,6 +12,10 @@ type (
 		conn    *DefaultCacheConnect
 	}
 )
+//关闭库
+func (base *DefaultCacheBase) Close() (error) {
+	return nil
+}
 
 //获取数据
 //数据应该复制一份，要不然写的时候会有同步问题
@@ -31,7 +35,7 @@ func (base *DefaultCacheBase) Set(key string, val Any, expiry int64) (error) {
 	base.conn.mutex.Lock()
 	defer base.conn.mutex.Unlock()
 
-	//暂时不直接过期的问题
+	//暂时不考虑过期的问题
 	base.conn.caches[key] = val
 
 	return nil
@@ -41,26 +45,26 @@ func (base *DefaultCacheBase) Del(key string) (error) {
 	base.conn.mutex.Lock()
 	defer base.conn.mutex.Unlock()
 
-	//暂时不直接过期的问题
 	delete(base.conn.caches, key)
 
 	return nil
 }
-//空清数据
+//清空数据
 func (base *DefaultCacheBase) Empty(prefixs ...string) (error) {
+	base.conn.mutex.Lock()
+	defer base.conn.mutex.Unlock()
 
 	keys,err := base.Keys(prefixs...)
 	if err == nil {
-		base.conn.mutex.Lock()
 		for _,key := range keys {
 			delete(base.conn.caches, key)
 		}
-		base.conn.mutex.Unlock()
 	}
 	return nil
 }
 
 //获取keys
+//暂时不支持前缀查询
 func (base *DefaultCacheBase) Keys(prefixs ...string) ([]string,error) {
 	base.conn.mutex.RLock()
 	defer base.conn.mutex.RUnlock()

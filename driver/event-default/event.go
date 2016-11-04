@@ -8,7 +8,7 @@ package event_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"errors"
 	"time"
 	"sync"
@@ -23,7 +23,7 @@ type (
 	//连接
 	DefaultEventConnect struct {
 		config      Map
-		handler     driver.EventHandler
+		handler     noggo.EventHandler
 
 		mutex       sync.Mutex
 		names       []string
@@ -58,7 +58,7 @@ func init() {
 
 
 //返回驱动
-func Driver() (driver.EventDriver) {
+func Driver() (noggo.EventDriver) {
 	return &DefaultEventDriver{}
 }
 
@@ -66,7 +66,7 @@ func Driver() (driver.EventDriver) {
 
 
 //连接
-func (drv *DefaultEventDriver) Connect(config Map) (driver.EventConnect,error) {
+func (drv *DefaultEventDriver) Connect(config Map) (noggo.EventConnect,error) {
 	return &DefaultEventConnect{
 		config: config, names: []string{}, datas: map[string]EventData{},
 	}, nil
@@ -90,7 +90,7 @@ func (drv *DefaultEventConnect) Close() error {
 
 
 //订阅者注册回调
-func (con *DefaultEventConnect) Accept(handler driver.EventHandler) error {
+func (con *DefaultEventConnect) Accept(handler noggo.EventHandler) error {
 	con.mutex.Lock()
 	defer con.mutex.Unlock()
 
@@ -143,7 +143,7 @@ func (con *DefaultEventConnect) StartSubscriber() error {
 
 //执行统一到这里
 func (con *DefaultEventConnect) execute(id string, name string, value Map) {
-	req := &driver.EventRequest{ Id: id, Name: name, Value: value }
+	req := &noggo.EventRequest{ Id: id, Name: name, Value: value }
 	res := &DefaultEventResponse{ con }
 	con.handler(req, res)
 }

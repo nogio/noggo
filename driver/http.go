@@ -6,34 +6,16 @@
 
 package driver
 
+
 import (
-	. "github.com/nogio/noggo/base"
-	"net/http"
+	"github.com/nogio/noggo"
+	"github.com/nogio/noggo/driver/http-default"
 )
 
-type (
 
-	//HTTP驱动
-	HttpDriver interface {
-		Connect(config Map) (HttpConnect,error)
-	}
 
-	HttpHandler func(req *http.Request, res http.ResponseWriter)
 
-	//HTTP连接
-	HttpConnect interface {
-		//打开驱动连接
-		Open() error
-		//关闭驱动连接
-		Close() error
-
-		//注册回调？
-		Accept(HttpHandler) error
-
-		//开始
-		Start(addr string) error
-		//开始TLS
-		StartTLS(addr string, certFile, keyFile string) error
-
-	}
-)
+//默认HTTP引擎
+func HttpDefault() (noggo.HttpDriver) {
+	return http_default.Driver()
+}

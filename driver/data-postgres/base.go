@@ -3,7 +3,7 @@ package data_postgres
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,10 +17,12 @@ type (
 		name    string
 		conn    *PostgresConnect
 		models  map[string]Map
+		views  map[string]Map
 
 		db      *sql.DB
 		tx      *sql.Tx
-		cache   driver.CacheBase
+		cache   noggo.CacheBase
+		caching bool
 
 		//是否手动提交事务，否则为自动
 		//当调用begin时， 自动变成手动提交事务
@@ -42,7 +44,7 @@ func (base *PostgresBase) Close() {
 }
 
 //获取模型对象
-func (base *PostgresBase) Model(name string) (driver.DataModel) {
+func (base *PostgresBase) Model(name string) (noggo.DataModel) {
 	if config,ok := base.models[name]; ok {
 
 		//模式，表名
@@ -55,9 +57,6 @@ func (base *PostgresBase) Model(name string) (driver.DataModel) {
 			object = n
 		}
 		if n,ok := config["table"].(string); ok {
-			object = n
-		}
-		if n,ok := config["view"].(string); ok {
 			object = n
 		}
 
@@ -77,10 +76,48 @@ func (base *PostgresBase) Model(name string) (driver.DataModel) {
 	}
 }
 
+//获取模型对象
+func (base *PostgresBase) View(name string) (noggo.DataView) {
+	if config,ok := base.views[name]; ok {
+
+		//模式，表名
+		schema, object, key, fields := "public", name, "id", Map{}
+		if n,ok := config["schema"].(string); ok {
+			schema = n
+		}
+
+		if n,ok := config["object"].(string); ok {
+			object = n
+		}
+		if n,ok := config["view"].(string); ok {
+			object = n
+		}
+
+
+		if n,ok := config["key"].(string); ok {
+			key = n
+		}
+		if n,ok := config["fields"].(Map); ok {
+			fields = n
+		}
+
+		return &PostgresView{
+			base, name, schema, object, key, fields,
+		}
+	} else {
+		panic("数据：视图不存在")
+	}
+}
+
+//是否开启缓存
+func (base *PostgresBase) Cache(use bool) (noggo.DataBase) {
+	base.caching = use
+	return base
+}
 
 
 //开启手动模式
-func (base *PostgresBase) Begin() (driver.DataBase) {
+func (base *PostgresBase) Begin() (noggo.DataBase) {
 	base.manual = true
 	return base
 }
@@ -325,9 +362,9 @@ func (base *PostgresBase) building(i int,args ...Map) (string,[]interface{},stri
 
 
 				//如果值是ASC,DESC，表示是排序
-				if ov,ok := v.(string); ok && (ov==driver.ASC || ov==driver.DESC) {
+				if ov,ok := v.(string); ok && (ov==noggo.ASC || ov==noggo.DESC) {
 
-					if ov == driver.ASC {
+					if ov == noggo.ASC {
 						orders = append(orders, fmt.Sprintf(`"%s" ASC`, k))
 					} else {
 						orders = append(orders, fmt.Sprintf(`"%s" DESC`, k))

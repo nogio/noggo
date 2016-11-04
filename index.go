@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"encoding/json"
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"errors"
 )
 
@@ -101,11 +100,11 @@ func init() {
 
 	//日志模块
 	Logger = &loggerGlobal{
-		drivers: map[string]driver.LoggerDriver{},
+		drivers: map[string]LoggerDriver{},
 	}
 	//会话模块
 	Session = &sessionGlobal{
-		drivers: map[string]driver.SessionDriver{},
+		drivers: map[string]SessionDriver{},
 	}
 	//触发器模块
 	Trigger = &triggerGlobal{
@@ -113,48 +112,48 @@ func init() {
 	}
 	//任务模块
 	Task = &taskGlobal{
-		drivers: map[string]driver.TaskDriver{},  middlers:map[string]TaskFunc{},
+		drivers: map[string]TaskDriver{},  middlers:map[string]TaskFunc{},
 	}
 
 
 
 	//计划模块
 	Plan = &planGlobal{
-		drivers: map[string]driver.PlanDriver{}, middlers: map[string]PlanFunc{},
+		drivers: map[string]PlanDriver{}, middlers: map[string]PlanFunc{},
 	}
 
 	//事件模块
 	Event = &eventGlobal{
-		drivers: map[string]driver.EventDriver{}, middlers: map[string]EventFunc{},
+		drivers: map[string]EventDriver{}, middlers: map[string]EventFunc{},
 	}
 
 	//队列模块
 	Queue = &queueGlobal{
-		drivers: map[string]driver.QueueDriver{}, middlers: map[string]QueueFunc{},
-		queueConnects: map[string]driver.QueueConnect{},
+		drivers: map[string]QueueDriver{}, middlers: map[string]QueueFunc{},
+		queueConnects: map[string]QueueConnect{},
 	}
 	//HTTP模块
 	Http = &httpGlobal{
-		drivers: map[string]driver.HttpDriver{}, middlers:map[string]HttpFunc{},
+		drivers: map[string]HttpDriver{}, middlers:map[string]HttpFunc{},
 	}
 
 	Url = &httpUrl{}
 
 	//View
 	View = &viewGlobal{
-		drivers: map[string]driver.ViewDriver{}, helpers: map[string]Any{},
+		drivers: map[string]ViewDriver{}, helpers: map[string]Any{},
 	}
 
 
 	//缓存
 	Cache = &cacheGlobal{
-		drivers: map[string]driver.CacheDriver{},
-		connects: map[string]driver.CacheConnect{},
+		drivers: map[string]CacheDriver{},
+		connects: map[string]CacheConnect{},
 	}
 	//数据
 	Data = &dataGlobal{
-		drivers: map[string]driver.DataDriver{},
-		connects: map[string]driver.DataConnect{},
+		drivers: map[string]DataDriver{},
+		connects: map[string]DataConnect{},
 	}
 
 

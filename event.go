@@ -11,9 +11,65 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"time"
-	"github.com/nogio/noggo/driver"
 	"errors"
 )
+
+
+
+//event driver begin
+
+type (
+	//事件驱动
+	EventDriver interface {
+		Connect(Map) (EventConnect,error)
+	}
+	//事件处理器
+	EventHandler func(*EventRequest, EventResponse)
+
+	//事件连接
+	EventConnect interface {
+		//打开连接
+		Open() error
+		//关闭连接
+		Close() error
+
+
+		//订阅者注册事件
+		Accept(EventHandler) error
+		//订阅者注册事件
+		Register(name string) error
+		//开始订阅者
+		StartSubscriber() error
+
+
+		//开始发布者
+		StartPublisher() error
+		//发布消息
+		Publish(name string, value Map) error
+		//发布延时消息
+		DeferredPublish(name string, delay time.Duration, value Map) error
+	}
+
+
+	//事件请求实体
+	EventRequest struct {
+		Id string
+		Name string
+		Value Map
+	}
+	//事件响应接口
+	EventResponse interface {
+		//完成
+		Finish(id string) error
+		//重新开始
+		Reevent(id string, delay time.Duration) error
+	}
+)
+//event driver end
+
+
+
+
 
 
 type (
@@ -22,7 +78,7 @@ type (
 	eventGlobal	struct {
 		mutex sync.Mutex
 		//驱动
-		drivers map[string]driver.EventDriver
+		drivers map[string]EventDriver
 
 		//中间件
 		middlers    map[string]EventFunc
@@ -42,13 +98,13 @@ type (
 
 		//全局为发布者
 		eventConfig     *eventConfig
-		eventConnect    driver.EventConnect
+		eventConnect    EventConnect
 	}
 
 )
 
 //事件：连接驱动
-func (module *eventGlobal) connect(config *eventConfig) (driver.EventConnect,error) {
+func (module *eventGlobal) connect(config *eventConfig) (EventConnect,error) {
 	if eventDriver,ok := module.drivers[config.Driver]; ok {
 		return eventDriver.Connect(config.Config)
 	} else {
@@ -58,12 +114,12 @@ func (module *eventGlobal) connect(config *eventConfig) (driver.EventConnect,err
 
 
 //注册事件驱动
-func (global *eventGlobal) Driver(name string, config driver.EventDriver) {
+func (global *eventGlobal) Driver(name string, config EventDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
 	if global.drivers == nil {
-		global.drivers = map[string]driver.EventDriver{}
+		global.drivers = map[string]EventDriver{}
 	}
 
 	if config == nil {
@@ -457,11 +513,11 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 
 		//事件配置与连接
 		eventConfig	*eventConfig
-		eventConnect	driver.EventConnect
+		eventConnect	EventConnect
 
 
 		//所在节点
@@ -490,8 +546,8 @@ type (
 		nexts []EventFunc		//方法列表
 		next int				//下一个索引
 
-		req *driver.EventRequest
-		res driver.EventResponse
+		req *EventRequest
+		res EventResponse
 
 		//基础
 		Id	string			//Session Id  会话时使用
@@ -876,7 +932,7 @@ func newEventModule(node *Noggo) (*eventModule) {
 
 //创建Event上下文
 //func (module *eventModule) newEventContext(id string, name string, time string, value Map) (*EventContext) {
-func (module *eventModule) newEventContext(req *driver.EventRequest, res driver.EventResponse) (*EventContext) {
+func (module *eventModule) newEventContext(req *EventRequest, res EventResponse) (*EventContext) {
 	return &EventContext{
 		Node: module.node, Module: module,
 		next: -1, nexts: []EventFunc{},
@@ -893,7 +949,7 @@ func (module *eventModule) newEventContext(req *driver.EventRequest, res driver.
 
 //事件Event  请求开始
 //func (module *eventModule) serveEvent(id string, name string, time string, value Map) {
-func (module *eventModule) serveEvent(req *driver.EventRequest, res driver.EventResponse) {
+func (module *eventModule) serveEvent(req *EventRequest, res EventResponse) {
 
 	ctx := module.newEventContext(req, res)
 

@@ -3,7 +3,7 @@ package data_sqlite
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"errors"
 )
 
@@ -14,7 +14,7 @@ type (
 )
 
 //驱动连接
-func (drv *SqliteDriver) Connect(config Map) (driver.DataConnect,error) {
+func (drv *SqliteDriver) Connect(config Map) (noggo.DataConnect,error) {
 
 	if config == nil {
 		return nil,errors.New("配置不可为空")
@@ -22,7 +22,7 @@ func (drv *SqliteDriver) Connect(config Map) (driver.DataConnect,error) {
 
 	if file,ok := config["file"].(string); ok {
 		return &SqliteConnect{
-			config: config, file: file, models: map[string]Map{},
+			config: config, file: file, models: map[string]Map{}, views: map[string]Map{},
 		},nil
 
 	} else {

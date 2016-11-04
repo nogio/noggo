@@ -2,9 +2,9 @@ package data_adodb
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"database/sql"
 	"errors"
+	"github.com/nogio/noggo"
 )
 
 type (
@@ -18,6 +18,7 @@ type (
 		url string
 		//模型
 		models  map[string]Map
+		views  map[string]Map
 	}
 )
 
@@ -46,7 +47,17 @@ func (conn *AdodbConnect) Close() error {
 func (conn *AdodbConnect) Model(name string, config Map) {
 	conn.models[name] = config
 }
+func (conn *AdodbConnect) View(name string, config Map) {
+	conn.views[name] = config
+}
 
-func (conn *AdodbConnect) Base(name string, cache driver.CacheBase) (driver.DataBase,error) {
-	return &AdodbBase{name, conn, conn.models, conn.db, nil, cache, false},nil
+func (conn *AdodbConnect) Base(name string, cache noggo.CacheBase) (noggo.DataBase,error) {
+	return &AdodbBase{name, conn, conn.models, conn.views, conn.db, nil, cache, true, false},nil
+}
+
+
+
+//来来来，构建数据结构
+func (conn *AdodbConnect) Build() error {
+	return nil
 }

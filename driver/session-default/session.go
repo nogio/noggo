@@ -11,9 +11,9 @@ package session_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"sync"
 	"time"
+	"github.com/nogio/noggo"
 )
 
 
@@ -38,7 +38,7 @@ type (
 
 
 //返回驱动
-func Driver() (driver.SessionDriver) {
+func Driver() (noggo.SessionDriver) {
 	return &DefaultDriver{}
 }
 
@@ -53,7 +53,7 @@ func Driver() (driver.SessionDriver) {
 
 
 //连接
-func (session *DefaultDriver) Connect(config Map) (driver.SessionConnect,error) {
+func (session *DefaultDriver) Connect(config Map) (noggo.SessionConnect,error) {
 	return &DefaultConnect{
 		config: config, sessions: map[string]DefaultSessionValue{},
 	},nil

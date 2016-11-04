@@ -3,18 +3,109 @@ package noggo
 import (
 	. "github.com/nogio/noggo/base"
 	"sync"
-	"github.com/nogio/noggo/driver"
 	"errors"
 	"database/sql"
 )
 
+
+
+//data driver begin
+
+const (
+	ASC     = "$$$ASC$$$"
+	DESC    = "$$$DESC$$$"
+	COUNT   = "$$$COUNT$$$"
+	AVG     = "$$$AVG$$$"
+	SUM     = "$$$SUM$$$"
+	MAX     = "$$$MAX$$$"
+	MIN     = "$$$MIN$$$"
+)
+type (
+	DataDriver interface {
+		//连接驱动的时候
+		//应该做如下工作：
+		//1. 检查config合法性
+		//2. 初始化连接相关对象
+		Connect(config Map) (DataConnect,error)
+	}
+	DataConnect interface {
+		//打开数据库连接
+		Open() (error)
+		//关闭数据库连接
+		Close() (error)
+
+		//构建模型和索引
+		Build() error
+
+		//注册模型
+		Model(string,Map)
+		//注册视图
+		View(string,Map)
+
+		//获取数据库对象
+		Base(string,CacheBase) (DataBase,error)
+	}
+
+	//数据库接口
+	DataBase interface {
+		Close()
+		Model(name string) (DataModel)
+		View(name string) (DataView)
+
+		//是否使用缓存，默认使用
+		Cache(bool) (DataBase)
+		//开启手动提交事务模式
+		Begin() (DataBase)
+		Submit() (error)
+		Cancel() (error)
+
+		//原生SQL的方法，接口可以执行原生查询，以支持Model不能完成的工作
+		//但是，必须 调用Begin之后，才能使用下例方法，然后 Submit 或 Cancel
+		//因为全部使用事务。
+		Exec(query string, args ...interface{}) (sql.Result, error)
+		Prepare(query string) (*sql.Stmt, error)
+		Query(query string, args ...interface{}) (*sql.Rows, error)
+		QueryRow(query string, args ...interface{}) (*sql.Row)
+		Stmt(stmt *sql.Stmt) (*sql.Stmt)
+	}
+
+
+	//数据视图接口
+	DataView interface {
+		Count(...Map) (int64,error)
+		Single(...Map) (Map,error)
+		Query(...Map) ([]Map,error)
+		Limit(Any,Any,...Map) ([]Map,error)
+
+		Group(string,...Map) ([]Map,error)
+	}
+
+	//数据模型接口
+	DataModel interface {
+		DataView
+
+		Create(Map) (Map,error)
+		Change(Map,Map) (Map,error)
+		Remove(Map) (error)
+		Entity(Any) (Map,error)
+
+		Update(sets Map,args ...Map) (int64,error)
+		Delete(args ...Map) (int64,error)
+	}
+
+)
+//data driver end
+
+
+
+
 type (
 	dataGlobal    struct {
 		mutex       sync.Mutex
-		drivers     map[string]driver.DataDriver
+		drivers     map[string]DataDriver
 
 		//数据连接
-		connects    map[string]driver.DataConnect
+		connects    map[string]DataConnect
 
 		models      map[string]map[string]Map
 	}
@@ -22,7 +113,7 @@ type (
 
 
 //连接驱动
-func (global *dataGlobal) connect(config *dataConfig) (driver.DataConnect,error) {
+func (global *dataGlobal) connect(config *dataConfig) (DataConnect,error) {
 	if dataDriver,ok := global.drivers[config.Driver]; ok {
 		return dataDriver.Connect(config.Config)
 	} else {
@@ -32,7 +123,7 @@ func (global *dataGlobal) connect(config *dataConfig) (driver.DataConnect,error)
 
 
 //注册数据驱动
-func (global *dataGlobal) Driver(name string, config driver.DataDriver) {
+func (global *dataGlobal) Driver(name string, config DataDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
@@ -293,11 +384,11 @@ func (global *dataGlobal) Enums(data, model, field string) (Map) {
 
 
 //返回DB对象
-func (global *dataGlobal) Base(name string) (driver.DataBase) {
+func (global *dataGlobal) Base(name string) (DataBase) {
 	if conn,ok := global.connects[name]; ok {
 
 		//缓存相关
-		var cb driver.CacheBase = nil
+		var cb CacheBase = nil
 		if cfg,ok := Config.Data[name]; ok {
 			if cfg.Cache != "" {
 				cb = Cache.Base(cfg.Cache)
@@ -323,13 +414,20 @@ func (global *dataGlobal) Base(name string) (driver.DataBase) {
 type (
 	noDataBase struct {}
 	noDataModel struct {}
+	noDataView struct {}
 )
 func (base *noDataBase) Close() {
 }
-func (base *noDataBase) Model(name string) (driver.DataModel) {
+func (base *noDataBase) Model(name string) (DataModel) {
 	return &noDataModel{}
 }
-func (base *noDataBase) Begin() (driver.DataBase) {
+func (base *noDataBase) View(name string) (DataView) {
+	return &noDataView{}
+}
+func (base *noDataBase) Cache(use bool)(DataBase) {
+	return base
+}
+func (base *noDataBase) Begin() (DataBase) {
 	return base
 }
 func (base *noDataBase) Submit() (error) {
@@ -408,5 +506,24 @@ func (model *noDataModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
 	return nil,errors.New("无数据")
 }
 func (model *noDataModel) Group(field string, args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
+}
+
+
+
+
+func (model *noDataView) Count(args ...Map) (int64,error) {
+	return int64(0),errors.New("无数据")
+}
+func (model *noDataView) Single(args ...Map) (Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataView) Query(args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataView) Limit(offset,limit Any, args ...Map) ([]Map,error) {
+	return nil,errors.New("无数据")
+}
+func (model *noDataView) Group(field string, args ...Map) ([]Map,error) {
 	return nil,errors.New("无数据")
 }

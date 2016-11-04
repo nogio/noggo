@@ -18,9 +18,41 @@ import (
 	"fmt"
 	"encoding/json"
 	"encoding/xml"
-	"github.com/nogio/noggo/driver"
 	"time"
 )
+
+
+// http driver begin
+
+type (
+
+	//HTTP驱动
+	HttpDriver interface {
+		Connect(config Map) (HttpConnect,error)
+	}
+
+	HttpHandler func(req *http.Request, res http.ResponseWriter)
+
+	//HTTP连接
+	HttpConnect interface {
+		//打开驱动连接
+		Open() error
+		//关闭驱动连接
+		Close() error
+
+		//注册回调？
+		Accept(HttpHandler) error
+
+		//开始
+		Start(addr string) error
+		//开始TLS
+		StartTLS(addr string, certFile, keyFile string) error
+
+	}
+)
+
+
+// http driver end
 
 
 type (
@@ -30,7 +62,7 @@ type (
 		mutex sync.Mutex
 
 		//驱动
-		drivers map[string]driver.HttpDriver
+		drivers map[string]HttpDriver
 		//中间件
 		middlers    map[string]HttpFunc
 		middlerNames []string
@@ -51,7 +83,7 @@ type (
 )
 
 //HTTP：连接驱动
-func (module *httpGlobal) connect(config *httpConfig) (driver.HttpConnect,error) {
+func (module *httpGlobal) connect(config *httpConfig) (HttpConnect,error) {
 	if httpDriver,ok := module.drivers[config.Driver]; ok {
 		return httpDriver.Connect(config.Config)
 	} else {
@@ -61,7 +93,7 @@ func (module *httpGlobal) connect(config *httpConfig) (driver.HttpConnect,error)
 
 
 //注册HTTP驱动
-func (global *httpGlobal) Driver(name string, config driver.HttpDriver) {
+func (global *httpGlobal) Driver(name string, config HttpDriver) {
 	global.mutex.Lock()
 	defer global.mutex.Unlock()
 
@@ -416,15 +448,15 @@ type (
 
 		//会话配置与连接
 		sessionConfig	*sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 
 		//View配置与连接
 		viewConfig	*viewConfig
-		viewConnect	driver.ViewConnect
+		viewConnect	ViewConnect
 
 		//HTTP配置与连接
 		httpConfig	*httpConfig
-		httpConnect	driver.HttpConnect
+		httpConnect	HttpConnect
 
 
 		//所在节点
@@ -2020,7 +2052,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 */
 
 
-	parse := &driver.ViewParse{
+	parse := &ViewParse{
 		Node: ctx.Node.Name, Lang: ctx.Lang,
 		Data: ctx.Data, View: body.View, Model: body.Model,
 		Helpers: Map{
@@ -2067,6 +2099,14 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 			},
 			"signer": func(key string) Any {
 				return ctx.Sign.Name(key)
+			},
+			//多语音字串，使用...Any，因为在view做类型转换比较麻烦，在这里转换
+			"lang": func(key string, args ...Any) string {
+				strs := []string{}
+				for _,v := range args {
+					strs = append(strs, fmt.Sprintf("%v", v))
+				}
+				return ctx.String(key, strs...)
 			},
 			"enum": func(data,model,field string,v Any) (string) {
 				html := ""
@@ -2593,6 +2633,11 @@ func (ctx *HttpContext) Return(data Any) {
 */
 
 
+
+//获取langString
+func (ctx *HttpContext) String(key string, args ...string) string {
+	return Const.LangString(key, args...)
+}
 
 
 

@@ -8,6 +8,11 @@
 package nodes
 
 import (
+	"github.com/nogio/noggo"
 	_ "./ing"
 	_ "./www"
 )
+
+func init() {
+	noggo.Current = ""
+}

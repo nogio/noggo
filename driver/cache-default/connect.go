@@ -2,7 +2,7 @@ package cache_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"sync"
 )
 
@@ -27,6 +27,6 @@ func (conn *DefaultCacheConnect) Close() error {
 
 
 
-func (conn *DefaultCacheConnect) Base(name string) (driver.CacheBase,error) {
+func (conn *DefaultCacheConnect) Base(name string) (noggo.CacheBase,error) {
 	return &DefaultCacheBase{name, conn},nil
 }

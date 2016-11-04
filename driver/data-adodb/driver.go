@@ -3,8 +3,8 @@ package data_adodb
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"errors"
+	"github.com/nogio/noggo"
 )
 
 type (
@@ -14,7 +14,7 @@ type (
 )
 
 //驱动连接
-func (drv *AdodbDriver) Connect(config Map) (driver.DataConnect,error) {
+func (drv *AdodbDriver) Connect(config Map) (noggo.DataConnect,error) {
 
 	if config == nil {
 		return nil,errors.New("配置不可为空")
@@ -22,7 +22,7 @@ func (drv *AdodbDriver) Connect(config Map) (driver.DataConnect,error) {
 
 	if url,ok := config["url"].(string); ok {
 		return &AdodbConnect{
-			config: config, url: url, models: map[string]Map{},
+			config: config, url: url, models: map[string]Map{}, views: map[string]Map{},
 		},nil
 
 	} else {

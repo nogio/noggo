@@ -12,7 +12,6 @@ import (
 	"time"
 	"sync"
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 )
 
 
@@ -51,7 +50,7 @@ type (
 
 		//会话配置与连接
 		sessionConfig   *sessionConfig
-		sessionConnect	driver.SessionConnect
+		sessionConnect	SessionConnect
 	}
 
 	//触发器上下文

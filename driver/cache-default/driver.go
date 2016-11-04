@@ -3,7 +3,7 @@ package cache_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 )
 
 type (
@@ -12,7 +12,7 @@ type (
 )
 
 //返回驱动
-func Driver() (driver.CacheDriver) {
+func Driver() (noggo.CacheDriver) {
 	return &DefaultCacheDriver{}
 }
 
@@ -22,7 +22,7 @@ func Driver() (driver.CacheDriver) {
 
 
 //驱动连接
-func (drv *DefaultCacheDriver) Connect(config Map) (driver.CacheConnect,error) {
+func (drv *DefaultCacheDriver) Connect(config Map) (noggo.CacheConnect,error) {
 	return &DefaultCacheConnect{
 		config: config, caches: map[string]Any{},
 	},nil

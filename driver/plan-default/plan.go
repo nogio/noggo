@@ -3,11 +3,11 @@ package plan_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
-	"github.com/nogio/noggo/driver/plan-default/cron"
+	"github.com/nogio/noggo/depend/cron"
 	"errors"
 	"time"
 	"sync"
+	"github.com/nogio/noggo"
 )
 
 
@@ -20,7 +20,7 @@ type (
 		mutex   sync.Mutex
 
 		config Map
-		handler    driver.PlanHandler
+		handler    noggo.PlanHandler
 
 		cron *cron.Cron
 
@@ -44,7 +44,7 @@ type (
 
 
 //返回驱动
-func Driver() (driver.PlanDriver) {
+func Driver() (noggo.PlanDriver) {
 	return &DefaultPlanDriver{}
 }
 
@@ -52,7 +52,7 @@ func Driver() (driver.PlanDriver) {
 
 
 //连接
-func (drv *DefaultPlanDriver) Connect(config Map) (driver.PlanConnect,error) {
+func (drv *DefaultPlanDriver) Connect(config Map) (noggo.PlanConnect,error) {
 	return &DefaultPlanConnect{
 		config: config, plans: map[string]string{}, datas: map[string]PlanData{},
 	}, nil
@@ -76,7 +76,7 @@ func (con *DefaultPlanConnect) Close() error {
 
 
 //注册回调
-func (con *DefaultPlanConnect) Accept(handler driver.PlanHandler) error {
+func (con *DefaultPlanConnect) Accept(handler noggo.PlanHandler) error {
 	con.handler = handler
 	return nil
 }
@@ -118,7 +118,7 @@ func (con *DefaultPlanConnect) Start() error {
 
 //执行统一到这里
 func (connect *DefaultPlanConnect) execute(id string, name string, time string, value Map) {
-	req := &driver.PlanRequest{ Id: id, Name: name, Time: time, Value: value }
+	req := &noggo.PlanRequest{ Id: id, Name: name, Time: time, Value: value }
 	res := &DefaultPlanResponse{ connect }
 	connect.handler(req, res)
 }

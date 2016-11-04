@@ -3,10 +3,10 @@ package task_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"time"
 	"errors"
 	"sync"
+	"github.com/nogio/noggo"
 )
 
 
@@ -20,7 +20,7 @@ type (
 		mutex   sync.Mutex
 
 		config      Map
-		handler    driver.TaskHandler
+		handler    noggo.TaskHandler
 
 		names       []string
 		datas       map[string]TaskData
@@ -41,7 +41,7 @@ type (
 
 
 //返回驱动
-func Driver() (driver.TaskDriver) {
+func Driver() (noggo.TaskDriver) {
 	return &DefaultTaskDriver{}
 }
 
@@ -51,7 +51,7 @@ func Driver() (driver.TaskDriver) {
 
 
 //连接驱动
-func (session *DefaultTaskDriver) Connect(config Map) (driver.TaskConnect,error) {
+func (session *DefaultTaskDriver) Connect(config Map) (noggo.TaskConnect,error) {
 	return &DefaultTaskConnect{
 		config: config, datas: map[string]TaskData{},
 	},nil
@@ -70,7 +70,7 @@ func (connect *DefaultTaskConnect) Close() error {
 
 
 //开始干活
-func (con *DefaultTaskConnect) Accept(handler driver.TaskHandler) error {
+func (con *DefaultTaskConnect) Accept(handler noggo.TaskHandler) error {
 	con.handler = handler
 	return nil
 }
@@ -129,7 +129,7 @@ func (connect *DefaultTaskConnect) After(name string, delay time.Duration, value
 
 //执行统一到这里
 func (connect *DefaultTaskConnect) execute(id string, name string, delay time.Duration, value Map) {
-	req := &driver.TaskRequest{ Id: id, Name: name, Delay: delay, Value: value }
+	req := &noggo.TaskRequest{ Id: id, Name: name, Delay: delay, Value: value }
 	res := &DefaultTaskResponse{ connect }
 	connect.handler(req, res)
 }

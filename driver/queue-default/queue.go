@@ -8,10 +8,10 @@ package queue_default
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
 	"errors"
 	"time"
 	"sync"
+	"github.com/nogio/noggo"
 )
 
 
@@ -23,7 +23,7 @@ type (
 	//连接
 	DefaultQueueConnect struct {
 		config      Map
-		handler     driver.QueueHandler
+		handler     noggo.QueueHandler
 
 		mutex       sync.Mutex
 		names       map[string]int  //map[name]line
@@ -58,7 +58,7 @@ func init() {
 
 
 //返回驱动
-func Driver() (driver.QueueDriver) {
+func Driver() (noggo.QueueDriver) {
 	return &DefaultQueueDriver{}
 }
 
@@ -66,7 +66,7 @@ func Driver() (driver.QueueDriver) {
 
 
 //连接
-func (drv *DefaultQueueDriver) Connect(config Map) (driver.QueueConnect,error) {
+func (drv *DefaultQueueDriver) Connect(config Map) (noggo.QueueConnect,error) {
 	return &DefaultQueueConnect{
 		config: config, names: map[string]int{}, datas: map[string]QueueData{},
 	}, nil
@@ -89,7 +89,7 @@ func (con *DefaultQueueConnect) Close() error {
 
 
 //注册回调
-func (con *DefaultQueueConnect) Accept(handler driver.QueueHandler) error {
+func (con *DefaultQueueConnect) Accept(handler noggo.QueueHandler) error {
 	con.handler = handler
 	return nil
 }
@@ -149,7 +149,7 @@ func (con *DefaultQueueConnect) consuming(name string) {
 
 //执行统一到这里
 func (con *DefaultQueueConnect) execute(id string, name string, value Map) {
-	req := &driver.QueueRequest{ Id: id, Name: name, Value: value }
+	req := &noggo.QueueRequest{ Id: id, Name: name, Value: value }
 	res := &DefaultQueueResponse{ con }
 	con.handler(req, res)
 }

@@ -2,7 +2,7 @@ package data_mysql
 
 import (
 	. "github.com/nogio/noggo/base"
-	"github.com/nogio/noggo/driver"
+	"github.com/nogio/noggo"
 	"database/sql"
 	"errors"
 )
@@ -18,6 +18,7 @@ type (
 		url string
 		//模型
 		models  map[string]Map
+		views  map[string]Map
 	}
 )
 
@@ -46,7 +47,18 @@ func (conn *MysqlConnect) Close() error {
 func (conn *MysqlConnect) Model(name string, config Map) {
 	conn.models[name] = config
 }
+func (conn *MysqlConnect) View(name string, config Map) {
+	conn.views[name] = config
+}
 
-func (conn *MysqlConnect) Base(name string, cache driver.CacheBase) (driver.DataBase,error) {
-	return &MysqlBase{name, conn, conn.models, conn.db, nil, cache, false},nil
+func (conn *MysqlConnect) Base(name string, cache noggo.CacheBase) (noggo.DataBase,error) {
+	return &MysqlBase{name, conn, conn.models, conn.views, conn.db, nil, cache, true, false},nil
+}
+
+
+
+
+//来来来，构建数据结构
+func (conn *MysqlConnect) Build() error {
+	return nil
 }
