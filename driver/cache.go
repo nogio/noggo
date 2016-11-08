@@ -12,6 +12,7 @@ package driver
 import (
 	"github.com/nogio/noggo"
 	"github.com/nogio/noggo/driver/cache-default"
+	"github.com/nogio/noggo/driver/cache-redis"
 )
 
 
@@ -22,7 +23,7 @@ func CacheDefault() (noggo.CacheDriver) {
 }
 
 
-//内存缓存引擎，就是默认驱动
-func CacheMemory() (noggo.CacheDriver) {
-	return cache_default.Driver()
+//redis缓存引擎
+func CacheRedis() (noggo.CacheDriver) {
+	return cache_redis.Driver()
 }

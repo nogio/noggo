@@ -4,6 +4,7 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"errors"
+	"time"
 )
 
 
@@ -28,17 +29,18 @@ type (
 	CacheBase interface {
 		Close() error
 
-
-		//查询缓存，自带值包装函数
-		Get(key string) (Any,error)
-		//更新缓存数据，不存在则创建，存在就更新
-		Set(key string, val Any, exp int64) error
-		//删除缓存
-		Del(key string) error
-		//清空缓存，如传prefix则表示清空固定前缀的缓存
-		Empty(prefixs ...string) (error)
 		//获取keys
 		Keys(prefixs ...string) ([]string,error)
+
+		//读缓存，自带值包装函数
+		Get(key string) (Any,error)
+		//写缓存数据，不存在则创建，存在就更新
+		Set(key string, val Any, exps ...int64) error
+
+		//删除缓存
+		Del(key string) error
+		//清理缓存，如传prefix则表示清空固定前缀的缓存
+		Clear(prefixs ...string) (error)
 
 	}
 )
@@ -145,6 +147,87 @@ func (global *cacheGlobal) Base(name string) (CacheBase) {
 
 
 
+
+
+//缓存值打包
+func (global *cacheGlobal) Pack(val Any) (Map,error) {
+
+	valType := "string"
+
+	//获取值类型
+	switch val.(type) {
+	case string:
+		valType = "string"
+	case []string:
+		valType = "[string]"
+
+	case int,int8,int16,int32,int64:
+		valType = "int"
+	case []int,[]int8,[]int16,[]int32,[]int64:
+		valType = "[int]"
+
+	case float32,float64:
+		valType = "float"
+	case []float32,[]float64:
+		valType = "[float]"
+
+	case bool:
+		valType = "bool"
+	case []bool:
+		valType = "[bool]"
+
+	case time.Time:
+		valType = "time"
+	case []time.Time:
+		valType = "[time]"
+
+	case Map,map[string]interface{}:
+		valType = "json"
+	case []Map,[]map[string]interface{}:
+		valType = "[json]"
+	}
+
+	return Map{
+		"type": valType, "data": val,
+	},nil
+}
+//缓存值解包
+func (global *cacheGlobal) UnPack(val Map) (Any,error) {
+
+	if val != nil && val["type"] != nil && val["data"] != nil{
+
+		if tt,ok := val["type"].(string); ok {
+
+			config := Map{
+				"data": Map{ "type": tt, "must": true },
+			}
+			value := Map{}
+
+			err := Mapping.Parse([]string{}, config, val, value)
+			if err != nil {
+				return nil,err
+			} else {
+				return value["data"],nil
+			}
+		}
+	}
+
+	return nil,errors.New("解包失败")
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 //---------------------------------------------------------------------------------
 
 type (
@@ -156,13 +239,13 @@ func (base *noCacheBase) Close() (error) {
 func (base *noCacheBase) Get(key string) (Any,error) {
 	return nil,errors.New("无缓存")
 }
-func (base *noCacheBase) Set(key string, val Any, expiry int64) (error) {
+func (base *noCacheBase) Set(key string, val Any, exps ...int64) (error) {
 	return errors.New("无缓存")
 }
 func (base *noCacheBase) Del(key string) (error) {
 	return errors.New("无缓存")
 }
-func (base *noCacheBase) Empty(prefixs ...string) (error) {
+func (base *noCacheBase) Clear(prefixs ...string) (error) {
 	return errors.New("无缓存")
 }
 func (base *noCacheBase) Keys(prefixs ...string) ([]string,error) {

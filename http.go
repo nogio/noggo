@@ -1201,7 +1201,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	cookie, err := ctx.Req.Cookie(module.node.Config.Cookie)
 	if err != nil || cookie.Value == "" {
 		ctx.Id = NewMd5Id()
-		m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
+		m,err := module.sessionConnect.Query(ctx.Id)
 		if err == nil {
 			ctx.Session = m
 		} else {
@@ -1222,7 +1222,7 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 	} else {
 		ctx.Id, _ = url.QueryUnescape(cookie.Value)
 
-		m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
+		m,err := module.sessionConnect.Query(ctx.Id)
 		if err == nil {
 			ctx.Session = m
 		} else {
@@ -1254,7 +1254,8 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	//module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	module.sessionConnect.Update(ctx.Id, ctx.Session)
 }
 
 

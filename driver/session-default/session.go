@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 	"github.com/nogio/noggo"
+	"errors"
 )
 
 
@@ -84,7 +85,7 @@ func (session *DefaultConnect) Close() error {
 
 
 //查询会话，
-func (session *DefaultConnect) Entity(id string, expiry int64) (Map,error) {
+func (session *DefaultConnect) Query(id string) (Map,error) {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
 
@@ -96,20 +97,30 @@ func (session *DefaultConnect) Entity(id string, expiry int64) (Map,error) {
 		}
 		return m,nil
 	} else {
+		return nil,errors.New("无会话")
+	}
+
+/*else {
 		v := DefaultSessionValue{
 			Value: Map{}, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),
 		}
 		session.sessions[id] = v
 		return v.Value,nil
 	}
+	*/
 }
 
 
 
 //更新会话
-func (session *DefaultConnect) Update(id string, value Map, expiry int64) error {
+func (session *DefaultConnect) Update(id string, value Map, exps ...int64) error {
 	session.mutex.Lock()
 	defer session.mutex.Unlock()
+
+	expiry := int64(3600)
+	if len(exps) > 0 {
+		expiry = exps[0]
+	}
 
 	session.sessions[id] = DefaultSessionValue{
 		Value: value, Expiry: time.Now().Add(time.Second*time.Duration(expiry)),

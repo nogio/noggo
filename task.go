@@ -527,7 +527,7 @@ func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 
 
 	//会话处理
-	m,e := global.sessionConnect.Entity(ctx.Id, global.sessionConfig.Expiry)
+	m,e := global.sessionConnect.Query(ctx.Id)
 	if e == nil {
 		ctx.Session = m
 	} else {
@@ -535,7 +535,8 @@ func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 	}
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
+	//global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
+	global.sessionConnect.Update(ctx.Id, ctx.Session)
 }
 
 //处理响应

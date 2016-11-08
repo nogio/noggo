@@ -394,7 +394,7 @@ func (global *triggerGlobal) contextRequest(ctx *TriggerContext) {
 	ctx.Id = ctx.Name	//使用name做为id，以便在同一个触发器之下共享session
 
 	//会话处理
-	m,e := global.sessionConnect.Entity(ctx.Id, global.sessionConfig.Expiry)
+	m,e := global.sessionConnect.Query(ctx.Id)
 	if e == nil {
 		ctx.Session = m
 	} else {
@@ -402,7 +402,8 @@ func (global *triggerGlobal) contextRequest(ctx *TriggerContext) {
 	}
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
+	//global.sessionConnect.Update(ctx.Id, ctx.Session, global.sessionConfig.Expiry)
+	global.sessionConnect.Update(ctx.Id, ctx.Session)
 }
 
 //处理响应

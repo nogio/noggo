@@ -18,32 +18,31 @@
   "node": {
     "ing": {
       "id": "ing-1", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心",
-      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": ""
+      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": "", "expiry": 360000
     },
     "www": {
       "id": "www-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站",
-      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": ""
+      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": "", "expiry": 360000
     }
   },
 
   "cache": {
     "main": {
-      "driver": "default",
-      "config": { }
+      "driver": "redis", "config": {
+        "server": "127.0.0.1:6379", "database": "5", "password":"", "prefix": "nog:",  "expiry": 3600
+      }
     }
   },
 
   "data": {
     "main": {
-      "driver": "postgres",
-      "cache": "main",
+      "driver": "postgres", "cache": "main",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_main?sslmode=disable"
       }
     },
     "temp": {
-      "driver": "postgres",
-      "cache": "main",
+      "driver": "postgres", "cache": "main",
       "config": {
         "url": "postgres://nog:nog2016@localhost/nog_temp?sslmode=disable"
       }
@@ -54,7 +53,6 @@
   "queue": {
     "default": {
       "driver": "default",
-      "prefix": "",
       "config": { }
     }
   },
@@ -81,17 +79,15 @@
 
 
   "trigger": {
-    "session": {
-      "driver": "default", "expiry": 3600,
-      "config": {}
-    }
   },
 
 
 
   "session": {
-    "driver": "default", "expiry": 3600,
-    "config": {}
+    "expiry": 3600,
+    "driver": "redis", "config": {
+      "server": "127.0.0.1:6379", "database": "7", "password":"", "prefix": "nog:",  "expiry": 3600
+    }
   },
 
   "logger": {

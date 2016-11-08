@@ -31,7 +31,7 @@ func (base *DefaultCacheBase) Get(key string) (Any,error) {
 	return nil,errors.New("无缓存")
 }
 //设置数据
-func (base *DefaultCacheBase) Set(key string, val Any, expiry int64) (error) {
+func (base *DefaultCacheBase) Set(key string, val Any, exps ...int64) (error) {
 	base.conn.mutex.Lock()
 	defer base.conn.mutex.Unlock()
 
@@ -50,7 +50,7 @@ func (base *DefaultCacheBase) Del(key string) (error) {
 	return nil
 }
 //清空数据
-func (base *DefaultCacheBase) Empty(prefixs ...string) (error) {
+func (base *DefaultCacheBase) Clear(prefixs ...string) (error) {
 	base.conn.mutex.Lock()
 	defer base.conn.mutex.Unlock()
 

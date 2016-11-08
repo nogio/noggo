@@ -1004,7 +1004,7 @@ func (module *eventModule) contextRequest(ctx *EventContext) {
 
 
 	//会话处理
-	m,err := module.sessionConnect.Entity(ctx.Id, module.sessionConfig.Expiry)
+	m,err := module.sessionConnect.Query(ctx.Id)
 	if err == nil {
 		ctx.Session = m
 	} else {
@@ -1012,7 +1012,8 @@ func (module *eventModule) contextRequest(ctx *EventContext) {
 	}
 	ctx.Sign = &Sign{ ctx.Session }
 	ctx.Next()
-	module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	//module.sessionConnect.Update(ctx.Id, ctx.Session, module.sessionConfig.Expiry)
+	module.sessionConnect.Update(ctx.Id, ctx.Session)
 }
 
 //处理响应

@@ -13,7 +13,14 @@ import (
 )
 
 func init() {
-	//驱动
+
+	//会话驱动
+	noggo.Driver("redis", driver.SessionRedis())
+
+	//缓存驱动
+	noggo.Driver("redis", driver.CacheRedis())
+
+	//数据驱动
 	noggo.Driver("postgres", driver.DataPostgres())
 	noggo.Driver("mysql", driver.DataMysql())
 	noggo.Driver("adodb", driver.DataAdodb())

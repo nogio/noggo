@@ -32,10 +32,10 @@ type (
 		Close() error
 
 
-		//查询会话，不存在就创建新的返回
-		Entity(id string, expiry int64) (Map,error)
+		//查询会话
+		Query(id string) (Map,error)
 		//更新会话数据，不存在则创建，存在就更新
-		Update(id string, value Map, expiry int64) error
+		Update(id string, value Map, exps ...int64) error
 		//删除会话
 		Remove(id string) error
 	}
