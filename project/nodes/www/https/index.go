@@ -12,6 +12,9 @@ func init() {
 		"route": Map{
 			"name": "首页", "text": "首页",
 			"action": func(ctx *noggo.HttpContext) {
+
+
+
 				ctx.View("index")
 			},
 		},

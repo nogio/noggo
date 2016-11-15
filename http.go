@@ -1996,6 +1996,7 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 		ctx.Type = "down"
 	}
 
+
 	body := ctx.Body.(httpBodyDown)
 
 	ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
@@ -2003,8 +2004,10 @@ func (module *httpModule) downResponder(ctx *HttpContext) {
 	if body.Name != "" {
 		ctx.Res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
 	}
+
 	ctx.Res.WriteHeader(ctx.Code)
-	fmt.Fprint(ctx.Res, body.Body)
+	ctx.Res.Write(body.Body)
+	//fmt.Fprint(ctx.Res, body.Body)
 }
 func (module *httpModule) viewResponder(ctx *HttpContext) {
 	if ctx.Type == "" {
