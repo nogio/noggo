@@ -49,6 +49,39 @@ func (base *DefaultCacheBase) Del(key string) (error) {
 
 	return nil
 }
+
+
+
+//计数器
+func (base *DefaultCacheBase) Num(key string, nums ...int) (int64,error) {
+	base.conn.mutex.Lock()
+	defer base.conn.mutex.Unlock()
+
+	num := 1
+	if len(nums) > 0 {
+		num = nums[0]
+	}
+
+	if v,ok := base.conn.caches[key].(int64); ok {
+		val := v+int64(num)
+		base.conn.caches[key] = val
+
+		return val, nil
+	} else {
+		val := int64(num)
+		base.conn.caches[key] = val
+
+		return val,nil
+	}
+}
+
+
+
+
+
+
+
+
 //清空数据
 func (base *DefaultCacheBase) Clear(prefixs ...string) (error) {
 	base.conn.mutex.Lock()
@@ -62,6 +95,8 @@ func (base *DefaultCacheBase) Clear(prefixs ...string) (error) {
 	}
 	return nil
 }
+
+
 
 //获取keys
 //暂时不支持前缀查询

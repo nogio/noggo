@@ -6,9 +6,9 @@ import (
 	"os"
 	"time"
 
-	"github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
-	_ "github.com/mattn/go-adodb"
+	"github.com/nogio/noggo/depend/go-ole"
+	"github.com/nogio/noggo/depend/go-ole/oleutil"
+	_ "github.com/nogio/noggo/depend/go-adodb"
 )
 
 func createMdb(f string) error {

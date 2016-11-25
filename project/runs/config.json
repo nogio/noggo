@@ -28,9 +28,8 @@
 
   "cache": {
     "main": {
-      "driver": "redis", "config": {
-        "server": "127.0.0.1:6379", "database": "5", "password":"", "prefix": "nog:",  "expiry": 3600
-      }
+      "driver": "default",
+      "config": { }
     }
   },
 
@@ -85,9 +84,8 @@
 
   "session": {
     "expiry": 3600,
-    "driver": "redis", "config": {
-      "server": "127.0.0.1:6379", "database": "7", "password":"", "prefix": "nog:",  "expiry": 3600
-    }
+    "driver": "default",
+    "config": {}
   },
 
   "logger": {

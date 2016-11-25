@@ -131,6 +131,15 @@ func (base *RedisCacheBase) Del(key string) (error) {
 		}
 	}
 }
+
+
+//计数incr,decr
+func (base *RedisCacheBase) Num(key string, nums ...int) (int64,error) {
+	return int64(0),errors.New("尚未支持")
+}
+
+
+
 //清理数据
 func (base *RedisCacheBase) Clear(prefixs ...string) (error) {
 	return nil

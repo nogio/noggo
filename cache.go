@@ -29,16 +29,19 @@ type (
 	CacheBase interface {
 		Close() error
 
-		//获取keys
-		Keys(prefixs ...string) ([]string,error)
-
 		//读缓存，自带值包装函数
 		Get(key string) (Any,error)
 		//写缓存数据，不存在则创建，存在就更新
 		Set(key string, val Any, exps ...int64) error
-
 		//删除缓存
 		Del(key string) error
+
+		//计数incr
+		Num(key string,nums ...int) (int64,error)
+
+		//获取keys
+		Keys(prefixs ...string) ([]string,error)
+
 		//清理缓存，如传prefix则表示清空固定前缀的缓存
 		Clear(prefixs ...string) (error)
 
@@ -244,6 +247,9 @@ func (base *noCacheBase) Set(key string, val Any, exps ...int64) (error) {
 }
 func (base *noCacheBase) Del(key string) (error) {
 	return errors.New("无缓存")
+}
+func (base *noCacheBase) Num(key string, nums ...int) (int64,error) {
+	return int64(0),errors.New("无缓存")
 }
 func (base *noCacheBase) Clear(prefixs ...string) (error) {
 	return errors.New("无缓存")

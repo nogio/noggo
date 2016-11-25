@@ -3,8 +3,8 @@ package adodb
 import (
 	"database/sql"
 	"database/sql/driver"
-	"github.com/go-ole/go-ole"
-	"github.com/go-ole/go-ole/oleutil"
+	"github.com/nogio/noggo/depend/go-ole"
+	"github.com/nogio/noggo/depend/go-ole/oleutil"
 	"io"
 	"math"
 	"math/big"
