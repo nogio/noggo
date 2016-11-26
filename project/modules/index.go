@@ -14,18 +14,18 @@
 
 package modules
 
+import "github.com/nogio/noggo"
 import (
-	"github.com/nogio/noggo"
-	_ "./tasks"
-	_ "./triggers"
 	_ "./events"
 	_ "./https"
 	_ "./plans"
 	_ "./queues"
+	_ "./tasks"
+	_ "./triggers"
+	_ "./views"
 )
 
 
 func init() {
 	noggo.Current = ""
-
 }

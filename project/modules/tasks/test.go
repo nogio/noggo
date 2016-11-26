@@ -1,4 +1,4 @@
-package plans
+package tasks
 
 import (
 	. "github.com/nogio/noggo/base"
