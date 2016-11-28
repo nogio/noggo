@@ -1,0 +1,41 @@
+package consts
+
+import (
+	"github.com/nogio/noggo"
+	. "github.com/nogio/noggo/base"
+)
+
+func init() {
+
+	//注册默认的语言配置
+	noggo.Const.Langs("default", Map{
+
+		"ok": "成功",
+		"no": "失败",
+
+		"none": "拒绝访问",
+
+		"found":  "不存在",
+		"error":  "系统错误",
+		"failed": "参数不可为空",
+		"denied": "未登录",
+
+		"coding": "编码中",
+
+		"map.empty": "%s不可为空",
+		"map.error": "%s不是有效的值",
+
+		"auth.empty": "%s未登录",
+		"auth.error": "%s未登录",
+
+		"item.empty": "%s参数不存在",
+		"item.error": "%s记录不存在",
+
+		"data.empty": "返回数据不可为空",
+		"data.error": "返回数据生成失败",
+
+
+		"test": "测试",
+
+	})
+}
