@@ -42,3 +42,9 @@ func Gets(item Map) (error) {
 	db := noggo.Data.Base("main"); defer db.Close()
 	return db.Model("test").Query(Map{ "id": Map{ ">": 100 }})
 }
+
+
+func GetItems() (error) {
+	db := noggo.Data.Base("main"); defer db.Close()
+	return db.Model("test").Query(Map{ "id": Map{ ">": 100 }, "name": noggo.FTS("asdfasdf")})
+}

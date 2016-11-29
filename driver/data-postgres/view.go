@@ -26,10 +26,10 @@ type (
 
 
 //统计数量
-func (view *PostgresView) Count(args ...Map) (int64,error) {
+func (view *PostgresView) Count(args ...Any) (int64,error) {
 
 	//生成查询条件
-	where,builds,_,err := view.base.building(1,args...)
+	where,builds,_,err := view.base.parsing(1,args...)
 	if err != nil {
 		return int64(0),err
 	} else {
@@ -52,7 +52,7 @@ func (view *PostgresView) Count(args ...Map) (int64,error) {
 				err := row.Scan(&count)
 				noggo.Logger.Debug("data", "count", err, sql)
 				if err != nil {
-					return count,errors.New("数据：查询时扫描失败 " + err.Error())
+					return count,errors.New("数据：查询时扫描失败 ")
 				} else {
 					return count,nil
 				}
@@ -63,10 +63,10 @@ func (view *PostgresView) Count(args ...Map) (int64,error) {
 
 
 //查询单条
-func (view *PostgresView) Single(args ...Map) (Map,error) {
+func (view *PostgresView) Single(args ...Any) (Map,error) {
 
 	//生成查询条件
-	where,builds,orderby,err := view.base.building(1,args...)
+	where,builds,orderby,err := view.base.parsing(1,args...)
 	if err != nil {
 		return nil,err
 	} else {
@@ -102,7 +102,7 @@ func (view *PostgresView) Single(args ...Map) (Map,error) {
 				err := row.Scan(pValues...)
 				noggo.Logger.Debug("data", "single", err, sql)
 				if err != nil {
-					return nil,errors.New("数据：查询时扫描失败 " + err.Error())
+					return nil,errors.New("数据：查询时扫描失败 ")
 				} else {
 					m := Map{}
 					for i,n := range keys {
@@ -133,9 +133,9 @@ func (view *PostgresView) Single(args ...Map) (Map,error) {
 	}
 }
 //查询列表
-func (view *PostgresView) Query(args ...Map) ([]Map,error) {
+func (view *PostgresView) Query(args ...Any) ([]Map,error) {
 	//生成查询条件
-	where,builds,orderby,err := view.base.building(1,args...)
+	where,builds,orderby,err := view.base.parsing(1,args...)
 	if err != nil {
 		return nil,err
 	} else {
@@ -177,7 +177,7 @@ func (view *PostgresView) Query(args ...Map) ([]Map,error) {
 					err := rows.Scan(pValues...)
 
 					if err != nil {
-						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+						return nil, errors.New("数据：查询时扫描失败")
 					} else {
 						m := Map{}
 						for i, n := range keys {
@@ -212,18 +212,18 @@ func (view *PostgresView) Query(args ...Map) ([]Map,error) {
 
 
 //分页查询
-func (view *PostgresView) Limit(offset,limit Any, args ...Map) ([]Map,error) {
+func (view *PostgresView) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) {
 	//生成查询条件
-	where,builds,orderby,err := view.base.building(1,args...)
+	where,builds,orderby,err := view.base.parsing(1,args...)
 	if err != nil {
-		return nil,err
+		return int64(0),[]Map{},err
 	} else {
 
 		//开启事务
 		tx,err := view.base.begin()
 		noggo.Logger.Debug("data", "limit", "begin", err)
 		if err != nil {
-			return nil,err
+			return int64(0),[]Map{},err
 		} else {
 
 			//先拿字段列表
@@ -234,57 +234,82 @@ func (view *PostgresView) Limit(offset,limit Any, args ...Map) ([]Map,error) {
 				keys = append(keys, k)
 			}
 
-			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s OFFSET %d LIMIT %d`, strings.Join(keys, `","`), view.schema, view.object, where, orderby, offset, limit)
-			rows,err := tx.Query(sql, builds...)
-			noggo.Logger.Debug("data", "limit", err, sql)
-			if err != nil {
-				return nil,err
+
+			//先统计
+			sql := fmt.Sprintf(`SELECT COUNT(*) FROM "%s"."%s" WHERE %s`, view.schema, view.object, where)
+			row := tx.QueryRow(sql, builds...)
+			if row == nil {
+				return int64(0),[]Map{},errors.New("数据：统计失败")
 			} else {
-				defer rows.Close()
 
-				//返回结果在这
-				items := []Map{}
+				count := int64(0)
 
-				//遍历结果
-				for rows.Next() {
-					//扫描数据
-					values := make([]interface{}, len(keys))    //真正的值
-					pValues := make([]interface{}, len(keys))    //指针，指向值
-					for i := range values {
-						pValues[i] = &values[i]
-					}
-					err := rows.Scan(pValues...)
+				err := row.Scan(&count)
+				noggo.Logger.Debug("data", "count", err, sql)
+				if err != nil {
+					return int64(0),[]Map{},errors.New("数据：统计时扫描失败")
+				} else {
 
+
+
+					sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s OFFSET %d LIMIT %d`, strings.Join(keys, `","`), view.schema, view.object, where, orderby, offset, limit)
+					rows,err := tx.Query(sql, builds...)
+					noggo.Logger.Debug("data", "limit", err, sql)
 					if err != nil {
-						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+						return int64(0),[]Map{},err
 					} else {
-						m := Map{}
-						for i, n := range keys {
-							switch v := values[i].(type) {
-							case []byte: {
-								m[n] = string(v)
+						defer rows.Close()
+
+						//返回结果在这
+						items := []Map{}
+
+						//遍历结果
+						for rows.Next() {
+							//扫描数据
+							values := make([]interface{}, len(keys))    //真正的值
+							pValues := make([]interface{}, len(keys))    //指针，指向值
+							for i := range values {
+								pValues[i] = &values[i]
 							}
-							default:
-								m[n] = v
+							err := rows.Scan(pValues...)
+
+							if err != nil {
+								return int64(0),[]Map{}, errors.New("数据：查询时扫描失败 ")
+							} else {
+								m := Map{}
+								for i, n := range keys {
+									switch v := values[i].(type) {
+									case []byte: {
+										m[n] = string(v)
+									}
+									default:
+										m[n] = v
+									}
+								}
+
+								//返回前使用代码生成
+								//有必要的, 按模型拿到数据
+								item := Map{}
+								err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+								if err == nil {
+									items = append(items, item)
+								} else {
+									//如果生成失败,还是返回原始返回值
+									//要不然,存在的也显示为不存在
+									items = append(items, m)
+								}
 							}
 						}
 
-						//返回前使用代码生成
-						//有必要的, 按模型拿到数据
-						item := Map{}
-						err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
-						if err == nil {
-							items = append(items, item)
-						} else {
-							//如果生成失败,还是返回原始返回值
-							//要不然,存在的也显示为不存在
-							items = append(items, m)
-						}
+						return count,items,nil
 					}
-				}
 
-				return items,nil
+
+
+
+				}
 			}
+
 		}
 	}
 }
@@ -292,18 +317,18 @@ func (view *PostgresView) Limit(offset,limit Any, args ...Map) ([]Map,error) {
 
 
 //查询列表
-func (view *PostgresView) Group(field string, args ...Map) ([]Map,error) {
+func (view *PostgresView) Group(field string, args ...Any) ([]Map,error) {
 	//生成查询条件
-	where,builds,orderby,err := view.base.building(1,args...)
+	where,builds,orderby,err := view.base.parsing(1,args...)
 	if err != nil {
-		return nil,err
+		return []Map{},err
 	} else {
 
 		//开启事务
 		tx,err := view.base.begin()
 		noggo.Logger.Debug("data", "group", "begin", err)
 		if err != nil {
-			return nil,err
+			return []Map{},err
 		} else {
 
 			//暂时只支持字段本身， 后续支持 count,sum,avg,max,min啥啥的
@@ -332,7 +357,7 @@ func (view *PostgresView) Group(field string, args ...Map) ([]Map,error) {
 					err := rows.Scan(pValues...)
 
 					if err != nil {
-						return nil, errors.New("数据：查询时扫描失败 " + err.Error())
+						return []Map{}, errors.New("数据：查询时扫描失败")
 					} else {
 						m := Map{}
 						for i, n := range keys {

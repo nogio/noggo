@@ -2,9 +2,9 @@ package data_adodb
 
 import (
 	. "github.com/nogio/noggo/base"
+	"github.com/nogio/noggo"
 	"database/sql"
 	"errors"
-	"github.com/nogio/noggo"
 )
 
 type (
@@ -54,6 +54,7 @@ func (conn *AdodbConnect) View(name string, config Map) {
 func (conn *AdodbConnect) Base(name string, cache noggo.CacheBase) (noggo.DataBase,error) {
 	return &AdodbBase{name, conn, conn.models, conn.views, conn.db, nil, cache, true, false},nil
 }
+
 
 
 

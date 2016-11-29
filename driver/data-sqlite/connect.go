@@ -14,8 +14,8 @@ type (
 
 		//数据库对象
 		db  *sql.DB
-		//文件路由
-		file string
+		//连接串
+		url string
 		//模型
 		models  map[string]Map
 		views  map[string]Map
@@ -24,7 +24,7 @@ type (
 
 //打开连接
 func (conn *SqliteConnect) Open() error {
-	db, err := sql.Open(SQLDRIVER, conn.file)
+	db, err := sql.Open(SQLDRIVER, conn.url)
 	if err != nil {
 		return errors.New("数据库连接失败：" + err.Error())
 	} else {
@@ -47,7 +47,6 @@ func (conn *SqliteConnect) Close() error {
 func (conn *SqliteConnect) Model(name string, config Map) {
 	conn.models[name] = config
 }
-//注册视图
 func (conn *SqliteConnect) View(name string, config Map) {
 	conn.views[name] = config
 }
@@ -55,6 +54,7 @@ func (conn *SqliteConnect) View(name string, config Map) {
 func (conn *SqliteConnect) Base(name string, cache noggo.CacheBase) (noggo.DataBase,error) {
 	return &SqliteBase{name, conn, conn.models, conn.views, conn.db, nil, cache, true, false},nil
 }
+
 
 
 

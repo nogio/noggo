@@ -20,12 +20,12 @@ func (drv *SqliteDriver) Connect(config Map) (noggo.DataConnect,error) {
 		return nil,errors.New("配置不可为空")
 	}
 
-	if file,ok := config["file"].(string); ok {
+	if url,ok := config["url"].(string); ok {
 		return &SqliteConnect{
-			config: config, file: file, models: map[string]Map{}, views: map[string]Map{},
+			config: config, url: url, models: map[string]Map{}, views: map[string]Map{},
 		},nil
 
 	} else {
-		return nil,errors.New("配置缺少[file]信息")
+		return nil,errors.New("配置缺少[url]信息")
 	}
 }

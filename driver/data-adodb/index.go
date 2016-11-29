@@ -2,7 +2,7 @@ package data_adodb
 
 import (
 	"github.com/nogio/noggo"
-	_ "github.com/nogio/noggo/depend/go-adodb"   //此包自动注册名为mysql的sql驱动
+	_ "github.com/nogio/noggo/depend/go-adodb"   //此包自动注册名为adodb的sql驱动
 )
 
 const (

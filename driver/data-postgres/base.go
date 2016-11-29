@@ -69,7 +69,7 @@ func (base *PostgresBase) Model(name string) (noggo.DataModel) {
 		}
 
 		return &PostgresModel{
-			base, name, schema, object, key, fields,
+			PostgresView{base, name, schema, object, key, fields},
 		}
 	} else {
 		panic("数据：模型不存在")
@@ -346,72 +346,20 @@ func (base *PostgresBase) packing(value Map) (Map) {
 
 
 //把MAP编译成sql查询条件
-//加入排序
-//where,args,order,error
-func (base *PostgresBase) building(i int,args ...Map) (string,[]interface{},string,error) {
+func (base *PostgresBase) parsing(i int,args ...Any) (string,[]interface{},string,error) {
 
-	if len(args) > 0 {
-		querys := []string{}
-		values := make([]interface{}, 0)
-		orders := []string{}
+	sql,val,odr,err := noggo.Data.Parsing(args...)
+	if err == nil {
 
-		//否则是多个map,单个为 与, 多个为 或
-		for _,m := range args {
-			ands := []string{}
-			for k,v := range m {
-
-
-				//如果值是ASC,DESC，表示是排序
-				if ov,ok := v.(string); ok && (ov==noggo.ASC || ov==noggo.DESC) {
-
-					if ov == noggo.ASC {
-						orders = append(orders, fmt.Sprintf(`"%s" ASC`, k))
-					} else {
-						orders = append(orders, fmt.Sprintf(`"%s" DESC`, k))
-					}
-
-				} else {
-
-					//v要处理一下如果是map要特别处理
-					//key做为操作符，比如 > < >= 等
-					//而且多个条件是and，比如 views > 1 AND views < 100
-					if opMap, opOK := v.(Map); opOK {
-
-						opAnds := []string{}
-						for opKey,opVal := range opMap {
-							opAnds = append(opAnds, fmt.Sprintf(`"%s" %s $%d`, k, opKey, i))
-							values = append(values, opVal)
-							i++
-						}
-						ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
-
-					} else {
-
-						if v == nil {
-							ands = append(ands, fmt.Sprintf(`"%s" IS NULL`, k))
-						} else {
-							ands = append(ands, fmt.Sprintf(`"%s" = $%d`, k, i))
-							values = append(values, v)
-							i++
-						}
-					}
-
-				}
-			}
-
-			if len(ands) > 0 {
-				querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
-			}
+		//结果要处理一下，字段包裹、参数处理
+		sql = strings.Replace(sql, noggo.DataFieldDelims, `"`, -1)
+		odr = strings.Replace(odr, noggo.DataFieldDelims, `"`, -1)
+		for range val {
+			sql = strings.Replace(sql, "?", fmt.Sprintf("$%d", i), 1)
+			i++
 		}
 
-		orderStr := ""
-		if len(orders) > 0 {
-			orderStr = fmt.Sprintf("ORDER BY %s", strings.Join(orders, ","))
-		}
-
-		return strings.Join(querys, " OR "), values, orderStr, nil
-
-	} else {
-		return "1=1",[]interface{}{}, "",nil
 	}
+
+	return sql,val,odr,err
 }

@@ -2,8 +2,8 @@ package data_sqlite
 
 
 import (
-	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo"
+	. "github.com/nogio/noggo/base"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -17,7 +17,7 @@ type (
 		name    string
 		conn    *SqliteConnect
 		models  map[string]Map
-		views  map[string]Map
+		views   map[string]Map
 
 		db      *sql.DB
 		tx      *sql.Tx
@@ -48,11 +48,11 @@ func (base *SqliteBase) Model(name string) (noggo.DataModel) {
 	if config,ok := base.models[name]; ok {
 
 		//模式，表名
-		schema, object, key, fields := "public", name, "id", Map{}
+		//模式默认等于库名，而不是public，万恶的Sqlite
+		schema, object, key, fields := base.name, name, "id", Map{}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
-
 
 		if n,ok := config["object"].(string); ok {
 			object = n
@@ -61,16 +61,17 @@ func (base *SqliteBase) Model(name string) (noggo.DataModel) {
 			object = n
 		}
 
-
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
 		if n,ok := config["fields"].(Map); ok {
 			fields = n
+		} else {
+			panic("数据：未定义字段fields")
 		}
 
 		return &SqliteModel{
-			base, name, schema, object, key, fields,
+			SqliteView{base, name, schema, object, key, fields},
 		}
 	} else {
 		panic("数据：模型不存在")
@@ -78,17 +79,16 @@ func (base *SqliteBase) Model(name string) (noggo.DataModel) {
 }
 
 
-
 //获取模型对象
 func (base *SqliteBase) View(name string) (noggo.DataView) {
 	if config,ok := base.views[name]; ok {
 
 		//模式，表名
-		schema, object, key, fields := "public", name, "id", Map{}
+		//模式默认等于库名，而不是public，万恶的Sqlite
+		schema, object, key, fields := base.name, name, "id", Map{}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
-
 
 		if n,ok := config["object"].(string); ok {
 			object = n
@@ -97,12 +97,13 @@ func (base *SqliteBase) View(name string) (noggo.DataView) {
 			object = n
 		}
 
-
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
 		if n,ok := config["fields"].(Map); ok {
 			fields = n
+		} else {
+			panic("数据：未定义字段fields")
 		}
 
 		return &SqliteView{
@@ -113,12 +114,12 @@ func (base *SqliteBase) View(name string) (noggo.DataView) {
 	}
 }
 
-
 //是否开启缓存
 func (base *SqliteBase) Cache(use bool) (noggo.DataBase) {
 	base.caching = use
 	return base
 }
+
 
 //开启手动模式
 func (base *SqliteBase) Begin() (noggo.DataBase) {
@@ -223,6 +224,7 @@ func (base *SqliteBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
 	}
 	return base.tx.Stmt(stmt)
 }
+
 
 
 
@@ -350,68 +352,14 @@ func (base *SqliteBase) packing(value Map) (Map) {
 //把MAP编译成sql查询条件
 //加入排序
 //where,args,order,error
-func (base *SqliteBase) building(args ...Map) (string,[]interface{},string,error) {
+func (base *SqliteBase) parsing(args ...Any) (string,[]interface{},string,error) {
 
-	if len(args) > 0 {
-		querys := []string{}
-		values := make([]interface{}, 0)
-		orders := []string{}
-
-		//否则是多个map,单个为 与, 多个为 或
-		for _,m := range args {
-			ands := []string{}
-			for k,v := range m {
-
-
-				//如果值是ASC,DESC，表示是排序
-				if ov,ok := v.(string); ok && (ov==noggo.ASC || ov==noggo.DESC) {
-
-					if ov == noggo.ASC {
-						orders = append(orders, fmt.Sprintf("`%s` ASC", k))
-					} else {
-						orders = append(orders, fmt.Sprintf("`%s` DESC", k))
-					}
-
-				} else {
-
-					//v要处理一下如果是map要特别处理
-					//key做为操作符，比如 > < >= 等
-					//而且多个条件是and，比如 views > 1 AND views < 100
-					if opMap, opOK := v.(Map); opOK {
-
-						opAnds := []string{}
-						for opKey,opVal := range opMap {
-							opAnds = append(opAnds, fmt.Sprintf("`%s` %s ?", k, opKey))
-							values = append(values, opVal)
-						}
-						ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
-
-					} else {
-
-						if v == nil {
-							ands = append(ands, fmt.Sprintf("`%s` IS NULL", k))
-						} else {
-							ands = append(ands, fmt.Sprintf("`%s` = ?", k))
-							values = append(values, v)
-						}
-					}
-
-				}
-
-			}
-			if len(ands) > 0 {
-				querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
-			}
-		}
-
-		orderStr := ""
-		if len(orders) > 0 {
-			orderStr = fmt.Sprintf("ORDER BY %s", strings.Join(orders, ","))
-		}
-
-		return strings.Join(querys, " OR "), values, orderStr, nil
-
-	} else {
-		return "1=1",[]interface{}{}, "",nil
+	sql,val,odr,err := noggo.Data.Parsing(args...)
+	if err == nil {
+		//结果要处理一下，字段包裹、参数处理
+		sql = strings.Replace(sql, noggo.DataFieldDelims, "`", -1)
+		odr = strings.Replace(odr, noggo.DataFieldDelims, "`", -1)
 	}
+
+	return sql,val,odr,err
 }

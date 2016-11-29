@@ -5,9 +5,9 @@ import (
 	"sync"
 	"errors"
 	"database/sql"
+	"fmt"
+	"strings"
 )
-
-
 
 //data driver begin
 
@@ -19,8 +19,12 @@ const (
 	SUM     = "$$$SUM$$$"
 	MAX     = "$$$MAX$$$"
 	MIN     = "$$$MIN$$$"
+	DataFieldDelims  = "$$$"
 )
 type (
+	FTS string  //全文搜索类型，解析sql的时候处理
+	Nil struct {}
+	NotNil struct {}
 	DataDriver interface {
 		//连接驱动的时候
 		//应该做如下工作：
@@ -72,12 +76,11 @@ type (
 
 	//数据视图接口
 	DataView interface {
-		Count(...Map) (int64,error)
-		Single(...Map) (Map,error)
-		Query(...Map) ([]Map,error)
-		Limit(Any,Any,...Map) ([]Map,error)
-
-		Group(string,...Map) ([]Map,error)
+		Count(args ...Any) (int64,error)
+		Single(args ...Any) (Map,error)
+		Query(args ...Any) ([]Map,error)
+		Limit(offset, limit Any, args ...Any) (int64,[]Map,error)
+		Group(field string, args ...Any) ([]Map,error)
 	}
 
 	//数据模型接口
@@ -89,8 +92,8 @@ type (
 		Remove(Map) (error)
 		Entity(Any) (Map,error)
 
-		Update(sets Map,args ...Map) (int64,error)
-		Delete(args ...Map) (int64,error)
+		Update(sets Map,args ...Any) (int64,error)
+		Delete(args ...Any) (int64,error)
 	}
 
 )
@@ -411,9 +414,150 @@ func (global *dataGlobal) Base(name string) (DataBase) {
 
 //----------------------------------------------------------------------
 
+
+
+//查询语法解析器
+// 字段包裹成  $$$field$$$ 请自行处理
+// 如mysql为反引号`field`，postgres为引号"field"，
+// 所有参数使问号(?)
+// postgres驱动需要自行处理转成 $1,$2这样的
+func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,error) {
+
+	if len(args) > 0 {
+
+		//如果直接写sql
+		if v,ok := args[0].(string); ok {
+			sql := v
+			params := []interface{}{}
+
+			for i,arg := range args {
+				if i > 0 {
+					params = append(params, arg)
+				}
+			}
+
+			return sql,params,"",nil
+
+		} else {
+
+
+			maps := []Map{}
+			for _,v := range args {
+				if m,ok := v.(Map); ok {
+					maps = append(maps, m)
+				}
+			}
+
+			querys,values,orders := global.parsing(maps...)
+
+			orderStr := ""
+			if len(orders) > 0 {
+				orderStr = fmt.Sprintf("ORDER BY %s", strings.Join(orders, ","))
+			}
+
+			//sql := fmt.Sprintf("%s %s", strings.Join(querys, " OR "), orderStr)
+
+			return strings.Join(querys, " OR "), values, orderStr, nil
+		}
+	}
+
+	return "",[]interface{}{},"",errors.New("解析失败")
+}
+//注意，这个是实际的解析，支持递归
+func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string) {
+
+	fp := DataFieldDelims
+
+	querys := []string{}
+	values := make([]interface{}, 0)
+	orders := []string{}
+
+	//否则是多个map,单个为 与, 多个为 或
+	for _,m := range args {
+		ands := []string{}
+
+		for k,v := range m {
+
+			//如果值是ASC,DESC，表示是排序
+			if ov,ok := v.(string); ok && (ov==ASC || ov==DESC) {
+
+				if ov == ASC {
+					orders = append(orders, fmt.Sprintf(`%s%s%s ASC`, fp, k, fp))
+				} else {
+					orders = append(orders, fmt.Sprintf(`%s%s%s DESC`, fp, k, fp))
+				}
+
+			} else if ms,ok := v.([]Map); ok {
+				//是[]Map，相当于or
+
+				qs,vs,os := global.parsing(ms...)
+				if len(qs) > 0 {
+					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(qs, " OR ")))
+					for _,vsVal := range vs {
+						values = append(values, vsVal)
+					}
+				}
+				for _,osVal := range os {
+					orders = append(orders, osVal)
+				}
+
+			} else {
+
+				//v要处理一下如果是map要特别处理
+				//key做为操作符，比如 > < >= 等
+				//而且多个条件是and，比如 views > 1 AND views < 100
+				//自定义操作符的时候，可以用  is not null 吗？
+				if opMap, opOK := v.(Map); opOK {
+
+					opAnds := []string{}
+					for opKey,opVal := range opMap {
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
+						values = append(values, opVal)
+					}
+					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
+
+				} else {
+
+					if v == nil {
+						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+					} else if _,ok := v.(Nil); ok {
+						//为空值
+						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+					} else if _,ok := v.(NotNil); ok {
+						//不为空值
+						ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
+					} else if fts,ok := v.(FTS); ok {
+						//处理模糊搜索
+						safeFts := strings.Replace(string(fts), "'", "''", -1)
+						ands = append(ands, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+					} else {
+						ands = append(ands, fmt.Sprintf(`%s%s%s = ?`, fp, k, fp))
+						values = append(values, v)
+					}
+				}
+
+			}
+
+		}
+
+		if len(ands) > 0 {
+			querys = append(querys, fmt.Sprintf("(%s)", strings.Join(ands, " AND ")))
+		}
+	}
+
+	return querys,values,orders
+}
+
+
+
+
+
+
 type (
 	noDataBase struct {}
-	noDataModel struct {}
+	noDataModel struct {
+		noDataView
+	}
 	noDataView struct {}
 )
 func (base *noDataBase) Close() {
@@ -487,12 +631,13 @@ func (model *noDataModel) Remove(item Map) (error) {
 func (model *noDataModel) Entity(id Any) (Map,error) {
 	return nil,errors.New("无数据")
 }
-func (model *noDataModel) Delete(args ...Map) (int64,error) {
+func (model *noDataModel) Delete(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataModel) Update(sets Map,args ...Map) (int64,error) {
+func (model *noDataModel) Update(sets Map,args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
+/*
 func (model *noDataModel) Count(args ...Map) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
@@ -508,22 +653,23 @@ func (model *noDataModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
 func (model *noDataModel) Group(field string, args ...Map) ([]Map,error) {
 	return nil,errors.New("无数据")
 }
+*/
 
 
 
 
-func (model *noDataView) Count(args ...Map) (int64,error) {
+func (model *noDataView) Count(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataView) Single(args ...Map) (Map,error) {
-	return nil,errors.New("无数据")
+func (model *noDataView) Single(args ...Any) (Map,error) {
+	return Map{},errors.New("无数据")
 }
-func (model *noDataView) Query(args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
+func (model *noDataView) Query(args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
 }
-func (model *noDataView) Limit(offset,limit Any, args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
+func (model *noDataView) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) {
+	return int64(0),[]Map{},errors.New("无数据")
 }
-func (model *noDataView) Group(field string, args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
+func (model *noDataView) Group(field string, args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
 }

@@ -2,7 +2,7 @@ package data_sqlite
 
 import (
 	"github.com/nogio/noggo"
-	_ "github.com/nogio/noggo/depend/go-sqlite3"   //此包自动注册名为sqlite的sql驱动
+	_ "github.com/nogio/noggo/depend/go-sqlite3"   //此包自动注册名为sqlite3的sql驱动
 )
 
 const (
