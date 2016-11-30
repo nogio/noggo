@@ -45,8 +45,8 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 	config := Map{}
 	uri := name //支持外部URL加上参数
-	if config,ok := url.ctx.Node.Http.routes[name]; ok {
-		if c,ok := config["uri"]; ok {
+	if cfg,ok := url.ctx.Node.Http.routes[name]; ok {
+		if c,ok := cfg["uri"]; ok {
 			switch v := c.(type) {
 			case string:
 				uri = v
@@ -54,29 +54,26 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 				uri = v[0]
 			}
 		}
+		config = cfg
 	}
 
 
 
 	if uri != "" {
 		argsConfig := Map{}
-		if c,ok := config["args"]; ok {
-			argsConfig = c.(Map)
-		} else if c,ok := config["route"]; ok {
-			routeConfig := c.(Map)
-			if d,ok := routeConfig["args"]; ok {
-				argsConfig = d.(Map)
-			} else if d,ok := routeConfig["get"]; ok {
-				methodConfig := d.(Map)
-				if e,ok := methodConfig["args"]; ok {
-					argsConfig = e.(Map)
+		if c,ok := config["args"].(Map); ok {
+			argsConfig = c
+		} else if routeConfig,ok := config["route"].(Map); ok {
+			if d,ok := routeConfig["args"].(Map); ok {
+				argsConfig = d
+			} else if methodConfig,ok := routeConfig["get"].(Map); ok {
+				if e,ok := methodConfig["args"].(Map); ok {
+					argsConfig = e
 				}
 			}
 		} else {
 			//其它无参数
 		}
-
-
 
 
 		//得到值和选项
@@ -201,8 +198,8 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 	config := Map{}
 	uri := ""
 	if siteConfig,ok := Http.routes[site]; ok {
-		if config,ok := siteConfig[name]; ok {
-			if c,ok := config["uri"]; ok {
+		if cfg,ok := siteConfig[name]; ok {
+			if c,ok := cfg["uri"]; ok {
 				switch v := c.(type) {
 				case string:
 					uri = v
@@ -210,7 +207,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 					uri = v[0]
 				}
 			}
-
+			config = cfg
 		}
 	}
 
@@ -218,21 +215,20 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 	if uri != "" {
 		argsConfig := Map{}
-		if c,ok := config["args"]; ok {
-			argsConfig = c.(Map)
-		} else if c,ok := config["route"]; ok {
-			routeConfig := c.(Map)
-			if d,ok := routeConfig["args"]; ok {
-				argsConfig = d.(Map)
-			} else if d,ok := routeConfig["get"]; ok {
-				methodConfig := d.(Map)
-				if e,ok := methodConfig["args"]; ok {
-					argsConfig = e.(Map)
+		if c,ok := config["args"].(Map); ok {
+			argsConfig = c
+		} else if routeConfig,ok := config["route"].(Map); ok {
+			if d,ok := routeConfig["args"].(Map); ok {
+				argsConfig = d
+			} else if methodConfig,ok := routeConfig["get"].(Map); ok {
+				if e,ok := methodConfig["args"].(Map); ok {
+					argsConfig = e
 				}
 			}
 		} else {
 			//其它无参数
 		}
+
 
 
 		//得到值和选项

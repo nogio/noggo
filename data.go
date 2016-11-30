@@ -111,6 +111,7 @@ type (
 		connects    map[string]DataConnect
 
 		models      map[string]map[string]Map
+		views      map[string]map[string]Map
 	}
 )
 
@@ -172,6 +173,17 @@ func (global *dataGlobal) initData() {
 				//再库
 				for k,v := range global.models[name] {
 					conn.Model(k, v)
+				}
+
+
+				//注册视图
+				//先全局
+				for k,v := range global.views[ConstNodeGlobal] {
+					conn.View(k, v)
+				}
+				//再库
+				for k,v := range global.views[name] {
+					conn.View(k, v)
 				}
 
 				//保存连接
@@ -239,6 +251,32 @@ func (global *dataGlobal) Model(name string, config Map) {
 	//可以后注册重写原有路由配置，所以直接保存
 	global.models[nodeName][name] = config
 }
+
+
+//注册视图
+func (global *dataGlobal) View(name string, config Map) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.views == nil {
+		global.views = map[string]map[string]Map{}
+	}
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+	//如果节点配置不存在，创建
+	if global.views[nodeName] == nil {
+		global.views[nodeName] = map[string]Map{}
+	}
+
+	//可以后注册重写原有路由配置，所以直接保存
+	global.views[nodeName][name] = config
+}
+
 
 
 //查询某库所有模型
@@ -459,9 +497,9 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 
 			return strings.Join(querys, " OR "), values, orderStr, nil
 		}
+	} else {
+		return "1=1",[]interface{}{},"",nil
 	}
-
-	return "",[]interface{}{},"",errors.New("解析失败")
 }
 //注意，这个是实际的解析，支持递归
 func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string) {
