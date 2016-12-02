@@ -232,7 +232,8 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		}
 
 
-
+		//解过密？
+		decoded := false
 
 		//Map 如果是JSON文件，或是发过来的消息，就不支持
 		//而用下面的，就算是MAP也可以支持，OK
@@ -420,13 +421,19 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 				//值处理前，是不是需要解密
 				//如果解密哦
-				if ct,ok := fieldConfig["decode"]; ok {
+				//decode
+				if ct,ok := fieldConfig["crypto"]; ok {
 					//而且要值是string类型
 					if sv,ok := fieldValue.(string); ok {
-
 						//得到解密方法
 						decode := global.CryptoDecode(ct.(string))
 						fieldValue = decode(sv)
+
+						//前方解过密了，表示该参数，不再加密
+						//因为加密解密，只有一个2选1的
+						//比如 args 只需要解密 data 只需要加密
+						//route 的时候 args 需要加密，而不用再解，所以是单次的
+						decoded = true
 					}
 				}
 
@@ -588,7 +595,8 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 		//最后，值要不要加密什么的
 		//如果加密
-		if ct,ok := fieldConfig["encode"]; ok {
+		//encode
+		if ct,ok := fieldConfig["crypto"]; ok && decoded == false {
 
 			//全都转成字串再加密
 			sv := ""
@@ -609,14 +617,21 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 				} else {
 					sv = "[]"
 				}
+			case []int,[]int8,[]int16,[]int32,[]int64,[]float32,[]float64,[]string,[]bool,[]Any:
+				d,e := json.Marshal(v)
+				if e == nil {
+					sv = string(d)
+				} else {
+					sv = "[]"
+				}
 			default:
 				sv = fmt.Sprintf("%v", v)
 			}
 
 
 			//得到解密方法
-			decode := global.CryptoEncode(ct.(string))
-			fieldValue = decode(sv)
+			encode := global.CryptoEncode(ct.(string))
+			fieldValue = encode(sv)
 		}
 
 

@@ -109,18 +109,33 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 
 
+		//parse的时候， 直接传值进去，这样是不是科学一点？
+		parseValues := Map{}
+		for k,v := range values {
+			k = strings.Replace(k, "{","",-1)
+			k = strings.Replace(k, "}","",-1)
+			parseValues[k] = v
+		}
 
 		//再从args,是不是有默认值
 		argsValue := Map{}
-		e := Mapping.Parse([]string{}, argsConfig, Map{}, argsValue)
+		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue)
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
-			/*
 			for k,v := range argsValue {
 				datas["{"+k+"}"] = v
 			}
-			*/
 		}
+
+
+		//然后是传过来的值
+		for k,v := range values {
+			//因为楼上处理过参数了，如果存在，这里不替换
+			if datas[k] == nil {
+				datas[k] = v
+			}
+		}
+
 
 		//这里后写, 才会盖掉args中的值
 		//先从web.Params拿值,这样如果是同一页,就有的相同的参数了
@@ -135,16 +150,12 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		}
 		*/
 
+
+		//这个单独处理
 		webParams := Map{}
 		if url.ctx != nil {
 			webParams = url.ctx.Param
 		}
-
-		//然后是传过来的值
-		for k,v := range values {
-			datas[k] = v
-		}
-
 
 
 
@@ -161,8 +172,6 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			} else if v,ok := webParams[argsKey]; ok {
 				//params必须优先,因为args默认值,就变0了
 				return fmt.Sprintf("%v", v)
-			} else if v,ok := argsValue[argsKey]; ok {
-				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,
 				return p
@@ -173,7 +182,10 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		//get参数
 		querys := []string{}
 		for k,v := range datas {
-			querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
+			if k[0:1] != "{" {
+				querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+			}
 		}
 		if len(querys) > 0 {
 			uri += "?" + strings.Join(querys, "&")
@@ -265,16 +277,30 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 
 
+		//parse的时候， 直接传值进去，这样是不是科学一点？
+		parseValues := Map{}
+		for k,v := range values {
+			k = strings.Replace(k, "{","",-1)
+			k = strings.Replace(k, "}","",-1)
+			parseValues[k] = v
+		}
+
 		//再从args,是不是有默认值
 		argsValue := Map{}
-		e := Mapping.Parse([]string{}, argsConfig, Map{}, argsValue)
+		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue)
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
-			/*
 			for k,v := range argsValue {
 				datas["{"+k+"}"] = v
 			}
-			*/
+		}
+
+		//然后是传过来的值
+		for k,v := range values {
+			//因为楼上处理过参数了，如果存在，这里不替换
+			if datas[k] == nil {
+				datas[k] = v
+			}
 		}
 
 		//这里后写, 才会盖掉args中的值
@@ -289,23 +315,19 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			}
 		}
 		*/
+
+
+		//这个单独处理
 		webParams := Map{}
 		if url.ctx != nil {
 			webParams = url.ctx.Param
 		}
-
-		//然后是传过来的值
-		for k,v := range values {
-			datas[k] = v
-		}
-
 
 
 
 		//keys := []string{}
 
 		//直接用正则替换
-
 		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
 		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
 			key := strings.Replace(p, "*", "", -1)
@@ -316,8 +338,6 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			} else if v,ok := webParams[argsKey]; ok {
 				//params必须优先,因为args默认值,就变0了
 				return fmt.Sprintf("%v", v)
-			} else if v,ok := argsValue[argsKey]; ok {
-				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,
 				return p
@@ -325,10 +345,14 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		})
 
 
+
 		//get参数
 		querys := []string{}
 		for k,v := range datas {
-			querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
+			if k[0:1] != "{" {
+				querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+			}
 		}
 		if len(querys) > 0 {
 			uri += "?" + strings.Join(querys, "&")

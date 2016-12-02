@@ -1207,20 +1207,30 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 	for _,obj := range module.routeUris {
 		uri := obj.uri
 
+		//如果uri以/结尾就去掉
+		if uri != "/" && strings.HasSuffix(uri, "/") {
+			uri = uri[0:len(uri)-1]
+		}
+
 		keys, vals := []string{}, []string{}
 
 		//用来匹配的正则表达式
 		regs := strings.Replace(uri, ".", "\\.", -1)
 		regs = strings.Replace(regs, "/", "\\/", -1)
-
+		if uri != "/" {
+			regs = regs + `(|\\/)`   //加上可以以斜杠结尾
+		}
 
 		//正则对象
 		regx := regexp.MustCompile(`\{[\*A-Za-z0-9_]+\}`)
 		//拿到URI中的参数列表
-		//keys := regx.FindAllString(uri, -1)
+		//kkkkks := regx.FindAllString(uri, -1)
+
 		//替换参数为正则
 		regs = regx.ReplaceAllStringFunc(regs, func(p string) string {
-			if (p[1:1] == "*") {
+			//if (p[1:1] == "*") {
+			if (strings.HasPrefix(p, "{*")) {
+				//{*abcd}
 				keys = append(keys, p[2:len(p)-1])
 				return `(.*)`
 			} else {
@@ -1237,7 +1247,6 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 			url = ctx.Host + ctx.Path
 		}
 
-
 		regx = regexp.MustCompile("^"+regs+"$")
 		if regx.MatchString(url) {
 
@@ -1249,11 +1258,13 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 			param := Map{}
 
 			//处理params
-			if len(keys) == len(vals) {
+			//因为结尾加了或斜杠，vals的length不一样了
+			//if len(keys) == len(vals) {
 				for i,k := range keys {
+					k = strings.Replace(k, "*", "", -1)
 					param[k] = vals[i]
 				}
-			}
+			//}
 
 			//解析成功
 			ctx.Name = obj.name

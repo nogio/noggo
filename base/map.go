@@ -4,7 +4,6 @@ import "fmt"
 
 type (
 	Map         map[string]Any
-	MapList     []Map
 )
 
 

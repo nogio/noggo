@@ -320,6 +320,7 @@ func (base *MysqlBase) packing(value Map) (Map) {
 				newValue[k] = "[]"
 			}
 		}
+			/*
 		case MapList: {
 			b,e := json.Marshal(t);
 			if e == nil {
@@ -328,6 +329,7 @@ func (base *MysqlBase) packing(value Map) (Map) {
 				newValue[k] = "[]"
 			}
 		}
+			*/
 		case []map[string]interface{}: {
 			b,e := json.Marshal(t);
 			if e == nil {
