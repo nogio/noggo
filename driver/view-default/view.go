@@ -70,6 +70,8 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 			view.layout = name
 			if len(args) > 0 {
 				view.model = args[0]
+			} else {
+				view.model = Map{}
 			}
 
 			return ""
@@ -343,8 +345,10 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 		},
 		"format": func(format string, args ...interface{}) (string) {
 			//支持一下显示时间
-			if len(args) == 1{
-				if ttt,ok := args[0].(time.Time); ok {
+			if len(args) == 1 {
+				if args[0] == nil {
+					return ""
+				} else if ttt,ok := args[0].(time.Time); ok {
 					return ttt.Format(format)
 				} else if ttt,ok := args[0].(int64); ok {
 					//时间戳是大于1971年是, 千万级, 2016年就是10亿级了
@@ -403,6 +407,43 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 
 			return false
 		},
+		"out": func(arr Any, i int) (string) {
+
+			strArr := []string{}
+
+			switch vv := arr.(type) {
+			case []string:
+				for _,v := range vv {
+					strArr = append(strArr, v)
+				}
+			case []int:
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			case []int8:
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			case []int16:
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			case []int32:
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			case []int64:
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			}
+
+			if len(strArr) > i {
+				return strArr[i]
+			}
+
+			return ""
+		},
 
 	}
 	for k,v := range parse.Helpers {
@@ -437,6 +478,10 @@ func (view *DefaultView) Layout(name string, model Map) (string,error) {
 			//没有使用布局，直接返回BODY
 			return bodyText,nil
 		} else {
+
+			if view.model == nil {
+				view.model = Map{}
+			}
 
 			//body赋值
 			view.body = bodyText

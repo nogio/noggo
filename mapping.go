@@ -202,12 +202,14 @@ func (global *mappingGlobal) CryptoMethod(name string)(func(Any) Any, func(Any) 
 
 
 //解析
-func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Map, args ...bool) *Error {
+func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Map, argn bool, pass bool) *Error {
 
+	/*
 	argn := false
 	if len(args) > 0 {
 		argn = args[0]
 	}
+	*/
 
 	//遍历配置	begin
 	for fieldName,fv := range config {
@@ -278,21 +280,24 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		//如果不可为空，但是为空了，
 		if (fieldMust && fieldEmpty == false && (fieldValue == nil || strVal == "") && fieldAuto == nil && fieldJson == nil && argn == false) {
 
-			//是否有自定义的状态
-			if c,ok := fieldConfig["empty"]; ok {
-				if fieldConfig["name"] != nil {
-					return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
-				} else {
-					return Const.NewStateError(c.(string), strings.Join(trees, "."))
-				}
+			//是否跳过
+			if pass == false {
+				//是否有自定义的状态
+				if c,ok := fieldConfig["empty"]; ok {
+					if fieldConfig["name"] != nil {
+						return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
+					} else {
+						return Const.NewStateError(c.(string), strings.Join(trees, "."))
+					}
 
-			} else {
-				//return errors.New("参数不可为空")
-				//return Const.NewStateError("args.empty", fieldName)
-				if fieldConfig["name"] != nil {
-					return Const.NewStateError("map.empty", fmt.Sprintf("%v", fieldConfig["name"]))
 				} else {
-					return Const.NewStateError("map.empty", strings.Join(trees, "."))
+					//return errors.New("参数不可为空")
+					//return Const.NewStateError("args.empty", fieldName)
+					if fieldConfig["name"] != nil {
+						return Const.NewStateError("map.empty", fmt.Sprintf("%v", fieldConfig["name"]))
+					} else {
+						return Const.NewStateError("map.empty", strings.Join(trees, "."))
+					}
 				}
 			}
 
@@ -469,25 +474,30 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 							}
 						} else {	//验证不通过
 
-							//是否有自定义的状态
-							if c,ok := fieldConfig["error"]; ok {
-								return Const.NewStateError(c.(string), strings.Join(trees, "."))
+							//是否可以跳过
+							if pass == false {
 
-								if fieldConfig["name"] != nil {
-									return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
-								} else {
+
+								//是否有自定义的状态
+								if c,ok := fieldConfig["error"]; ok {
 									return Const.NewStateError(c.(string), strings.Join(trees, "."))
-								}
+
+									if fieldConfig["name"] != nil {
+										return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
+									} else {
+										return Const.NewStateError(c.(string), strings.Join(trees, "."))
+									}
 
 
-							} else {
-								//return errors.New("valid error")
-								//类型不匹配
-								//return Const.NewStateError("args.error", fieldName)
-								if fieldConfig["name"] != nil {
-									return Const.NewStateError("map.error", fmt.Sprintf("%v", fieldConfig["name"]))
 								} else {
-									return Const.NewStateError("map.error", strings.Join(trees, "."))
+									//return errors.New("valid error")
+									//类型不匹配
+									//return Const.NewStateError("args.error", fieldName)
+									if fieldConfig["name"] != nil {
+										return Const.NewStateError("map.error", fmt.Sprintf("%v", fieldConfig["name"]))
+									} else {
+										return Const.NewStateError("map.error", strings.Join(trees, "."))
+									}
 								}
 							}
 						}
@@ -570,7 +580,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 			for _,d := range fieldData {
 				v := Map{}
 
-				err := global.Parse(trees, jsonConfig, d, v, args...);
+				err := global.Parse(trees, jsonConfig, d, v, argn, pass);
 				if err != nil {
 					return err
 				} else {

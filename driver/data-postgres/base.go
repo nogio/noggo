@@ -64,7 +64,7 @@ func (base *PostgresBase) Model(name string) (noggo.DataModel) {
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
-		if n,ok := config["fields"].(Map); ok {
+		if n,ok := config["field"].(Map); ok {
 			fields = n
 		}
 
@@ -97,7 +97,7 @@ func (base *PostgresBase) View(name string) (noggo.DataView) {
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
-		if n,ok := config["fields"].(Map); ok {
+		if n,ok := config["field"].(Map); ok {
 			fields = n
 		}
 

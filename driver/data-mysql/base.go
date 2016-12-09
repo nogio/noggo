@@ -64,7 +64,7 @@ func (base *MysqlBase) Model(name string) (noggo.DataModel) {
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
-		if n,ok := config["fields"].(Map); ok {
+		if n,ok := config["field"].(Map); ok {
 			fields = n
 		} else {
 			panic("数据：未定义字段fields")
@@ -100,7 +100,7 @@ func (base *MysqlBase) View(name string) (noggo.DataView) {
 		if n,ok := config["key"].(string); ok {
 			key = n
 		}
-		if n,ok := config["fields"].(Map); ok {
+		if n,ok := config["field"].(Map); ok {
 			fields = n
 		} else {
 			panic("数据：未定义字段fields")

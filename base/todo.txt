@@ -1,32 +1,7 @@
-苦逼
-    found,error,failed,denied
-    failed还是要的，因为args验证失败后，不能直接调error，  error主要是用来展示程序出错的页面
-    而failed还有返回alert或是接口state的功能， 而不是用于展示页面
-
-
-20161021
-	任务，计划等之前的接口都要重新定义，向数据层和队列那样整理过，或是全部重新思考一套模式 (ok20161024)
-	数据库生成查询条件时，需要加个排序，  (ok 20161024)
-
-
-20161024
-	HTTP模块加了 删除了 failed,denied处理器   (ok161030)
-	Triiger  也删了    (ok161030)
-	Task  也删了       (ok161030)
-	其它的模块还没处理   (ok161030)
-
-20161025
-	event传参有问题，解析错误         (ok20161102)
-	event,queue, 多个路由时有问题   （ok20161026)
-
-20161026
-	数据层接口返回[]Map改为 MapList  (取消不改了)
-	数据层Limit接口返回多加一个count(int64)   （ok 20161129）
-	数据层所有驱动，当返回err时，应给一个默认数组，（ok 20161129）
-
 20161027
-	item中间件要修改下，在execute前执行，branch前不执行，execute前需合并顶级item配置到子级，并且value要改成args，考虑到args加解密，而且非http，只有args
+	item中间件要修改下，在execute前执行，branch前不执行，execute前需合并顶级item配置到子级，并且value要改成args，考虑到args加解密，而且非http，只有args  http ok
 
 20161129
-    mapping.parse的时候，需要加一个忽略错误的选项，如果解析出错，就跳过，继续下面的字段，这样在数据库查询的时候，当数据结构和代码不一样的时候，正常的字段是可以被解析的
-    data.parsing 还要处理一下， 某个OR相关，和[]Map有关？  (ok)
+    mapping.parse的时候，需要加一个忽略错误的选项，如果解析出错，就跳过，继续下面的字段，这样在数据库查询的时候，当数据结构和代码不一样的时候，正常的字段是可以被解析的    ok
+
+

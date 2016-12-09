@@ -120,7 +120,7 @@ func (view *AdodbView) Single(args ...Any) (Map,error) {
 					//返回前使用代码生成
 					//有必要的, 按模型拿到数据
 					item := Map{}
-					err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+					err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 					noggo.Logger.Debug("data", "single", "mapping", err)
 					if err == nil {
 						return item,nil
@@ -198,7 +198,7 @@ func (view *AdodbView) Query(args ...Any)  ([]Map,error) {
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
 						item := Map{}
-						err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 						if err == nil {
 							items = append(items, item)
 						} else {
@@ -294,7 +294,7 @@ func (view *AdodbView) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) 
 								//返回前使用代码生成
 								//有必要的, 按模型拿到数据
 								item := Map{}
-								err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+								err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 								if err == nil {
 									items = append(items, item)
 								} else {
@@ -374,7 +374,7 @@ func (view *AdodbView) Group(field string, args ...Any) ([]Map,error) {
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
 						item := Map{}
-						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, true)
+						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 						if err == nil {
 							items = append(items, item)
 						} else {

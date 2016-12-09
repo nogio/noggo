@@ -312,7 +312,7 @@ func (global *dataGlobal) Fields(base, model string, maps ...Map) (Map) {
 
 	if dc,ok := global.models[base]; ok {
 		if mc,ok := dc[model]; ok {
-			if fc,ok := mc["fields"]; ok {
+			if fc,ok := mc["field"]; ok {
 				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
 				for k,v := range fc.(Map) {
 					m[k] = v
@@ -338,7 +338,7 @@ func (global *dataGlobal) Field(base, model string, fields []string, maps ...Map
 
 	if dc,ok := global.models[base]; ok {
 		if mc,ok := dc[model]; ok {
-			if fc,ok := mc["fields"]; ok {
+			if fc,ok := mc["field"]; ok {
 
 				// 后续考虑支持多级
 				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
@@ -373,8 +373,8 @@ func (global *dataGlobal) Enums(data, model, field string) (Map) {
 		dataConfig := Data.models[data]
 		if dataConfig[model] != nil {
 			modelConfig := dataConfig[model]
-			if modelConfig["fields"] != nil {
-				fields := modelConfig["fields"].(Map)
+			if modelConfig["field"] != nil {
+				fields := modelConfig["field"].(Map)
 				if fields[field] != nil {
 					fieldConfig := fields[field].(Map)
 					if fieldConfig["enum"] != nil {

@@ -118,7 +118,7 @@ func (view *PostgresView) Single(args ...Any) (Map,error) {
 					//返回前使用代码生成
 					//有必要的, 按模型拿到数据
 					item := Map{}
-					err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+					err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 					noggo.Logger.Debug("data", "single", "mapping", err)
 					if err == nil {
 						return item,nil
@@ -193,7 +193,7 @@ func (view *PostgresView) Query(args ...Any) ([]Map,error) {
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
 						item := Map{}
-						err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 						if err == nil {
 							items = append(items, item)
 						} else {
@@ -290,7 +290,7 @@ func (view *PostgresView) Limit(offset,limit Any, args ...Any) (int64,[]Map,erro
 								//返回前使用代码生成
 								//有必要的, 按模型拿到数据
 								item := Map{}
-								err := noggo.Mapping.Parse([]string{}, view.fields, m, item)
+								err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 								if err == nil {
 									items = append(items, item)
 								} else {
@@ -373,7 +373,7 @@ func (view *PostgresView) Group(field string, args ...Any) ([]Map,error) {
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
 						item := Map{}
-						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, true)
+						err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
 						if err == nil {
 							items = append(items, item)
 						} else {

@@ -1266,7 +1266,7 @@ func (module *queueModule) contextArgs(ctx *QueueContext) {
 	}
 
 	//所有值都会放在 module.Value 中
-	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
+	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn, false)
 	if err != nil {
 		ctx.Error(err)
 	} else {

@@ -307,6 +307,18 @@ func (global *constGlobal) Valid(value, regular string) bool {
 
 	return false
 }
+func (global *constGlobal) Check(value, regular string) bool {
+
+	exps := global.RegularExp(regular)
+	for _,v := range exps {
+		regx := regexp.MustCompile(v)
+		if regx.MatchString(value) {
+			return true
+		}
+	}
+
+	return false
+}
 
 
 

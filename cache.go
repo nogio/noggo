@@ -206,7 +206,7 @@ func (global *cacheGlobal) UnPack(val Map) (Any,error) {
 			}
 			value := Map{}
 
-			err := Mapping.Parse([]string{}, config, val, value)
+			err := Mapping.Parse([]string{}, config, val, value, false, false)
 			if err != nil {
 				return nil,err
 			} else {

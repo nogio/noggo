@@ -33,7 +33,7 @@ func (model *AdodbModel) Create(data Map) (Map,error) {
 
 	//按字段生成值
 	value := Map{}
-	err := noggo.Mapping.Parse([]string{}, model.fields, data, value);
+	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, false, false);
 	noggo.Logger.Debug("create", model.fields, data)
 
 	if err != nil {
@@ -118,7 +118,7 @@ func (model *AdodbModel) Change(item Map, data Map) (Map,error) {
 
 	//按字段生成值
 	value := Map{}
-	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, true);
+	err := noggo.Mapping.Parse([]string{}, model.fields, data, value, true, false);
 	noggo.Logger.Debug("change", "mapping", err)
 
 	if err != nil {
@@ -292,7 +292,7 @@ func (model *AdodbModel) Entity(id Any) (Map,error) {
 				//返回前使用代码生成
 				//有必要的, 按模型拿到数据
 				item := Map{}
-				err := noggo.Mapping.Parse([]string{}, model.fields, m, item)
+				err := noggo.Mapping.Parse([]string{}, model.fields, m, item, false, true)
 				noggo.Logger.Debug("data", "entity", "mapping", err)
 				if err == nil {
 					return item,nil
@@ -365,7 +365,7 @@ func (model *AdodbModel) Update(sets Map, args ...Any) (int64,error) {
 
 	//按字段生成值
 	value := Map{}
-	err := noggo.Mapping.Parse([]string{}, model.fields, sets, value, true);
+	err := noggo.Mapping.Parse([]string{}, model.fields, sets, value, true, false);
 	noggo.Logger.Debug("data", "update", "mapping", err)
 
 

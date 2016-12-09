@@ -1215,10 +1215,10 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 		keys, vals := []string{}, []string{}
 
 		//用来匹配的正则表达式
-		regs := strings.Replace(uri, ".", "\\.", -1)
-		regs = strings.Replace(regs, "/", "\\/", -1)
+		regs := strings.Replace(uri, ".", `\.`, -1)
+		regs = strings.Replace(regs, "/", `\/`, -1)
 		if uri != "/" {
-			regs = regs + `(|\\/)`   //加上可以以斜杠结尾
+			regs = regs + `(|\/)`   //加上可以以斜杠结尾
 		}
 
 		//正则对象
@@ -1238,7 +1238,6 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 				return `([-_A-Za-z0-9\.]+)`
 			}
 		})
-
 
 		//正则匹配当前URL，是否从域名开始匹配
 		//忽略query部分
@@ -1601,7 +1600,7 @@ func (module *httpModule) contextArgs(ctx *HttpContext) {
 	}
 
 	//所有值都会放在 module.Value 中
-	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn)
+	err := Mapping.Parse([]string{}, ctx.Config["args"].(Map), ctx.Value, ctx.Args, argn, false)
 	if err != nil {
 		ctx.Failed(err)
 	} else {
@@ -2612,7 +2611,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 				v := Map{}
 
-				e := Mapping.Parse([]string{}, newConfig, newData, v)
+				e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 				if e != nil {
 					//出错了
 					ctx.Error(e)
@@ -2627,7 +2626,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 				v := Map{}
 
-				e := Mapping.Parse([]string{}, c, d, v)
+				e := Mapping.Parse([]string{}, c, d, v, false, false)
 				if e != nil {
 					//出错了
 					ctx.Error(e)
@@ -2658,7 +2657,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 				v := Map{}
 
-				e := Mapping.Parse([]string{}, newConfig, newData, v)
+				e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 				if e != nil {
 					//出错了
 					ctx.Error(e)
@@ -2710,7 +2709,7 @@ func (ctx *HttpContext) Return(data Any) {
 
 			v := Map{}
 
-			e := Mapping.Parse([]string{}, newConfig, newData, v)
+			e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 			if e != nil {
 				//出错了
 				ctx.Error(e)
@@ -2725,7 +2724,7 @@ func (ctx *HttpContext) Return(data Any) {
 
 			v := Map{}
 
-			e := Mapping.Parse([]string{}, c, d, v)
+			e := Mapping.Parse([]string{}, c, d, v, false, false)
 			if e != nil {
 				//出错了
 				ctx.Error(e)
@@ -2759,7 +2758,7 @@ func (ctx *HttpContext) Return(data Any) {
 
 			v := Map{}
 
-			e := Mapping.Parse([]string{}, newConfig, newData, v)
+			e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 			if e != nil {
 				//出错了
 				ctx.Error(e)

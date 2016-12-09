@@ -77,6 +77,11 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 
 		//得到值和选项
+		//值有几个来源
+		//1 datas中传过来的，最优先
+		//2 args中的默认值，
+		//3 params中现有的值
+		//而1中的值，也要args解析，用来保证加解密的话，1和2其实就混在一起了
 		datas,values,options := Map{}, Map{}, Map{}
 		if len(args) > 0 {
 			if len(args) == 1 {
@@ -86,6 +91,11 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 				options = args[1]
 			}
 		}
+
+
+
+
+
 
 
 
@@ -111,30 +121,41 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 		//parse的时候， 直接传值进去，这样是不是科学一点？
 		parseValues := Map{}
+
 		for k,v := range values {
 			k = strings.Replace(k, "{","",-1)
 			k = strings.Replace(k, "}","",-1)
 			parseValues[k] = v
 		}
+		//从params中来一下，直接参数解析
+		if url.ctx != nil {
+			for k,v := range url.ctx.Param {
+				if parseValues[k] == nil {
+					parseValues[k] = v
+				}
+			}
+		}
 
 		//再从args,是不是有默认值
 		argsValue := Map{}
-		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue)
+		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
+
+			//这里解析完， 默认值都过来了，不能直接替换写入datas，要不然传过来的值就无效了
 			for k,v := range argsValue {
+				//注意
 				datas["{"+k+"}"] = v
 			}
 		}
 
-
-		//然后是传过来的值
+		//然后是传过来的值，先把传的值写入？
 		for k,v := range values {
-			//因为楼上处理过参数了，如果存在，这里不替换
 			if datas[k] == nil {
 				datas[k] = v
 			}
 		}
+
 
 
 		//这里后写, 才会盖掉args中的值
@@ -152,10 +173,12 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 
 		//这个单独处理
+		/*
 		webParams := Map{}
 		if url.ctx != nil {
 			webParams = url.ctx.Param
 		}
+		*/
 
 
 
@@ -165,18 +188,18 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
 		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
 			key := strings.Replace(p, "*", "", -1)
-			argsKey := key[1:len(key)-1]
 			if v,ok := datas[key]; ok {
 				delete(datas, key)
-				return fmt.Sprintf("%v", v)
-			} else if v,ok := webParams[argsKey]; ok {
-				//params必须优先,因为args默认值,就变0了
 				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,
 				return p
 			}
 		})
+
+
+
+
 
 
 		//get参数
@@ -244,6 +267,11 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 
 		//得到值和选项
+		//值有几个来源
+		//1 datas中传过来的，最优先
+		//2 args中的默认值，
+		//3 params中现有的值
+		//而1中的值，也要args解析，用来保证加解密的话，1和2其实就混在一起了
 		datas,values,options := Map{}, Map{}, Map{}
 		if len(args) > 0 {
 			if len(args) == 1 {
@@ -253,6 +281,11 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 				options = args[1]
 			}
 		}
+
+
+
+
+
 
 
 
@@ -276,32 +309,44 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 
 
-
 		//parse的时候， 直接传值进去，这样是不是科学一点？
 		parseValues := Map{}
+
 		for k,v := range values {
 			k = strings.Replace(k, "{","",-1)
 			k = strings.Replace(k, "}","",-1)
 			parseValues[k] = v
 		}
+		//从params中来一下，直接参数解析
+		if url.ctx != nil {
+			for k,v := range url.ctx.Param {
+				if parseValues[k] == nil {
+					parseValues[k] = v
+				}
+			}
+		}
 
 		//再从args,是不是有默认值
 		argsValue := Map{}
-		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue)
+		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
+
+			//这里解析完， 默认值都过来了，不能直接替换写入datas，要不然传过来的值就无效了
 			for k,v := range argsValue {
+				//注意
 				datas["{"+k+"}"] = v
 			}
 		}
 
-		//然后是传过来的值
+		//然后是传过来的值，先把传的值写入？
 		for k,v := range values {
-			//因为楼上处理过参数了，如果存在，这里不替换
 			if datas[k] == nil {
 				datas[k] = v
 			}
 		}
+
+
 
 		//这里后写, 才会盖掉args中的值
 		//先从web.Params拿值,这样如果是同一页,就有的相同的参数了
@@ -318,10 +363,12 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 
 		//这个单独处理
+		/*
 		webParams := Map{}
 		if url.ctx != nil {
 			webParams = url.ctx.Param
 		}
+		*/
 
 
 
@@ -331,18 +378,17 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
 		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
 			key := strings.Replace(p, "*", "", -1)
-			argsKey := key[1:len(key)-1]
 			if v,ok := datas[key]; ok {
 				delete(datas, key)
-				return fmt.Sprintf("%v", v)
-			} else if v,ok := webParams[argsKey]; ok {
-				//params必须优先,因为args默认值,就变0了
 				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,
 				return p
 			}
 		})
+
+
+
 
 
 
