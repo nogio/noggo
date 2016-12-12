@@ -31,6 +31,9 @@ type (
 		//Session使用的domain
 		Domain	string	`json:"domain"`
 
+		//节点root
+		Root    string	`json:"root"`
+
 		//节点指定SESSION
 		Session *sessionConfig `json:"session"`
 	}

@@ -32,6 +32,19 @@ func (url *httpUrl) Node(name string, args ...string) string {
 	return "[no node here]"
 }
 
+func (url *httpUrl) Root(args ...string) string {
+	root := ""
+	if url.ctx != nil && url.ctx.Node != nil && url.ctx.Node.Config != nil {
+		root = url.ctx.Node.Config.Root
+	}
+
+	if len(args) > 0 {
+		return fmt.Sprintf("%s%s", root, args[0])
+	} else {
+		return root
+	}
+}
+
 
 
 //当前站本身的路由
@@ -230,7 +243,12 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			uri += "?" + strings.Join(querys, "&")
 		}
 
-		return uri
+		if url.ctx != nil && url.ctx.Node != nil && url.ctx.Node.Config != nil {
+			return url.ctx.Node.Config.Root + uri
+		} else {
+			return uri
+		}
+
 	}
 
 	return "[no route here]"

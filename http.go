@@ -2237,6 +2237,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 			"backurl": func() string{ return ctx.Url.Back() },
 			"lasturl": func() string{ return ctx.Url.Last() },
 			"nodeurl": func(name string, args ...string) string{ return ctx.Url.Node(name, args...) },
+			"rooturl": func(args ...string) string{ return ctx.Url.Root(args...) },
 			"route": func(name string, vals ...Any) string{
 				args := []Map{}
 				for _,v := range vals {
