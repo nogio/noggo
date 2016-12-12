@@ -150,9 +150,6 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		argsValue := Map{}
 		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
 
-
-		Logger.Debug(name, uri, "route", "parse", parseValues, argsValue)
-
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
 			for k,v := range argsValue {
