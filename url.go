@@ -117,12 +117,18 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		}
 
 
+		//取的时候，还是要走这里取一次
+		paramValues := Map{}
+
 
 
 		//parse的时候， 直接传值进去，这样是不是科学一点？
 		parseValues := Map{}
 
 		for k,v := range values {
+			//{开头的参数 才做转换处理，query中的参数 不处理
+			//但是这里如果跳过的话route中可能有默认值，会变成默认值返回到argsValue
+			//不行，因为page=%v这样的情况，而page有默认值，就不行了
 			k = strings.Replace(k, "{","",-1)
 			k = strings.Replace(k, "}","",-1)
 			parseValues[k] = v
@@ -132,20 +138,31 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			for k,v := range url.ctx.Param {
 				if parseValues[k] == nil {
 					parseValues[k] = v
+					paramValues["{"+k+"}"] = v
 				}
 			}
 		}
 
+
 		//再从args,是不是有默认值
+		//小问题一个，如果目标路由，没有定义参数，比如/admin/remove/{id}
+		//这里并不定义参数，所以在这里，上面的parseValue写入param其实就没有意义
 		argsValue := Map{}
 		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
+
+
+		Logger.Debug(name, uri, "route", "parse", parseValues, argsValue)
+
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
-
-			//这里解析完， 默认值都过来了，不能直接替换写入datas，要不然传过来的值就无效了
 			for k,v := range argsValue {
-				//注意
-				datas["{"+k+"}"] = v
+				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
+				if _,ok := values[k]; ok {
+					datas[k] = v
+				} else {
+					datas["{"+k+"}"] = v
+				}
+
 			}
 		}
 
@@ -190,6 +207,8 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			key := strings.Replace(p, "*", "", -1)
 			if v,ok := datas[key]; ok {
 				delete(datas, key)
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := paramValues[key]; ok {
 				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,
@@ -307,6 +326,8 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		}
 
 
+		//取的时候，还是要走这里取一次
+		paramValues := Map{}
 
 
 		//parse的时候， 直接传值进去，这样是不是科学一点？
@@ -322,6 +343,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			for k,v := range url.ctx.Param {
 				if parseValues[k] == nil {
 					parseValues[k] = v
+					paramValues["{"+k+"}"] = v
 				}
 			}
 		}
@@ -331,11 +353,14 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
-
-			//这里解析完， 默认值都过来了，不能直接替换写入datas，要不然传过来的值就无效了
 			for k,v := range argsValue {
-				//注意
-				datas["{"+k+"}"] = v
+				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
+				if _,ok := values[k]; ok {
+					datas[k] = v
+				} else {
+					datas["{"+k+"}"] = v
+				}
+
 			}
 		}
 
@@ -380,6 +405,8 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			key := strings.Replace(p, "*", "", -1)
 			if v,ok := datas[key]; ok {
 				delete(datas, key)
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := paramValues[key]; ok {
 				return fmt.Sprintf("%v", v)
 			} else {
 				//有参数没有值,

@@ -1708,11 +1708,27 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 
 			name := config["name"].(string)
 			key := k
-			if config["args"] != nil && config["args"] != "" {
-				key = config["args"].(string)
+			var val Any = nil
+			if vv,ok := config["args"].(string); ok {
+				key = vv
+				val = ctx.Args[key]
+			} else if vv,ok := config["param"].(string); ok {
+				key = vv
+				val = ctx.Param[key]
+			} else if vv,ok := config["query"].(string); ok {
+				key = vv
+				val = ctx.Query[key]
+			} else if vv,ok := config["value"].(string); ok {
+				key = vv
+				val = ctx.Value[key]
+			} else if vv,ok := config["key"].(string); ok {
+				key = vv
+				val = ctx.Value[key]
+			} else {
+				val = nil
 			}
 
-			if ctx.Args[key] == nil {
+			if val == nil {
 				//参数不为空啊啊
 				state := "item.empty"
 				//是否有自定义状态
@@ -1731,7 +1747,7 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 
 					//要查询库
 					db := Data.Base(dataName);
-					item,err := db.Model(modelName).Entity(ctx.Value[key])
+					item,err := db.Model(modelName).Entity(val)
 					db.Close()
 					if err != nil {
 						state := "item.error"
