@@ -2769,10 +2769,6 @@ func (ctx *HttpContext) Return(data Any) {
 			}
 
 
-
-			Logger.Debug("dddd", newData)
-
-
 			v := Map{}
 
 			e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)

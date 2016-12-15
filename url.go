@@ -95,7 +95,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		//2 args中的默认值，
 		//3 params中现有的值
 		//而1中的值，也要args解析，用来保证加解密的话，1和2其实就混在一起了
-		datas,values,options := Map{}, Map{}, Map{}
+		values,options := Map{}, Map{}
 		if len(args) > 0 {
 			if len(args) == 1 {
 				values = args[0]
@@ -108,31 +108,110 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 
 
-
-
-
+		queryValues := Map{}
 
 		//选项处理
 		if (options["back"] != nil && url.ctx != nil) {
 			var url = url.Back()
-			datas[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url);
 		}
 		//选项处理
 		if (options["last"] != nil && url.ctx != nil) {
 			var url = url.Last()
-			datas[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url);
 		}
 		//自动携带原有的query信息
 		if (options["query"] != nil && url.ctx != nil) {
 			for k,v := range url.ctx.Query {
-				datas[k] = v
+				queryValues[k] = v
 			}
 		}
 
 
-		//取的时候，还是要走这里取一次
-		paramValues := Map{}
 
+
+
+		//所以，解析uri中的参数，值得分几类：
+		//1传的值，2param值, 3默认值
+		//其中主要问题就是，传的值，需要到args解析，用于加密，这个值和auto值完全重叠了，除非分2次解析
+		//为了框架好用，真是操碎了心
+		dataValues, paramValues, autoValues := Map{},Map{},Map{}
+
+		//1. 处理传过来的值
+		//从value中获取
+		dataArgsValues, dataParseValues := Map{},Map{}
+		for k,v := range values {
+			if k[0:1] == "{" {
+				k = strings.Replace(k, "{","",-1)
+				k = strings.Replace(k, "}","",-1)
+				dataArgsValues[k] = v
+			} else {
+				//这个也要？要不然指定的一些page啥的不行？
+				dataArgsValues[k] = v
+				//另外的是query的值
+				queryValues[k] = v
+			}
+		}
+		dataErr := Mapping.Parse([]string{}, argsConfig, dataArgsValues, dataParseValues, false, true)
+		if dataErr == nil {
+			for k,v := range dataParseValues {
+
+				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
+				if _,ok := values[k]; ok {
+					dataValues[k] = v
+				} else if _,ok := values["{"+k+"}"]; ok {
+					dataValues["{"+k+"}"] = v
+				} else {
+					//这里是默认值应该，就不需要了
+				}
+			}
+		}
+
+
+		//2.params中的值
+		//从params中来一下，直接参数解析
+		if url.ctx != nil {
+			for k,v := range url.ctx.Param {
+				paramValues["{"+k+"}"] = v
+			}
+		}
+
+
+		//3. 默认值
+		//从value中获取
+		autoArgsValues, autoParseValues := Map{},Map{}
+		autoErr := Mapping.Parse([]string{}, argsConfig, autoArgsValues, autoParseValues, false, true)
+		if autoErr == nil {
+			for k,v := range autoParseValues {
+				autoValues["{"+k+"}"] = v
+			}
+		}
+
+		//Logger.Debug(name, "data", dataValues, "param", paramValues, "auto", autoValues)
+
+		//开始替换值
+		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
+		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
+			key := strings.Replace(p, "*", "", -1)
+
+			if v,ok := dataValues[key]; ok {
+				//先从传的值去取
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := paramValues[key]; ok {
+				//再从params中去取
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := autoValues[key]; ok {
+				//最后从默认值去取
+				return fmt.Sprintf("%v", v)
+			} else {
+				//有参数没有值,
+				return p
+			}
+		})
+
+
+
+		/*
 
 
 		//parse的时候， 直接传值进去，这样是不是科学一点？
@@ -142,6 +221,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			//{开头的参数 才做转换处理，query中的参数 不处理
 			//但是这里如果跳过的话route中可能有默认值，会变成默认值返回到argsValue
 			//不行，因为page=%v这样的情况，而page有默认值，就不行了
+
 			k = strings.Replace(k, "{","",-1)
 			k = strings.Replace(k, "}","",-1)
 			parseValues[k] = v
@@ -149,13 +229,24 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		//从params中来一下，直接参数解析
 		if url.ctx != nil {
 			for k,v := range url.ctx.Param {
+				paramValues["{"+k+"}"] = v
 				if parseValues[k] == nil {
-					parseValues[k] = v
-					paramValues["{"+k+"}"] = v
+					//parse不能把param写进去，
+					//因为如果param中的值加密过，在parse的时候， 就给解密了， 这不科学
+					//所以还是要写进去，因为：
+					//当route有默认值的时候， 而我调用route的时候， 只传了1个值，
+					//其它的全都有默认值了，就不会跑param中去拿值了
+					//最终还是不能复制param的过去
+
+					//在下面args的时候判断，如果args中的k不在value中，就应该干掉，不写入datas
+
+					//parseValues[k] = v
 				}
 			}
 		}
 
+
+		/*
 
 		//再从args,是不是有默认值
 		//小问题一个，如果目标路由，没有定义参数，比如/admin/remove/{id}
@@ -163,16 +254,19 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		argsValue := Map{}
 		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
 
+
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
 			for k,v := range argsValue {
 				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
 				if _,ok := values[k]; ok {
 					datas[k] = v
+				} else if _,ok := values["{"+k+"}"]; ok {
+					datas["{"+k+"}"] = v
 				} else {
+					//到这里， 应该是默认值
 					datas["{"+k+"}"] = v
 				}
-
 			}
 		}
 
@@ -207,6 +301,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		}
 		*/
 
+		/*
 
 
 		//keys := []string{}
@@ -226,6 +321,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			}
 		})
 
+		*/
 
 
 
@@ -233,7 +329,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 		//get参数
 		querys := []string{}
-		for k,v := range datas {
+		for k,v := range queryValues {
 			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
 			if k[0:1] != "{" {
 				querys = append(querys, fmt.Sprintf("%v=%v", k, v))
@@ -306,7 +402,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		//2 args中的默认值，
 		//3 params中现有的值
 		//而1中的值，也要args解析，用来保证加解密的话，1和2其实就混在一起了
-		datas,values,options := Map{}, Map{}, Map{}
+		values,options := Map{}, Map{}
 		if len(args) > 0 {
 			if len(args) == 1 {
 				values = args[0]
@@ -319,36 +415,120 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 
 
-
-
-
+		queryValues := Map{}
 
 		//选项处理
 		if (options["back"] != nil && url.ctx != nil) {
 			var url = url.Back()
-			datas[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url);
 		}
 		//选项处理
 		if (options["last"] != nil && url.ctx != nil) {
 			var url = url.Last()
-			datas[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url);
 		}
 		//自动携带原有的query信息
 		if (options["query"] != nil && url.ctx != nil) {
 			for k,v := range url.ctx.Query {
-				datas[k] = v
+				queryValues[k] = v
 			}
 		}
 
 
-		//取的时候，还是要走这里取一次
-		paramValues := Map{}
+
+
+
+		//所以，解析uri中的参数，值得分几类：
+		//1传的值，2param值, 3默认值
+		//其中主要问题就是，传的值，需要到args解析，用于加密，这个值和auto值完全重叠了，除非分2次解析
+		//为了框架好用，真是操碎了心
+		dataValues, paramValues, autoValues := Map{},Map{},Map{}
+
+		//1. 处理传过来的值
+		//从value中获取
+		dataArgsValues, dataParseValues := Map{},Map{}
+		for k,v := range values {
+			if k[0:1] == "{" {
+				k = strings.Replace(k, "{","",-1)
+				k = strings.Replace(k, "}","",-1)
+				dataArgsValues[k] = v
+			} else {
+				//这个也要？要不然指定的一些page啥的不行？
+				dataArgsValues[k] = v
+				//另外的是query的值
+				queryValues[k] = v
+			}
+		}
+		dataErr := Mapping.Parse([]string{}, argsConfig, dataArgsValues, dataParseValues, false, true)
+		if dataErr == nil {
+			for k,v := range dataParseValues {
+
+				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
+				if _,ok := values[k]; ok {
+					dataValues[k] = v
+				} else if _,ok := values["{"+k+"}"]; ok {
+					dataValues["{"+k+"}"] = v
+				} else {
+					//这里是默认值应该，就不需要了
+				}
+			}
+		}
+
+
+		//2.params中的值
+		//从params中来一下，直接参数解析
+		if url.ctx != nil {
+			for k,v := range url.ctx.Param {
+				paramValues["{"+k+"}"] = v
+			}
+		}
+
+
+		//3. 默认值
+		//从value中获取
+		autoArgsValues, autoParseValues := Map{},Map{}
+		autoErr := Mapping.Parse([]string{}, argsConfig, autoArgsValues, autoParseValues, false, true)
+		if autoErr == nil {
+			for k,v := range autoParseValues {
+				autoValues["{"+k+"}"] = v
+			}
+		}
+
+		//Logger.Debug(name, "data", dataValues, "param", paramValues, "auto", autoValues)
+
+		//开始替换值
+		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
+		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
+			key := strings.Replace(p, "*", "", -1)
+
+			if v,ok := dataValues[key]; ok {
+				//先从传的值去取
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := paramValues[key]; ok {
+				//再从params中去取
+				return fmt.Sprintf("%v", v)
+			} else if v,ok := autoValues[key]; ok {
+				//最后从默认值去取
+				return fmt.Sprintf("%v", v)
+			} else {
+				//有参数没有值,
+				return p
+			}
+		})
+
+
+
+		/*
 
 
 		//parse的时候， 直接传值进去，这样是不是科学一点？
 		parseValues := Map{}
 
 		for k,v := range values {
+			//{开头的参数 才做转换处理，query中的参数 不处理
+			//但是这里如果跳过的话route中可能有默认值，会变成默认值返回到argsValue
+			//不行，因为page=%v这样的情况，而page有默认值，就不行了
+
 			k = strings.Replace(k, "{","",-1)
 			k = strings.Replace(k, "}","",-1)
 			parseValues[k] = v
@@ -356,26 +536,44 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		//从params中来一下，直接参数解析
 		if url.ctx != nil {
 			for k,v := range url.ctx.Param {
+				paramValues["{"+k+"}"] = v
 				if parseValues[k] == nil {
-					parseValues[k] = v
-					paramValues["{"+k+"}"] = v
+					//parse不能把param写进去，
+					//因为如果param中的值加密过，在parse的时候， 就给解密了， 这不科学
+					//所以还是要写进去，因为：
+					//当route有默认值的时候， 而我调用route的时候， 只传了1个值，
+					//其它的全都有默认值了，就不会跑param中去拿值了
+					//最终还是不能复制param的过去
+
+					//在下面args的时候判断，如果args中的k不在value中，就应该干掉，不写入datas
+
+					//parseValues[k] = v
 				}
 			}
 		}
 
+
+		/*
+
 		//再从args,是不是有默认值
+		//小问题一个，如果目标路由，没有定义参数，比如/admin/remove/{id}
+		//这里并不定义参数，所以在这里，上面的parseValue写入param其实就没有意义
 		argsValue := Map{}
 		e := Mapping.Parse([]string{}, argsConfig, parseValues, argsValue, false, true)
+
+
 		//不直接写datas,而是在下面的params中,如果有,才写入
 		if e == nil {
 			for k,v := range argsValue {
 				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
 				if _,ok := values[k]; ok {
 					datas[k] = v
+				} else if _,ok := values["{"+k+"}"]; ok {
+					datas["{"+k+"}"] = v
 				} else {
+					//到这里， 应该是默认值
 					datas["{"+k+"}"] = v
 				}
-
 			}
 		}
 
@@ -410,6 +608,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		}
 		*/
 
+		/*
 
 
 		//keys := []string{}
@@ -429,6 +628,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			}
 		})
 
+		*/
 
 
 
@@ -436,7 +636,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 		//get参数
 		querys := []string{}
-		for k,v := range datas {
+		for k,v := range queryValues {
 			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
 			if k[0:1] != "{" {
 				querys = append(querys, fmt.Sprintf("%v=%v", k, v))

@@ -211,6 +211,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 	}
 	*/
 
+
 	//遍历配置	begin
 	for fieldName,fv := range config {
 		fieldConfig := Map{}
@@ -236,6 +237,8 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 		//解过密？
 		decoded := false
+		passEmpty := false
+		passError := false
 
 		//Map 如果是JSON文件，或是发过来的消息，就不支持
 		//而用下面的，就算是MAP也可以支持，OK
@@ -281,14 +284,20 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		if (fieldMust && fieldEmpty == false && (fieldValue == nil || strVal == "") && fieldAuto == nil && fieldJson == nil && argn == false) {
 
 			//是否跳过
-			if pass == false {
+			if pass {
+				passEmpty = true
+			} else {
 				//是否有自定义的状态
 				if c,ok := fieldConfig["empty"]; ok {
+					//自定义的状态下， 应该不用把参数名传过去了，都自定义了
+					return Const.NewStateError(c.(string))
+					/*
 					if fieldConfig["name"] != nil {
 						return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
 					} else {
 						return Const.NewStateError(c.(string), strings.Join(trees, "."))
 					}
+					*/
 
 				} else {
 					//return errors.New("参数不可为空")
@@ -427,7 +436,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 				//值处理前，是不是需要解密
 				//如果解密哦
 				//decode
-				if ct,ok := fieldConfig["crypto"]; ok {
+				if ct,ok := fieldConfig["decode"]; ok {
 					//而且要值是string类型
 					if sv,ok := fieldValue.(string); ok {
 						//得到解密方法
@@ -475,19 +484,23 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 						} else {	//验证不通过
 
 							//是否可以跳过
-							if pass == false {
+							if pass {
+								passError = true
+							} else {
 
 
 								//是否有自定义的状态
 								if c,ok := fieldConfig["error"]; ok {
-									return Const.NewStateError(c.(string), strings.Join(trees, "."))
+									//自定义的状态下， 应该不用把参数名传过去了，都自定义了
+									return Const.NewStateError(c.(string))
 
+									/*
 									if fieldConfig["name"] != nil {
 										return Const.NewStateError(c.(string), fmt.Sprintf("%v", fieldConfig["name"]))
 									} else {
 										return Const.NewStateError(c.(string), strings.Join(trees, "."))
 									}
-
+									*/
 
 								} else {
 									//return errors.New("valid error")
@@ -602,54 +615,63 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		}
 
 
+		// 跳过且为空时，不写值
+		if pass && passEmpty {
+		} else {
 
-		//最后，值要不要加密什么的
-		//如果加密
-		//encode
-		if ct,ok := fieldConfig["crypto"]; ok && decoded == false {
+			// 跳过但错误时，不编码
+			if (pass && passError) {
 
-			//全都转成字串再加密
-			sv := ""
-			switch v:=fieldValue.(type) {
-			case string:
-				sv = v
-			case Map,map[string]interface{}:
-				d,e := json.Marshal(v)
-				if e == nil {
-					sv = string(d)
-				} else {
-					sv = "{}"
+			} else {
+
+				//当pass=true的时候， 这里可能会是空值，那应该跳过
+				//最后，值要不要加密什么的
+				//如果加密
+				//encode
+				if ct,ok := fieldConfig["encode"]; ok && decoded == false && passEmpty == false && passError == false {
+
+					//全都转成字串再加密
+					sv := ""
+					switch v:=fieldValue.(type) {
+					case string:
+						sv = v
+					case Map,map[string]interface{}:
+						d,e := json.Marshal(v)
+						if e == nil {
+							sv = string(d)
+						} else {
+							sv = "{}"
+						}
+					case []Map,[]map[string]interface{}:
+						d,e := json.Marshal(v)
+						if e == nil {
+							sv = string(d)
+						} else {
+							sv = "[]"
+						}
+					case []int,[]int8,[]int16,[]int32,[]int64,[]float32,[]float64,[]string,[]bool,[]Any:
+						d,e := json.Marshal(v)
+						if e == nil {
+							sv = string(d)
+						} else {
+							sv = "[]"
+						}
+					default:
+						sv = fmt.Sprintf("%v", v)
+					}
+
+
+					//得到解密方法
+					encode := global.CryptoEncode(ct.(string))
+					fieldValue = encode(sv)
 				}
-			case []Map,[]map[string]interface{}:
-				d,e := json.Marshal(v)
-				if e == nil {
-					sv = string(d)
-				} else {
-					sv = "[]"
-				}
-			case []int,[]int8,[]int16,[]int32,[]int64,[]float32,[]float64,[]string,[]bool,[]Any:
-				d,e := json.Marshal(v)
-				if e == nil {
-					sv = string(d)
-				} else {
-					sv = "[]"
-				}
-			default:
-				sv = fmt.Sprintf("%v", v)
+
+
 			}
 
-
-			//得到解密方法
-			encode := global.CryptoEncode(ct.(string))
-			fieldValue = encode(sv)
+			//没有JSON要处理，所以给值
+			value[fieldName] = fieldValue
 		}
-
-
-
-
-		//没有JSON要处理，所以给值
-		value[fieldName] = fieldValue
-
 
 	}
 	return nil
