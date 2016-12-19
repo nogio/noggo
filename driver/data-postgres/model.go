@@ -246,6 +246,15 @@ func (model *PostgresModel) Remove(item Map) (error) {
 	}
 }
 
+
+
+
+//恢复对象
+func (model *PostgresModel) Recover(item Map) (error) {
+	return errors.New("数据：不支持Recover")
+}
+
+
 //查询唯一对象
 func (model *PostgresModel) Entity(id Any) (Map,error) {
 

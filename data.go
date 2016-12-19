@@ -19,7 +19,7 @@ const (
 	SUM     = "$$$SUM$$$"
 	MAX     = "$$$MAX$$$"
 	MIN     = "$$$MIN$$$"
-	DataFieldDelims  = "$$$"
+	DataFieldDelims  = "$"
 )
 type (
 	FTS string  //全文搜索类型，解析sql的时候处理
@@ -49,7 +49,10 @@ type (
 		//获取数据库对象
 		Base(string,CacheBase) (DataBase,error)
 	}
-
+	DataTrigger struct {
+		Name    string
+		Value   Map
+	}
 	//数据库接口
 	DataBase interface {
 		Close()
@@ -87,10 +90,12 @@ type (
 	DataModel interface {
 		DataView
 
+		Entity(Any) (Map,error)
+
 		Create(Map) (Map,error)
 		Change(Map,Map) (Map,error)
 		Remove(Map) (error)
-		Entity(Any) (Map,error)
+		Recover(Map) (error)
 
 		Update(sets Map,args ...Any) (int64,error)
 		Delete(args ...Any) (int64,error)
@@ -664,6 +669,9 @@ func (model *noDataModel) Change(item Map, data Map) (Map,error) {
 	return nil,errors.New("无数据")
 }
 func (model *noDataModel) Remove(item Map) (error) {
+	return nil
+}
+func (model *noDataModel) Recover(item Map) (error) {
 	return nil
 }
 func (model *noDataModel) Entity(id Any) (Map,error) {

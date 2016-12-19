@@ -3,7 +3,6 @@ package noggo
 import (
 	. "github.com/nogio/noggo/base"
 	"fmt"
-	"encoding/json"
 	"strings"
 	"time"
 )
@@ -437,8 +436,14 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 				//如果解密哦
 				//decode
 				if ct,ok := fieldConfig["decode"]; ok {
+
+					//有一个小bug这里，在route的时候， 如果传的是string，本来是想加密的， 结果这里变成了解密
+					//还得想个办法解决这个问题，所以，在传值的时候要注意，另外string型加密就有点蛋疼了
+					//主要是在route的时候，其它的时候还ok
+
 					//而且要值是string类型
 					if sv,ok := fieldValue.(string); ok {
+
 						//得到解密方法
 						decode := global.CryptoDecode(ct.(string))
 						fieldValue = decode(sv)
@@ -630,7 +635,9 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 				//encode
 				if ct,ok := fieldConfig["encode"]; ok && decoded == false && passEmpty == false && passError == false {
 
+					/*
 					//全都转成字串再加密
+					//为什么要全部转字串才能加密？
 					sv := ""
 					switch v:=fieldValue.(type) {
 					case string:
@@ -659,11 +666,11 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 					default:
 						sv = fmt.Sprintf("%v", v)
 					}
-
+					*/
 
 					//得到解密方法
 					encode := global.CryptoEncode(ct.(string))
-					fieldValue = encode(sv)
+					fieldValue = encode(fieldValue)
 				}
 
 
