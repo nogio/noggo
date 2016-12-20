@@ -139,6 +139,7 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 
 		//1. 处理传过来的值
 		//从value中获取
+		//如果route不定义args，这里是拿不到值的
 		dataArgsValues, dataParseValues := Map{},Map{}
 		for k,v := range values {
 			if k[0:1] == "{" {
@@ -164,6 +165,12 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 				} else {
 					//这里是默认值应该，就不需要了
 				}
+			}
+		}
+		//所以这里还得处理一次，如果route不定义args，parse就拿不到值，就直接用values中的值
+		for k,v := range values {
+			if k[0:1] == "{" && dataValues[k] == nil {
+				dataValues[k] = v
 			}
 		}
 
@@ -446,6 +453,7 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 
 		//1. 处理传过来的值
 		//从value中获取
+		//这里有个问题，如果route中没有定义args，那应该是拿不到值了
 		dataArgsValues, dataParseValues := Map{},Map{}
 		for k,v := range values {
 			if k[0:1] == "{" {
@@ -462,7 +470,6 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		dataErr := Mapping.Parse([]string{}, argsConfig, dataArgsValues, dataParseValues, false, true)
 		if dataErr == nil {
 			for k,v := range dataParseValues {
-
 				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
 				if _,ok := values[k]; ok {
 					dataValues[k] = v
@@ -471,6 +478,12 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 				} else {
 					//这里是默认值应该，就不需要了
 				}
+			}
+		}
+		//所以这里还得处理一次，如果route不定义args，parse就拿不到值，就直接用values中的值
+		for k,v := range values {
+			if k[0:1] == "{" && dataValues[k] == nil {
+				dataValues[k] = v
 			}
 		}
 
@@ -493,8 +506,6 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 				autoValues["{"+k+"}"] = v
 			}
 		}
-
-		//Logger.Debug(name, "data", dataValues, "param", paramValues, "auto", autoValues)
 
 		//开始替换值
 		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
