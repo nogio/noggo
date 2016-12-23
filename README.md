@@ -92,8 +92,4 @@ func main() {
 
 
 # 项目
-完整项目示例，请参考 project 目录或子项目 noggo-project
-```
-go get github.com/nogio/noggo-project
-```
-
+完整项目示例，请参考 project 目录
