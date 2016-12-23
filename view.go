@@ -28,7 +28,7 @@ type (
 		Charset string  //当前字符集
 		Data    Map     //ctx.Data
 		View    string  //视图文件
-		Model   Map     //视图模型
+		Model   Any     //视图模型
 		Helpers Map     //工具方法
 	}
 

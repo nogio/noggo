@@ -615,7 +615,7 @@ type (
 	//响应视图
 	httpBodyView struct {
 		View string
-		Model Map
+		Model Any
 	}
 )
 
@@ -2496,8 +2496,8 @@ func (ctx *HttpContext) Down(body []byte, mimeType string, names ...string) {
 	ctx.Type = mimeType
 	ctx.Body = httpBodyDown{body,name}
 }
-func (ctx *HttpContext) View(view string, models ...Map) {
-	model := Map{};
+func (ctx *HttpContext) View(view string, models ...Any) {
+	var model Any
 	if len(models) > 0 {
 		model = models[0]
 	}

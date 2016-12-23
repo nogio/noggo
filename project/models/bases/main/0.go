@@ -1,4 +1,4 @@
-package models
+package maindb
 
 import (
 	"github.com/nogio/noggo"

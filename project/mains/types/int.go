@@ -70,6 +70,8 @@ func init() {
 		"name": "整型数组", "text": "整型数组",
 		"valid": func(value Any, config Map) bool {
 
+			noggo.Logger.Debug("[int]", value)
+
 			switch v := value.(type) {
 			case int,int8,int16,int32,int64: {
 				return true
@@ -236,6 +238,7 @@ func init() {
 				} else if strings.HasPrefix(v, "[") && strings.HasSuffix(v, "]") {
 					jv := []interface{}{}
 					e := json.Unmarshal([]byte(v), &jv)
+
 					if e == nil {
 
 						arr := []int64{}
@@ -246,6 +249,7 @@ func init() {
 								arr = append(arr, int64(newVal))
 							}
 						}
+
 						return arr
 					}
 				} else {

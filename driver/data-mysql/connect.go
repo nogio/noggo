@@ -16,6 +16,7 @@ type (
 		db  *sql.DB
 		//连接串
 		url string
+		schema string
 		//模型
 		models  map[string]Map
 		views  map[string]Map

@@ -8,48 +8,48 @@
         <th>参数名称</th>
         <th>参数说明</th>
     </tr>
-    <%range $name,$config := .model%>
+    {%range $name,$config := .model%}
     <tr>
-        <td><%$name%></td>
+        <td>{%$name%}</td>
         <td>
-            <div><%$config.type%></div>
-            <%if $config.enum%>
+            <div>{%$config.type%}</div>
+            {%if $config.enum%}
             <table>
                 <tr>
                     <th>值</th>
                     <th>说明</th>
                 </tr>
-                <%range $enumKey,$enumVal := $config.enum%>
+                {%range $enumKey,$enumVal := $config.enum%}
                 <tr>
-                    <td><%$enumKey%></td>
-                    <td><%$enumVal%></td>
+                    <td>{%$enumKey%}</td>
+                    <td>{%$enumVal%}</td>
                 </tr>
-                <%end%>
+                {%end%}
             </table>
-            <%end%>
+            {%end%}
         </td>
-        <td><%$config.must%></td>
+        <td>{%$config.must%}</td>
         <td>
-            <%$config.auto%>
+            {%$config.auto%}
         </td>
         <td>
-            <a href="#crypto:<%$config.encode%>"><%$config.encode%></a>
-            <a href="#crypto:<%$config.decode%>"><%$config.decode%></a>
+            <a href="#crypto:{%$config.encode%}">{%$config.encode%}</a>
+            <a href="#crypto:{%$config.decode%}">{%$config.decode%}</a>
         </td>
-        <td><%$config.name%></td>
-        <td><%$config.text%></td>
+        <td>{%$config.name%}</td>
+        <td>{%$config.text%}</td>
     </tr>
 
     <!-- 如果data有json1 begin -->
-    <%if $config.json%>
+    {%if $config.json%}
     <tr>
         <td></td>
         <td colspan="6">
-            <%render "json" $config.json%>
+            {%render "json" $config.json%}
         </td>
     </tr>
-    <%end%>
+    {%end%}
     <!-- 如果data有json1 end -->
 
-    <%end%>
+    {%end%}
 </table>

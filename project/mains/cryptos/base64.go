@@ -12,10 +12,10 @@ func init() {
 	noggo.Mapping.Crypto("base64", Map{
 		"name": "BASE64加解密", "text": "BASE64加解密",
 		"encode": func(value Any) Any {
-			return utils.Encode64(value.(string))
+			return utils.Encode64(utils.String(value))
 		},
 		"decode": func(value Any) Any {
-			return utils.Decode64(value.(string))
+			return utils.Decode64(utils.String(value))
 		},
 	})
 }

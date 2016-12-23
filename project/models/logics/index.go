@@ -3,48 +3,44 @@ package logics
 import (
 	"github.com/nogio/noggo"
 	. "github.com/nogio/noggo/base"
+    "github.com/nogio/noggo/project/mains/consts"
+    "time"
 )
 
 
 
+//按帐号查询管理员
+func GetAdminByAccount(account string) (Map,error) {
+    db := noggo.Data.Base(consts.MAINDB); defer db.Close()
+    return db.Model("admin").Single(Map{
+        "account": account,
+    })
+}
 
-
-
-func GetTest(id Any) (error,Map) {
-	db := noggo.Data.Base("main"); defer db.Close()
-
-
-
-
-	return db.Model("test").Entity(id)
+//查询所有管理员
+func GetAdmins() ([]Map,error) {
+    db := noggo.Data.Base(consts.MAINDB); defer db.Close()
+    return db.Model("admin").Query()
 }
 
 
-func AddTest(data Map) (error,Map) {
-	db := noggo.Data.Base("main"); defer db.Close()
-	return db.Model("test").Create(data)
+//添加管理员
+func NewAdmin(data Map) (Map,error) {
+    db := noggo.Data.Base(consts.MAINDB); defer db.Close()
+    return db.Model("admin").Create(data)
 }
 
 
-func ChangeTest(item, data Map) (error,Map) {
-	db := noggo.Data.Base("main"); defer db.Close()
-	return db.Model("test").Change(item, data)
+//修改管理员信息
+func ChangeAdmin(item, data Map) (Map,error) {
+    db := noggo.Data.Base(consts.MAINDB); defer db.Close()
+    data["changed"] = time.Now()
+    return db.Model("admin").Change(item, data)
 }
 
 
-func RemoveTest(item Map) (error) {
-	db := noggo.Data.Base("main"); defer db.Close()
-	return db.Model("test").Remove(item)
-}
-
-
-func Gets(item Map) (error) {
-	db := noggo.Data.Base("main"); defer db.Close()
-	return db.Model("test").Query(Map{ "id": Map{ ">": 100 }})
-}
-
-
-func GetItems() (error) {
-	db := noggo.Data.Base("main"); defer db.Close()
-	return db.Model("test").Query(Map{ "id": Map{ ">": 100 }, "name": noggo.FTS("asdfasdf")})
+//删除管理员
+func RemoveAdmin(item Map) (error) {
+    db := noggo.Data.Base(consts.MAINDB); defer db.Close()
+    return db.Model("admin").Remove(item)
 }

@@ -10,5 +10,7 @@ import (
 	_ "./consts"
 	_ "./cryptos"
 	_ "./defines"
+	_ "./drivers"
+	_ "./middlers"
 	_ "./types"
 )

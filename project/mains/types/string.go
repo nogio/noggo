@@ -33,7 +33,7 @@ func init() {
 			return false
 		},
 		"value": func(value Any, config Map) Any {
-			return fmt.Sprintf("%s", value)
+			return strings.TrimSpace(fmt.Sprintf("%v", value))
 		},
 	})
 
@@ -64,7 +64,17 @@ func init() {
 
 			switch v := value.(type) {
 			case []string:
-				return v
+
+				//去空字串
+				reals := []string{}
+				for _,sv := range v {
+					if sv != "" {
+						reals = append(reals, sv)
+					}
+				}
+
+
+				return reals
 			case string:
 
 
@@ -104,6 +114,57 @@ func init() {
 	})
 
 
+
+
+	noggo.Mapping.Type("[line]", Map{
+		"name": "字符分行数组", "text": "字符分行数组",
+		"valid": func(value Any, config Map) bool {
+			switch value.(type) {
+			case []string:
+				return true
+			case string:
+				return true
+			default:
+				return false
+			}
+		},
+		"value": func(value Any, config Map) Any {
+
+			switch v := value.(type) {
+			case []string:
+
+				//去空字串
+				reals := []string{}
+				for _,sv := range v {
+					sv = strings.TrimSpace(sv)
+					if sv != "" {
+						reals = append(reals, sv)
+					}
+				}
+
+
+				return reals
+			case string:
+
+				v = strings.Replace(v, "\r", "", -1)
+				arr := strings.Split(v, "\n")
+
+
+				//去空字串
+				reals := []string{}
+				for _,sv := range arr {
+					sv = strings.TrimSpace(sv)
+					if sv != "" {
+						reals = append(reals, sv)
+					}
+				}
+
+				return reals
+			default:
+				return []string{}
+			}
+		},
+	})
 
 
 

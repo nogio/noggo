@@ -131,17 +131,20 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 			return template.HTML(view.body)
 		},
 		"render": func(name string, vals ...Any) template.HTML {
-			args := []Map{}
+			args := []Any{}
 			for _,v := range vals {
-				switch t := v.(type) {
-				case Map:
-					args = append(args, t)
-				case string:
+
+				if t,ok := v.(string); ok {
 					m := Map{}
 					e := json.Unmarshal([]byte(t), &m)
 					if e == nil {
 						args = append(args, m)
+					} else {
+						//要不然直接string
+						args = append(args, t)
 					}
+				} else {
+					args = append(args, v)
 				}
 			}
 
@@ -466,7 +469,7 @@ func (view *DefaultView) Parse() (string,error) {
 //这里实际是在解析layout
 //注意，这里的name,model是body的
 //layout的name,model要在 layout方法中调用， 记录到  view对象中的 layout, model
-func (view *DefaultView) Layout(name string, model Map) (string,error) {
+func (view *DefaultView) Layout(name string, model Any) (string,error) {
 
 	bodyText,bodyError := view.Body(name, model)
 	if bodyError != nil {
@@ -539,8 +542,8 @@ func (view *DefaultView) Layout(name string, model Map) (string,error) {
 
 
 /* 返回view */
-func (view *DefaultView) Body(name string, args ...Map) (string,error) {
-	bodyModel := Map{}
+func (view *DefaultView) Body(name string, args ...Any) (string,error) {
+	var bodyModel Any
 	if len(args) > 0 {
 		bodyModel = args[0]
 	}
@@ -600,9 +603,9 @@ func (view *DefaultView) Body(name string, args ...Map) (string,error) {
 }
 
 /* 返回view */
-func (view *DefaultView) Render(name string, args ...Map) (string,error) {
+func (view *DefaultView) Render(name string, args ...Any) (string,error) {
 
-	renderModel := Map{}
+	var renderModel Any
 	if len(args) > 0 {
 		renderModel = args[0]
 	}

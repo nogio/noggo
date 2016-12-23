@@ -24,6 +24,8 @@
   "data.error": "返回数据生成失败",
 
 
+  "api.login.wrong.password": "密码错误",
+
   "test": "测试"
 
 }

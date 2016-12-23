@@ -3,6 +3,8 @@
   "ok": "Success",
   "no": "Failed",
 
+  "api.login.wrong.password": "密码错误",
+
   "test": "test"
 
 }

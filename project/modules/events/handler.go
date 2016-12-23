@@ -12,9 +12,7 @@ func init() {
 	})
 	//错误处理
 	noggo.Event.ErrorHandler("error", func(ctx *noggo.EventContext) {
-
 		noggo.Logger.Debug(ctx.Name, "event.error", ctx.Wrong.Text)
-
 		ctx.Finish()
 	})
 }

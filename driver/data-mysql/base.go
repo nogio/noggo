@@ -50,6 +50,10 @@ func (base *MysqlBase) Model(name string) (noggo.DataModel) {
 		//模式，表名
 		//模式默认等于库名，而不是public，万恶的MYSQL
 		schema, object, key, fields := base.name, name, "id", Map{}
+		if base.conn.schema != "" {
+			//优先拿connect时的库名
+			schema = base.conn.schema
+		}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}
@@ -86,6 +90,10 @@ func (base *MysqlBase) View(name string) (noggo.DataView) {
 		//模式，表名
 		//模式默认等于库名，而不是public，万恶的MYSQL
 		schema, object, key, fields := base.name, name, "id", Map{}
+		if base.conn.schema != "" {
+			//优先拿connect时的库名
+			schema = base.conn.schema
+		}
 		if n,ok := config["schema"].(string); ok {
 			schema = n
 		}

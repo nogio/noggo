@@ -1,4 +1,4 @@
-package models
+package tempdb
 
 import (
 	"github.com/nogio/noggo"

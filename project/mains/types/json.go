@@ -61,6 +61,8 @@ func init() {
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
+			case Map:
+				return true
 			case []Map:
 				return true
 			case []map[string]interface{}:
@@ -78,6 +80,8 @@ func init() {
 		"value": func(value Any, config Map) Any {
 
 			switch v := value.(type) {
+			case Map:
+				return []Map{ v }
 			case []Map:
 				return v
 			case []map[string]interface{}:

@@ -1,0 +1,36 @@
+{%layout `sys`%}
+
+<form role="form" method="post" action="{%route `` `{}` `{"back":true}`%}">
+<table>
+    <tr>
+        <th style="width: 150px;">编号：</th>
+        <td>
+            {%.data.item.id%}
+        </td>
+    </tr>
+    <tr>
+        <th style="width: 150px;"><span>*</span>帐号：</th>
+        <td>
+            {%.data.item.account%}
+        </td>
+    </tr>
+    <tr>
+        <th><span>*</span>名称：</th>
+        <td>
+            {%.data.item.name%}
+        </td>
+    </tr>
+    <tr>
+        <th><span>*</span>角色：</th>
+        <td>
+            {%enum "main" "admin" "role" .data.item.role%}
+        </td>
+    </tr>
+    <tr>
+        <th></th>
+        <td>
+            <button type="submit" class="btn btn-success btn-s-xs">确认删除</button>
+        </td>
+    </tr>
+</table>
+</form>

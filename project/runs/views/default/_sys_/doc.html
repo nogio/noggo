@@ -57,9 +57,9 @@
 
 <h2>参数加解密</h2>
 <div class="link">
-    <%range $k,$v := .data.cryptos %>
-    <a href="#crypto:<%$k%>" title="<%$k%>"><%$v.name%></a>
-    <%end%>
+    {%range $k,$v := .data.cryptos %}
+    <a href="#crypto:{%$k%}" title="{%$k%}">{%$v.name%}</a>
+    {%end%}
 </div>
 <hr/>
 
@@ -68,59 +68,59 @@
 
 <h2>状态</h2>
 <div class="link">
-    <% range $k,$v := .data.states %>
-    <a href="#state:<%$k%>" title="<%$k%>"><%$k%></a>
-    <%end%>
+    {% range $k,$v := .data.states %}
+    <a href="#state:{%$k%}" title="{%$k%}">{%$k%}</a>
+    {%end%}
 </div>
 <hr/>
 
 <h2>模型</h2>
 <div class="link">
-    <% range $dk,$dv := .data.models %>
+    {% range $dk,$dv := .data.models %}
     <div>
-        <strong><%$dk%>：</strong>
-        <%range $mk,$mv := $dv%>
-            <a href="#model:<%$dk%>.<%$mk%>"><%$mk%></a>
-        <%end%>
+        <strong>{%$dk%}：</strong>
+        {%range $mk,$mv := $dv%}
+            <a href="#model:{%$dk%}.{%$mk%}">{%$mk%}</a>
+        {%end%}
     </div>
-    <%end%>
+    {%end%}
 </div>
 <hr/>
 
 <h2>路由</h2>
 <div class="link">
-    <% range $name,$config := .data.routes %>
+    {% range $name,$config := .data.routes %}
     <div>
-    <strong><%$config.uri%>：</strong>
-    <%if $config.route%>
-    <%if and $config.route.action%>
-    <a href="#route:<%$name%>">(*)<%$config.route.name%></a>
-    <%else%>
-    <%range $method,$methodConfig := $config.route%>
-    <a href="#route:<%$name%>">(<%$method%>)<%$methodConfig.name%></a>
-    <%end%>
-    <%end%>
-    <%end%>
+    <strong>{%$config.uri%}：</strong>
+    {%if $config.route%}
+    {%if and $config.route.action%}
+    <a href="#route:{%$name%}">(*){%$config.route.name%}</a>
+    {%else%}
+    {%range $method,$methodConfig := $config.route%}
+    <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+    {%end%}
+    {%end%}
+    {%end%}
 
 
-    <%if $config.branch%>
-    <%range $branchName,$branchConfig := $config.branch%>
+    {%if $config.branch%}
+    {%range $branchName,$branchConfig := $config.branch%}
 
-    <strong>分支：<%$branchName%></strong>
+    <strong>分支：{%$branchName%}</strong>
 
-    <%if and $branchConfig.route.action%>
-    <a href="#route:<%$name%>">(*)<%$branchConfig.route.name%></a>
-    <%else%>
-    <%range $method,$methodConfig := $branchConfig.route%>
-    <a href="#route:<%$name%>">(<%$method%>)<%$methodConfig.name%></a>
-    <%end%>
-    <%end%>
+    {%if and $branchConfig.route.action%}
+    <a href="#route:{%$name%}">(*){%$branchConfig.route.name%}</a>
+    {%else%}
+    {%range $method,$methodConfig := $branchConfig.route%}
+    <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+    {%end%}
+    {%end%}
 
 
-    <%end%>
-    <%end%>
+    {%end%}
+    {%end%}
     </div>
-    <%end%>
+    {%end%}
 </div>
 <hr/>
 
@@ -128,39 +128,39 @@
 
 <h2>WebScoket路由</h2>
 <div class="link">
-    <% range $name,$config := .data.sockets %>
+    {% range $name,$config := .data.sockets %}
     <div>
 
-    <strong><%$name%>：</strong>
-    <%if $config.route%>
-    <%if and $config.route.action%>
-    <a href="#socket:<%$name%>">(*)<%$config.route.name%></a>
-    <%else%>
-    <%range $method,$methodConfig := $config.route%>
-    <a href="#socket:<%$name%>">(<%$method%>)<%$methodConfig.name%></a>
-    <%end%>
-    <%end%>
-    <%end%>
+    <strong>{%$name%}：</strong>
+    {%if $config.route%}
+    {%if and $config.route.action%}
+    <a href="#socket:{%$name%}">(*){%$config.route.name%}</a>
+    {%else%}
+    {%range $method,$methodConfig := $config.route%}
+    <a href="#socket:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+    {%end%}
+    {%end%}
+    {%end%}
 
 
-    <%if $config.branch%>
-    <%range $branchName,$branchConfig := $config.branch%>
+    {%if $config.branch%}
+    {%range $branchName,$branchConfig := $config.branch%}
 
-    <strong>分支：<%$branchName%></strong>
+    <strong>分支：{%$branchName%}</strong>
 
-    <%if and $branchConfig.route.action%>
-    <a href="#socket:<%$name%>">(*)<%$branchConfig.route.name%></a>
-    <%else%>
-    <%range $method,$methodConfig := $branchConfig.route%>
-    <a href="#socket:<%$name%>">(<%$method%>)<%$methodConfig.name%></a>
-    <%end%>
-    <%end%>
+    {%if and $branchConfig.route.action%}
+    <a href="#socket:{%$name%}">(*){%$branchConfig.route.name%}</a>
+    {%else%}
+    {%range $method,$methodConfig := $branchConfig.route%}
+    <a href="#socket:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+    {%end%}
+    {%end%}
 
 
-    <%end%>
-    <%end%>
+    {%end%}
+    {%end%}
     </div>
-    <%end%>
+    {%end%}
 </div>
 <hr/>
 
@@ -168,9 +168,9 @@
 
 <h2>WebSocket消息</h2>
 <div class="link">
-    <% range $k,$v := .data.messages %>
-        <a href="#message:<%$k%>"><%$k%> ( <%$v.name%> )</a>
-    <%end%>
+    {% range $k,$v := .data.messages %}
+        <a href="#message:{%$k%}">{%$k%} ( {%$v.name%} )</a>
+    {%end%}
 </div>
 <hr/>
 -->
@@ -192,14 +192,14 @@
             <th>说明</th>
             <th>Key</th>
         </tr>
-        <%range $k,$v := .data.cryptos %>
+        {%range $k,$v := .data.cryptos %}
         <tr>
-            <td><%$k%></td>
-            <td><a name="crypto:<%$k%>"></a><%$v.name%></td>
-            <td><%$v.text%></td>
-            <td><%format "%v" $v.key%></td>
+            <td>{%$k%}</td>
+            <td><a name="crypto:{%$k%}"></a>{%$v.name%}</td>
+            <td>{%$v.text%}</td>
+            <td>{%format "%v" $v.key%}</td>
         </tr>
-        <%end%>
+        {%end%}
     </table>
 </div>
 <hr/>
@@ -226,12 +226,12 @@
             <th>状态码</th>
             <th>状态字串</th>
         </tr>
-        <% range $k,$v := .data.states %>
+        {% range $k,$v := .data.states %}
         <tr>
-            <td><%$k%></td>
-            <td><%$v%></td>
+            <td>{%$k%}</td>
+            <td>{%$v%}</td>
         </tr>
-        <%end%>
+        {%end%}
     </table>
 </div>
 <hr/>
@@ -247,11 +247,11 @@
 
     <!-- 循环模型 begin -->
 
-    <% range $dk,$dv := .data.models %>
-    <% range $name,$config := $dv %>
+    {% range $dk,$dv := .data.models %}
+    {% range $name,$config := $dv %}
 
     <div class="model">
-        <h3>模型：<a name="model:<%$dk%>.<%$name%>" href="" target="_blank"><%$dk%>.<%$name%></a></h3>
+        <h3>模型：<a name="model:{%$dk%}.{%$name%}" href="" target="_blank">{%$dk%}.{%$name%}</a></h3>
 
         <div style="margin: 50px 0;">
             <table>
@@ -263,44 +263,44 @@
                     <th>说明</th>
                 </tr>
                 <tr>
-                    <td><%$dk%></td>
+                    <td>{%$dk%}</td>
                     <td>
-                        <%if $config.schema%>
-                            <%$config.schema%>
-                        <%else%>
+                        {%if $config.schema%}
+                            {%$config.schema%}
+                        {%else%}
                             public
-                        <%end%>
+                        {%end%}
                     </td>
                     <td>
-                        <%if $config.table%>
-                            <%$config.table%>
-                        <%else%>
-                            <%$name%>
-                        <%end%>
+                        {%if $config.table%}
+                            {%$config.table%}
+                        {%else%}
+                            {%$name%}
+                        {%end%}
                     </td>
-                    <td><%$config.name%></td>
-                    <td><%$config.text%></td>
+                    <td>{%$config.name%}</td>
+                    <td>{%$config.text%}</td>
                 </tr>
 
                 <!-- 判断模型 有没有参数 begin -->
-                <%if $config.fields%>
+                {%if $config.field%}
                 <tr>
                     <th colspan="5">字段列表</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.fields%>
+                        {%render "json" $config.field%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
             </table>
         </div>
     </div>
-    <%end%>
-    <%end%>
+    {%end%}
+    {%end%}
     <!-- 循环模型 end -->
 
 </div>
@@ -315,17 +315,17 @@
 <hr/>
 <div class="routes">
 
-    <% range $name,$config := .data.routes %>
+    {% range $name,$config := .data.routes %}
     <div class="route">
         <h3>
-            <div>路由：<a name="route:<%$name%>"><%$name%></a></div>
+            <div>路由：<a name="route:{%$name%}">{%$name%}</a></div>
         </h3>
 
         <!-- 判断全/分方法版 begin -->
-        <%if $config.route.action %>
+        {%if $config.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="<%if $config.route.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -337,23 +337,23 @@
                 <tr>
                     <td>*</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$config.route.name%></td>
-                    <td><%$config.route.text%></td>
+                    <td>{%$config.route.name%}</td>
+                    <td>{%$config.route.text%}</td>
                     <td>
-                        <%if $config.route.coded%>
+                        {%if $config.route.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -369,22 +369,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.base%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.base%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $config.route.auth%>
+                {%end%}
+                {%if $config.route.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -400,41 +400,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.route.auth%>
+                            {%range $authName,$authConfig := $config.route.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $config.route.args%>
+                {%if $config.route.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.args%>
+                        {%render "json" $config.route.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $config.route.state%>
+                {%if $config.route.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -445,29 +445,29 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $config.route.state%>
+                            {%range $stateCode,$stateText := $config.route.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $config.route.data%>
+                {%if $config.route.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.data%>
+                        {%render "json" $config.route.data%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
@@ -476,12 +476,12 @@
         </div>
 
         <!-- 全方法版 end -->
-        <%else%>
+        {%else%}
         <!-- 分方法版 begin -->
 
-        <%range $methodName,$methodConfig := $config.route%>
+        {%range $methodName,$methodConfig := $config.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="<%if $methodConfig.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -491,24 +491,24 @@
                     <th style="width: 70px;">编码</th>
                 </tr>
                 <tr>
-                    <td><%$methodName%></td>
+                    <td>{%$methodName%}</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$methodConfig.name%></td>
-                    <td><%$methodConfig.text%></td>
+                    <td>{%$methodConfig.name%}</td>
+                    <td>{%$methodConfig.text%}</td>
                     <td>
-                        <%if $methodConfig.coded%>
+                        {%if $methodConfig.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -524,22 +524,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.base%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.base%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $methodConfig.auth%>
+                {%end%}
+                {%if $methodConfig.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -555,41 +555,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $methodConfig.auth%>
+                            {%range $authName,$authConfig := $methodConfig.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $methodConfig.args%>
+                {%if $methodConfig.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.args%>
+                        {%render "json" $methodConfig.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $methodConfig.state%>
+                {%if $methodConfig.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -600,26 +600,26 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $methodConfig.state%>
+                            {%range $stateCode,$stateText := $methodConfig.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $methodConfig.data%>
+                {%if $methodConfig.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.data%>
+                        {%render "json" $methodConfig.data%}
                     </td>
                 </tr>
 
@@ -629,16 +629,16 @@
 
 
 
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
             </table>
         </div>
         <!-- 循环methods end -->
-        <%end%>
+        {%end%}
 
         <!-- 分方法版 end -->
-        <%end%>
+        {%end%}
         <!-- 判断全/分方法版 end -->
 
 
@@ -648,19 +648,19 @@
 
 
         <!-- 路由分支 begin -->
-        <%if $config.branch%>
-        <%range $k,$branchConfig := $config.branch%>
+        {%if $config.branch%}
+        {%range $k,$branchConfig := $config.branch%}
 
         <h3>
-            <div>路由：<%$name%> 分支：<%$k%></div>
+            <div>路由：{%$name%} 分支：{%$k%}</div>
         </h3>
-        <div><strong><%$branchConfig.name%>: </strong> <%$branchConfig.text%></div>
+        <div><strong>{%$branchConfig.name%}: </strong> {%$branchConfig.text%}</div>
 
         <!-- 判断全/分方法版 begin -->
-        <%if $branchConfig.route.action %>
+        {%if $branchConfig.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="<%if $config.route.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -672,23 +672,23 @@
                 <tr>
                     <td>*</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$branchConfig.route.name%></td>
-                    <td><%$branchConfig.route.text%></td>
+                    <td>{%$branchConfig.route.name%}</td>
+                    <td>{%$branchConfig.route.text%}</td>
                     <td>
-                        <%if $branchConfig.route.coded%>
+                        {%if $branchConfig.route.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -704,22 +704,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $branchConfig.route.auth%>
+                {%end%}
+                {%if $branchConfig.route.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -735,41 +735,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $branchConfig.route.auth%>
+                            {%range $authName,$authConfig := $branchConfig.route.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $branchConfig.route.args%>
+                {%if $branchConfig.route.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.args%>
+                        {%render "json" $config.route.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $branchConfig.route.state%>
+                {%if $branchConfig.route.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -780,29 +780,29 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $config.route.state%>
+                            {%range $stateCode,$stateText := $config.route.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $branchConfig.route.data%>
+                {%if $branchConfig.route.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.data%>
+                        {%render "json" $config.route.data%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
@@ -811,12 +811,12 @@
         </div>
 
         <!-- 全方法版 end -->
-        <%else%>
+        {%else%}
         <!-- 分方法版 begin -->
 
-        <%range $methodName,$methodConfig := $branchConfig.route%>
+        {%range $methodName,$methodConfig := $branchConfig.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="<%if $methodConfig.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -826,24 +826,24 @@
                     <th style="width: 70px;">编码</th>
                 </tr>
                 <tr>
-                    <td><%$methodName%></td>
+                    <td>{%$methodName%}</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$methodConfig.name%></td>
-                    <td><%$methodConfig.text%></td>
+                    <td>{%$methodConfig.name%}</td>
+                    <td>{%$methodConfig.text%}</td>
                     <td>
-                        <%if $methodConfig.coded%>
+                        {%if $methodConfig.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -859,22 +859,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $methodConfig.auth%>
+                {%end%}
+                {%if $methodConfig.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -890,41 +890,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $methodConfig.auth%>
+                            {%range $authName,$authConfig := $methodConfig.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $methodConfig.args%>
+                {%if $methodConfig.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.args%>
+                        {%render "json" $methodConfig.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $methodConfig.state%>
+                {%if $methodConfig.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -935,26 +935,26 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $methodConfig.state%>
+                            {%range $stateCode,$stateText := $methodConfig.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $methodConfig.data%>
+                {%if $methodConfig.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.data%>
+                        {%render "json" $methodConfig.data%}
                     </td>
                 </tr>
 
@@ -964,16 +964,16 @@
 
 
 
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
             </table>
         </div>
         <!-- 循环methods end -->
-        <%end%>
+        {%end%}
 
         <!-- 分方法版 end -->
-        <%end%>
+        {%end%}
         <!-- 判断全/分方法版 end -->
 
 
@@ -981,8 +981,8 @@
 
 
 
-        <%end%>
-        <%end%>
+        {%end%}
+        {%end%}
         <!-- 路由分支 end -->
 
 
@@ -1003,7 +1003,7 @@
 
     </div>
     <!-- 路由循环 end -->
-    <%end%>
+    {%end%}
 
 </div>
 <hr/>
@@ -1023,17 +1023,17 @@
 <hr/>
 <div class="routes">
 
-    <% range $name,$config := .data.sockets %>
+    {% range $name,$config := .data.sockets %}
     <div class="route">
         <h3>
-            <div>WebSocket路由：<a name="socket:<%$name%>"><%$name%></a></div>
+            <div>WebSocket路由：<a name="socket:{%$name%}">{%$name%}</a></div>
         </h3>
 
         <!-- 判断全/分方法版 begin -->
-        <%if $config.route.action %>
+        {%if $config.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="<%if $config.route.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1045,27 +1045,27 @@
                 <tr>
                     <td>*</td>
                     <td>
-                        <%if $config.uri%>
-                        <div><%$config.uri%></div>
-                        <%else%>
-                        <div><%$name%></div>
-                        <%end%>
+                        {%if $config.uri%}
+                        <div>{%$config.uri%}</div>
+                        {%else%}
+                        <div>{%$name%}</div>
+                        {%end%}
                     </td>
-                    <td><%$config.route.name%></td>
-                    <td><%$config.route.text%></td>
+                    <td>{%$config.route.name%}</td>
+                    <td>{%$config.route.text%}</td>
                     <td>
-                        <%if $config.route.coded%>
+                        {%if $config.route.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -1081,22 +1081,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $config.route.auth%>
+                {%end%}
+                {%if $config.route.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -1112,41 +1112,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.route.auth%>
+                            {%range $authName,$authConfig := $config.route.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $config.route.args%>
+                {%if $config.route.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.args%>
+                        {%render "json" $config.route.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $config.route.state%>
+                {%if $config.route.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -1157,29 +1157,29 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $config.route.state%>
+                            {%range $stateCode,$stateText := $config.route.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $config.route.data%>
+                {%if $config.route.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.data%>
+                        {%render "json" $config.route.data%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
@@ -1188,12 +1188,12 @@
         </div>
 
         <!-- 全方法版 end -->
-        <%else%>
+        {%else%}
         <!-- 分方法版 begin -->
 
-        <%range $methodName,$methodConfig := $config.route%>
+        {%range $methodName,$methodConfig := $config.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="<%if $methodConfig.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1203,24 +1203,24 @@
                     <th style="width: 70px;">编码</th>
                 </tr>
                 <tr>
-                    <td><%$methodName%></td>
+                    <td>{%$methodName%}</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$methodConfig.name%></td>
-                    <td><%$methodConfig.text%></td>
+                    <td>{%$methodConfig.name%}</td>
+                    <td>{%$methodConfig.text%}</td>
                     <td>
-                        <%if $methodConfig.coded%>
+                        {%if $methodConfig.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -1236,22 +1236,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $methodConfig.auth%>
+                {%end%}
+                {%if $methodConfig.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -1267,41 +1267,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $methodConfig.auth%>
+                            {%range $authName,$authConfig := $methodConfig.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $methodConfig.args%>
+                {%if $methodConfig.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.args%>
+                        {%render "json" $methodConfig.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $methodConfig.state%>
+                {%if $methodConfig.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -1312,26 +1312,26 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $methodConfig.state%>
+                            {%range $stateCode,$stateText := $methodConfig.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $methodConfig.data%>
+                {%if $methodConfig.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.data%>
+                        {%render "json" $methodConfig.data%}
                     </td>
                 </tr>
 
@@ -1341,16 +1341,16 @@
 
 
 
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
             </table>
         </div>
         <!-- 循环methods end -->
-        <%end%>
+        {%end%}
 
         <!-- 分方法版 end -->
-        <%end%>
+        {%end%}
         <!-- 判断全/分方法版 end -->
 
 
@@ -1360,19 +1360,19 @@
 
 
         <!-- 路由分支 begin -->
-        <%if $config.branch%>
-        <%range $k,$branchConfig := $config.branch%>
+        {%if $config.branch%}
+        {%range $k,$branchConfig := $config.branch%}
 
         <h3>
-            <div>路由：<%$name%> 分支：<%$k%></div>
+            <div>路由：{%$name%} 分支：{%$k%}</div>
         </h3>
-        <div><strong><%$branchConfig.name%>: </strong> <%$branchConfig.text%></div>
+        <div><strong>{%$branchConfig.name%}: </strong> {%$branchConfig.text%}</div>
 
         <!-- 判断全/分方法版 begin -->
-        <%if $branchConfig.route.action %>
+        {%if $branchConfig.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="<%if $config.route.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1384,23 +1384,23 @@
                 <tr>
                     <td>*</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$branchConfig.route.name%></td>
-                    <td><%$branchConfig.route.text%></td>
+                    <td>{%$branchConfig.route.name%}</td>
+                    <td>{%$branchConfig.route.text%}</td>
                     <td>
-                        <%if $branchConfig.route.coded%>
+                        {%if $branchConfig.route.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -1416,22 +1416,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $branchConfig.route.auth%>
+                {%end%}
+                {%if $branchConfig.route.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -1447,41 +1447,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $branchConfig.route.auth%>
+                            {%range $authName,$authConfig := $branchConfig.route.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $branchConfig.route.args%>
+                {%if $branchConfig.route.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.args%>
+                        {%render "json" $config.route.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $branchConfig.route.state%>
+                {%if $branchConfig.route.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -1492,29 +1492,29 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $config.route.state%>
+                            {%range $stateCode,$stateText := $config.route.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $branchConfig.route.data%>
+                {%if $branchConfig.route.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $config.route.data%>
+                        {%render "json" $config.route.data%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
 
@@ -1523,12 +1523,12 @@
         </div>
 
         <!-- 全方法版 end -->
-        <%else%>
+        {%else%}
         <!-- 分方法版 begin -->
 
-        <%range $methodName,$methodConfig := $branchConfig.route%>
+        {%range $methodName,$methodConfig := $branchConfig.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="<%if $methodConfig.coded%>coded<%else%>coding<%end%>">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1538,24 +1538,24 @@
                     <th style="width: 70px;">编码</th>
                 </tr>
                 <tr>
-                    <td><%$methodName%></td>
+                    <td>{%$methodName%}</td>
                     <td>
-                        <div><%$config.uri%></div>
+                        <div>{%$config.uri%}</div>
                     </td>
-                    <td><%$methodConfig.name%></td>
-                    <td><%$methodConfig.text%></td>
+                    <td>{%$methodConfig.name%}</td>
+                    <td>{%$methodConfig.text%}</td>
                     <td>
-                        <%if $methodConfig.coded%>
+                        {%if $methodConfig.coded%}
                         <span style="color: green;">已完成</span>
-                        <%else%>
+                        {%else%}
                         <span style="color: red;">未完成</span>
-                        <%end%>
+                        {%end%}
                     </td>
                 </tr>
 
                 <!-- 判断路由 有没有访问验证 begin -->
                 <!-- 注意，分方法页，可能会上级的总体访问验证 -->
-                <%if $config.auth%>
+                {%if $config.auth%}
                 <tr>
                     <th colspan="5">上级访问验证</th>
                 </tr>
@@ -1571,22 +1571,22 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $config.auth%>
+                            {%range $authName,$authConfig := $config.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
-                <%if $methodConfig.auth%>
+                {%end%}
+                {%if $methodConfig.auth%}
                 <tr>
                     <th colspan="5">访问验证</th>
                 </tr>
@@ -1602,41 +1602,41 @@
                                 <th>名称</th>
                                 <th>说明</th>
                             </tr>
-                            <%range $authName,$authConfig := $methodConfig.auth%>
+                            {%range $authName,$authConfig := $methodConfig.auth%}
                             <tr>
-                                <td><%$authName%></td>
-                                <td><%$authConfig.must%></td>
-                                <td><%$authConfig.sign%></td>
-                                <td><%$authConfig.data%></td>
-                                <td><%$authConfig.model%></td>
-                                <td><%$authConfig.name%></td>
-                                <td><%$authConfig.text%></td>
+                                <td>{%$authName%}</td>
+                                <td>{%$authConfig.must%}</td>
+                                <td>{%$authConfig.sign%}</td>
+                                <td>{%$authConfig.data%}</td>
+                                <td>{%$authConfig.model%}</td>
+                                <td>{%$authConfig.name%}</td>
+                                <td>{%$authConfig.text%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有访问验证 end -->
 
 
 
 
                 <!-- 判断路由 有没有参数 begin -->
-                <%if $methodConfig.args%>
+                {%if $methodConfig.args%}
                 <tr>
                     <th colspan="5">路由参数</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.args%>
+                        {%render "json" $methodConfig.args%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
                 <!-- 判断路由 有没有返回状态 begin -->
-                <%if $methodConfig.state%>
+                {%if $methodConfig.state%}
                 <tr>
                     <th colspan="5">返回状态</th>
                 </tr>
@@ -1647,26 +1647,26 @@
                                 <th>状态码</th>
                                 <th>状态说明</th>
                             </tr>
-                            <%range $stateCode,$stateText := $methodConfig.state%>
+                            {%range $stateCode,$stateText := $methodConfig.state%}
                             <tr>
-                                <td><%$stateCode%></td>
-                                <td><%$stateText%></td>
+                                <td>{%$stateCode%}</td>
+                                <td>{%$stateText%}</td>
                             </tr>
-                            <%end%>
+                            {%end%}
                         </table>
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有返回状态 end -->
 
                 <!-- 判断路由 有没有返回数据 begin -->
-                <%if $methodConfig.data%>
+                {%if $methodConfig.data%}
                 <tr>
                     <th colspan="5">返回数据</th>
                 </tr>
                 <tr>
                     <td colspan="5">
-                        <%render "json" $methodConfig.data%>
+                        {%render "json" $methodConfig.data%}
                     </td>
                 </tr>
 
@@ -1676,16 +1676,16 @@
 
 
 
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
             </table>
         </div>
         <!-- 循环methods end -->
-        <%end%>
+        {%end%}
 
         <!-- 分方法版 end -->
-        <%end%>
+        {%end%}
         <!-- 判断全/分方法版 end -->
 
 
@@ -1693,8 +1693,8 @@
 
 
 
-        <%end%>
-        <%end%>
+        {%end%}
+        {%end%}
         <!-- 路由分支 end -->
 
 
@@ -1715,7 +1715,7 @@
 
     </div>
     <!-- 路由循环 end -->
-    <%end%>
+    {%end%}
 
 </div>
 <hr/>
@@ -1741,10 +1741,10 @@
 
     <!-- 循环消息 begin -->
 
-    <% range $mk,$mv := .data.messages %>
+    {% range $mk,$mv := .data.messages %}
 
     <div class="model">
-        <h3>消息：<a name="message:<%$mk%>"><%$mk%> &nbsp;&nbsp;&nbsp;&nbsp;</a></h3>
+        <h3>消息：<a name="message:{%$mk%}">{%$mk%} &nbsp;&nbsp;&nbsp;&nbsp;</a></h3>
 
         <div style="margin: 50px 0;">
             <table>
@@ -1755,35 +1755,35 @@
                     <th>说明</th>
                 </tr>
                 <tr>
-                    <td><%$mk%></td>
+                    <td>{%$mk%}</td>
                     <td>
-                        <%if .mv.uri%>
-                            <%.mv.uri%>
-                        <%else%>
-                            <%$mk%>
-                        <%end%>
+                        {%if .mv.uri%}
+                            {%.mv.uri%}
+                        {%else%}
+                            {%$mk%}
+                        {%end%}
                     </td>
-                    <td><%$mv.name%></td>
-                    <td><%$mv.text%></td>
+                    <td>{%$mv.name%}</td>
+                    <td>{%$mv.text%}</td>
                 </tr>
 
                 <!-- 判断模型 有没有参数 begin -->
-                <%if $mv.data%>
+                {%if $mv.data%}
                 <tr>
                     <th colspan="4">发送数据data</th>
                 </tr>
                 <tr>
                     <td colspan="4">
-                        <%render "json" $mv.data%>
+                        {%render "json" $mv.data%}
                     </td>
                 </tr>
-                <%end%>
+                {%end%}
                 <!-- 判断路由 有没有参数 end -->
 
             </table>
         </div>
     </div>
-    <%end%>
+    {%end%}
     <!-- 循环消息 end -->
 </div>
 

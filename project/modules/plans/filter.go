@@ -8,9 +8,14 @@ func init() {
 
 	//请求拦截器
 	noggo.Plan.RequestFilter("request", func(ctx *noggo.PlanContext) {
-		noggo.Logger.Debug(ctx.Node.Name, "计划拦截器开始")
 		ctx.Next()
 	})
-
-
+	//执行拦截器
+	noggo.Plan.ExecuteFilter("execute", func(ctx *noggo.PlanContext) {
+		ctx.Next()
+	})
+	//响应拦截器
+	noggo.Plan.ResponseFilter("response", func(ctx *noggo.PlanContext) {
+		ctx.Next()
+	})
 }

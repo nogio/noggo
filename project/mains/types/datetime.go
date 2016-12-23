@@ -31,7 +31,17 @@ func init() {
 			case *time.Time:
 				return v
 			case string:
-				dt,err := time.Parse("2006-01-02 15:04:05", v)
+
+				lay := "2006-01-02 15:04:05"
+				if len(v) == 8 {
+					lay = "20060102"
+				} else if len(v) == 10 {
+					lay = "2006-01-02"
+				} else {
+					lay = "2006-01-02 15:04:05"
+				}
+
+				dt,err := time.Parse(lay, v)
 				if err == nil {
 					return dt
 				} else {

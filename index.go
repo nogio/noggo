@@ -165,7 +165,6 @@ func init() {
 
 
 
-
 	loadConfig()
 	loadLang()
 }

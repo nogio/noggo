@@ -7,9 +7,11 @@
 
 package nodes
 
+import "github.com/nogio/noggo"
+
 import (
-	"github.com/nogio/noggo"
 	_ "./ing"
+	_ "./sys"
 	_ "./www"
 )
 

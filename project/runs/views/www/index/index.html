@@ -1,3 +1,25 @@
-<%layout "layout"%>
-这里是VIEW层哦~~~~~~
-<p><%.data.msg%></p>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>首页视图</title>
+</head>
+<body>
+
+<div>{%.data.msg%}</div>
+
+<hr/>
+
+{%render `_part` "传的值"%}
+{%render `_part` 123456%}
+
+<hr/>
+
+<h3>循环</h3>
+
+{%range .data.items%}
+<div>编号：{%.id%}，名字：{%.name%}</div>
+{%end%}
+
+</body>
+</html>

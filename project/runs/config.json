@@ -14,36 +14,48 @@
   },
 
 
-  
+
   "node": {
     "ing": {
       "id": "ing-1", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心",
-      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": "", "expiry": 360000
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
+    },
+    "sys": {
+      "id": "sys-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "后台管理", "text": "后台管理",
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
     },
     "www": {
-      "id": "www-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "主站", "text": "主站",
-      "charset": "utf-8", "cookie": "nog", "domain": "", "crypto": "", "expiry": 360000
+      "id": "www-1", "port": ":22751", "url": "http://127.0.0.1:22751", "name": "主站", "text": "主站",
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
     }
   },
 
   "cache": {
     "main": {
-      "driver": "default",
-      "config": { }
+      "driver": "default", "config": {}
+    },
+    "temp": {
+      "driver": "default", "config": { }
     }
   },
 
   "data": {
     "main": {
-      "driver": "postgres", "cache": "main",
+      "driver": "mysql", "cache": "main",
       "config": {
-        "url": "postgres://nog:nog2016@localhost/nog_main?sslmode=disable"
+        "url": "nog:nog2017@tcp(127.0.0.1:3306)/noggo?charset=utf8"
       }
     },
-    "temp": {
+    "main.postgres": {
       "driver": "postgres", "cache": "main",
       "config": {
-        "url": "postgres://nog:nog2016@localhost/nog_temp?sslmode=disable"
+        "url": "postgres://nog:nog2017@127.0.0.1/noggo?sslmode=disable"
+      }
+    },
+    "main.mysql": {
+      "driver": "mysql", "cache": "main",
+      "config": {
+        "url": "nog:nog2017@tcp(localhost:3306)/noggo?charset=utf8"
       }
     }
   },
@@ -77,15 +89,8 @@
   },
 
 
-  "trigger": {
-  },
-
-
-
   "session": {
-    "expiry": 3600,
-    "driver": "default",
-    "config": {}
+    "driver": "default", "config": {}
   },
 
   "logger": {
@@ -109,7 +114,11 @@
 
 
   "custom": {
-
+    "static": "statics",
+    "view":   "views",
+    "upload": "",
+    "storage": "files/storage",
+    "thumbnail": "files/thumbnail"
   },
 
 

@@ -43,28 +43,26 @@ package main
 
 import (
 	"github.com/nogio/noggo"
+	_ "github.com/nogio/noggo/core"
 	"github.com/nogio/noggo/middler"
 )
-
-func init() {
-	//请求日志、静态文件、表单处理中间件
-	noggo.Use(middler.HttpLogger())
-	noggo.Use(middler.HttpStatic("statics"))
-	noggo.Use(middler.HttpForm("uploads"))
-}
 
 
 func main() {
 
-	//get 请求
+	//请求日志、静态文件、表单解析、中间件
+	noggo.Use(middler.HttpLogger())
+	noggo.Use(middler.HttpStatic("statics"))
+	noggo.Use(middler.HttpForm("uploads"))
+
+	//get 首页
 	noggo.Get("/", func(ctx *noggo.HttpContext) {
 		ctx.Text("hello noggo.")
 	})
-	//post 请求
+	//post 首页
 	noggo.Post("/", func(ctx *noggo.HttpContext) {
-		ctx.Text("post hello noggo.")
+		ctx.Json(ctx.Form)
 	})
-	
 	//添加一个触发器，noggo.Trigger.Touch("trigger.test") 触发
 	noggo.Add("trigger.test", func(ctx *noggo.TriggerContext) {
 		ctx.Finish()
@@ -73,8 +71,9 @@ func main() {
 	noggo.Add("task.test", func(ctx *noggo.TaskContext) {
 		ctx.Finish()
 	})
-	//添加一个每5秒执行的计划，   自动调用
+	//添加一个每5秒执行的计划，  不需调用，
 	noggo.Add("*/5 * * * * *", func(ctx *noggo.PlanContext) {
+		noggo.Logger.Debug("定时计划开始执行")
 		ctx.Finish()
 	})
 	//添加一个事件，noggo.Event.Publish("event.test")调用

@@ -1,0 +1,45 @@
+{%layout `sys`%}
+
+<form role="form" method="post" action="{%route `` `{}` `{"back":true}`%}">
+<table>
+    <tr>
+        <th style="width: 150px;">编号：</th>
+        <td>
+            {%.data.item.id%}
+        </td>
+    </tr>
+    <tr>
+        <th style="width: 150px;"><span>*</span>帐号：</th>
+        <td>
+            <input class="input" type="text" id="form-account" name="account" value="{%.data.item.account%}" placeholder="帐号不可为空、且唯一"/>
+        </td>
+    </tr>
+    <tr>
+        <th><span>*</span>密码：</th>
+        <td>
+            <input class="input" type="text" id="form-password" name="password" placeholder="密码不可为空"/>
+        </td>
+    </tr>
+    <tr>
+        <th><span>*</span>名称：</th>
+        <td>
+            <input class="input" type="text" id="form-name" name="name" value="{%.data.item.name%}" placeholder="名称不可为空"/>
+        </td>
+    </tr>
+    <tr>
+        <th><span>*</span>角色：</th>
+        <td>
+            {%range $k,$v := .data.roles%}
+            <input type="radio" id="form-role-{%$k%}" name="role" value="{%$k%}" {%if eq $k $.data.item.role%}checked="checked"{%end%} />
+            <label for="form-role-{%$k%}">{%$v%}</label>
+            {%end%}
+        </td>
+    </tr>
+    <tr>
+        <th></th>
+        <td>
+            <button type="submit" class="btn btn-success btn-s-xs">确认修改</button>
+        </td>
+    </tr>
+</table>
+</form>

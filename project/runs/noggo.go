@@ -2,35 +2,12 @@ package main
 
 import (
 	"github.com/nogio/noggo"
-	"github.com/nogio/noggo/driver"
-	"github.com/nogio/noggo/middler"
-	_ "github.com/nogio/noggo/core"
 	_ "../mains"
-	_ "../models/bases"
+	_ "../models"
 	_ "../modules"
 	_ "../nodes"
 	"os"
 )
-
-func init() {
-
-	//会话驱动
-	noggo.Driver("redis", driver.SessionRedis())
-
-	//缓存驱动
-	noggo.Driver("redis", driver.CacheRedis())
-
-	//数据驱动
-	noggo.Driver("postgres", driver.DataPostgres())
-	noggo.Driver("mysql", driver.DataMysql())
-	noggo.Driver("adodb", driver.DataAdodb())
-	noggo.Driver("sqlite", driver.DataSqlite())
-
-	//中间件
-	noggo.Use(middler.HttpLogger())
-	noggo.Use(middler.HttpStatic("statics"))
-	noggo.Use(middler.HttpForm("uploads"))
-}
 
 func main() {
 	//框架初始化
