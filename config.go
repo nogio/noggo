@@ -30,6 +30,8 @@ type (
 		Cookie	string	`json:"cookie"`
 		//Session使用的domain
 		Domain	string	`json:"domain"`
+		//session超时时间
+		Expiry	int64	`json:"expiry"`
 
 		//节点root
 		Root    string	`json:"root"`
@@ -70,7 +72,7 @@ type (
 		//驱动
 		Driver	string	`json:"driver"`
 		//超时时间
-		Expiry	int64	`json:"expiry"`
+		//Expiry	int64	`json:"expiry"`
 		//自定义配置
 		Config	Map		`json:"config"`
 	}

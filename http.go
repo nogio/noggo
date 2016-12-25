@@ -1297,8 +1297,8 @@ func (module *httpModule) contextRequest(ctx *HttpContext) {
 		//这里在ctx.Cookie封装之后，应当写到ctx.Cookie中，在response写入res
 		//待修改
 		cookie := http.Cookie{ Name: module.node.Config.Cookie, Value: url.QueryEscape(ctx.Id), Path: "/", HttpOnly: true }
-		if Config.Session.Expiry > 0 {
-			cookie.MaxAge = int(Config.Session.Expiry)
+		if module.node.Config.Expiry > 0 {
+			cookie.MaxAge = int(module.node.Config.Expiry)
 		}
 		if module.node.Config.Domain != "" {
 			cookie.Domain = module.node.Config.Domain
@@ -2864,8 +2864,8 @@ func (ctx *HttpContext) Cookie(key string, vals ...Any) string {
 		switch val := vals[0].(type) {
 			case http.Cookie:
 				val.Value = url.QueryEscape(val.Value)
-				if ctx.Node.session.sessionConfig.Expiry > 0 {
-					val.MaxAge = int(ctx.Node.session.sessionConfig.Expiry)
+				if ctx.Node.Config.Expiry > 0 {
+					val.MaxAge = int(ctx.Node.Config.Expiry)
 				}
 				if ctx.Node.Config.Domain != "" {
 					val.Domain = ctx.Node.Config.Domain
@@ -2873,8 +2873,8 @@ func (ctx *HttpContext) Cookie(key string, vals ...Any) string {
 				http.SetCookie(ctx.Res, &val)
 			case string:
 				cookie := http.Cookie{ Name: key, Value: url.QueryEscape(val), Path: "/", HttpOnly: true }
-				if ctx.Node.session.sessionConfig.Expiry > 0 {
-					cookie.MaxAge = int(ctx.Node.session.sessionConfig.Expiry)
+				if ctx.Node.Config.Expiry > 0 {
+					cookie.MaxAge = int(ctx.Node.Config.Expiry)
 				}
 				if ctx.Node.Config.Domain != "" {
 					cookie.Domain = ctx.Node.Config.Domain
