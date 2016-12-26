@@ -57,7 +57,8 @@ var (
 	Cache *cacheGlobal
 	//数据
 	Data *dataGlobal
-
+	//存储
+	Storage *storageGlobal
 
 	//语法糖
 	Sugar *sugarGlobal
@@ -155,7 +156,11 @@ func init() {
 		drivers: map[string]DataDriver{},
 		connects: map[string]DataConnect{},
 	}
-
+	//存储
+	Storage = &storageGlobal{
+		drivers: map[string]StorageDriver{},
+		connects: map[string]StorageConnect{},
+	}
 
 
 

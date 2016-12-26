@@ -60,6 +60,16 @@
     }
   },
 
+  "storage": {
+    "main": {
+      "driver": "default", "config": {
+        "path": "files/storage"
+      }
+    }
+  },
+
+
+
 
   "queue": {
     "default": {

@@ -59,6 +59,14 @@ type (
 	}
 
 
+	//storage配置
+	storageConfig struct {
+		//驱动
+		Driver	string	`json:"driver"`
+		//驱动配置
+		Config	Map		`json:"config"`
+	}
+
 
 	//日志配置
 	loggerConfig struct {
@@ -156,9 +164,10 @@ type (
 
 		Lang	map[string]*langConfig	`json:"lang"`
 		Node	map[string]*nodeConfig	`json:"node"`
-		Data	map[string]*dataConfig	`json:"data"`
 		Cache	map[string]*cacheConfig	`json:"cache"`
+		Data	map[string]*dataConfig	`json:"data"`
 		Queue	map[string]*queueConfig	`json:"queue"`
+		Storage	map[string]*storageConfig	`json:"storage"`
 
 
 		//日志配置
