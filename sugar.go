@@ -63,6 +63,8 @@ func Driver(name string, drv Any) {
 		Cache.Driver(name, v)
 	case DataDriver:
 		Data.Driver(name, v)
+	case StorageDriver:
+		Storage.Driver(name, v)
 
 	case HttpDriver:
 		Http.Driver(name, v)
