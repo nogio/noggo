@@ -29,27 +29,35 @@ type (
 	StorageBase interface {
 		Close() error
 
-		//上传文件
-		Upload(path string) (string,error)
-		//上传二进制文件，支持断点
-		UploadBytes(bytes []byte, offset int64) (string,error)
-		//下载文件
-		Download(id string, path string) (error)
-		//下载二进制文件内容，支持断点，limit不传表示到结尾，offset默认传0
-		DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error)
-
-		//获取访问url
-		TargetUrl(id string) (string,error)
-
+		//创建，生成文件ID
+		Create() (string,error)
 		//删除文件
 		Remove(id string) (error)
 		//恢复文件，兼容设计，以支持部分存储系统逻辑删除
 		Recover(id string) (error)
 
+
 		//统计文件数量
 		Count() (int64,error)
 		//统计剩余空间，单位字节
 		Space() (int64, error)
+
+
+		//上传文件
+		Upload(id string, path string) (error)
+		//上传二进制文件
+		UploadBytes(id string, bytes []byte, offset int64) (error)
+		//下载文件
+		Download(id string, path string) (error)
+		//下载二进制文件内容，支持断点，limit不传表示到结尾，offset默认传0
+		DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error)
+
+
+		//获取访问url
+		TargetUrl(id string) (string,error)
+		//获取预览（缩图）url
+		PreviewUrl(id string) (string,error)
+
 	}
 )
 // 存储驱动接口定义 end
@@ -157,19 +165,8 @@ type (
 func (base *noStorageBase) Close() (error) {
 	return nil
 }
-func (base *noStorageBase) Upload(path string) (string,error) {
-	return "",errors.New("无存储")
-}
-func (base *noStorageBase) UploadBytes(bytes []byte, offset int64) (string,error) {
-	return "",errors.New("无存储")
-}
-func (base *noStorageBase) Download(id string, path string) (error) {
-	return errors.New("无存储")
-}
-func (base *noStorageBase) DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error) {
-	return nil,errors.New("无存储")
-}
-func (base *noStorageBase) TargetUrl(id string) (string,error) {
+
+func (base *noStorageBase) Create() (string,error) {
 	return "",errors.New("无存储")
 }
 func (base *noStorageBase) Remove(id string) (error) {
@@ -178,9 +175,36 @@ func (base *noStorageBase) Remove(id string) (error) {
 func (base *noStorageBase) Recover(id string) (error) {
 	return errors.New("无存储")
 }
+
+
+
 func (base *noStorageBase) Count() (int64,error) {
 	return int64(0),errors.New("无存储")
 }
 func (base *noStorageBase) Space() (int64,error) {
 	return int64(0),errors.New("无存储")
+}
+
+
+
+
+func (base *noStorageBase) Upload(id string, path string) (error) {
+	return errors.New("无存储")
+}
+func (base *noStorageBase) UploadBytes(id string, bytes []byte, offset int64) (error) {
+	return errors.New("无存储")
+}
+func (base *noStorageBase) Download(id string, path string) (error) {
+	return errors.New("无存储")
+}
+func (base *noStorageBase) DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error) {
+	return nil,errors.New("无存储")
+}
+
+
+func (base *noStorageBase) TargetUrl(id string) (string,error) {
+	return "",errors.New("无存储")
+}
+func (base *noStorageBase) PreviewUrl(id string, width, height int) (string,error) {
+	return "",errors.New("无存储")
 }

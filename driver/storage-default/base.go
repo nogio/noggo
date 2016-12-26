@@ -17,23 +17,7 @@ func (base *DefaultStorageBase) Close() (error) {
 	return nil
 }
 
-
-
-
-
-func (base *DefaultStorageBase) Upload(path string) (string,error) {
-	return "",errors.New("未实现")
-}
-func (base *DefaultStorageBase) UploadBytes(bytes []byte, offset int64) (string,error) {
-	return "",errors.New("未实现")
-}
-func (base *DefaultStorageBase) Download(id string, path string) (error) {
-	return errors.New("未实现")
-}
-func (base *DefaultStorageBase) DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error) {
-	return nil,errors.New("未实现")
-}
-func (base *DefaultStorageBase) TargetUrl(id string) (string,error) {
+func (base *DefaultStorageBase) Create() (string,error) {
 	return "",errors.New("未实现")
 }
 func (base *DefaultStorageBase) Remove(id string) (error) {
@@ -42,9 +26,33 @@ func (base *DefaultStorageBase) Remove(id string) (error) {
 func (base *DefaultStorageBase) Recover(id string) (error) {
 	return errors.New("未实现")
 }
+
 func (base *DefaultStorageBase) Count() (int64,error) {
 	return int64(0),errors.New("未实现")
 }
 func (base *DefaultStorageBase) Space() (int64,error) {
 	return int64(0),errors.New("未实现")
+}
+
+
+
+func (base *DefaultStorageBase) Upload(id string, path string) (error) {
+	return errors.New("未实现")
+}
+func (base *DefaultStorageBase) UploadBytes(id string, bytes []byte, offset int64) (error) {
+	return errors.New("未实现")
+}
+func (base *DefaultStorageBase) Download(id string, path string) (error) {
+	return errors.New("未实现")
+}
+func (base *DefaultStorageBase) DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error) {
+	return nil,errors.New("未实现")
+}
+
+
+func (base *DefaultStorageBase) TargetUrl(id string) (string,error) {
+	return "",errors.New("未实现")
+}
+func (base *DefaultStorageBase) PreviewUrl(id string, width int, height int) (string,error) {
+	return "",errors.New("未实现")
 }
