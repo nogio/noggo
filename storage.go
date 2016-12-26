@@ -56,7 +56,7 @@ type (
 		//获取访问url
 		TargetUrl(id string) (string,error)
 		//获取预览（缩图）url
-		PreviewUrl(id string) (string,error)
+		PreviewUrl(id string, width, height int) (string,error)
 
 	}
 )
