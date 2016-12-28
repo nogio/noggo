@@ -4,7 +4,6 @@ import (
 	. "github.com/nogio/noggo/base"
 	"sync"
 	"errors"
-	"time"
 )
 
 
@@ -29,8 +28,8 @@ type (
 	StorageBase interface {
 		Close() error
 
-		//创建，生成文件ID
-		Create() (string,error)
+		//创建，生成文件ID args为可选参数Map，用来传一些文件相关的参数
+		Create(args ...Map) (string,error)
 		//删除文件
 		Remove(id string) (error)
 		//恢复文件，兼容设计，以支持部分存储系统逻辑删除
@@ -53,8 +52,10 @@ type (
 		DownloadBytes(id string, offset int64, limits ...int64) ([]byte, error)
 
 
-		//获取访问url
-		TargetUrl(id string) (string,error)
+		//获取公开访问url
+		PublicUrl(id string) (string,error)
+		//获取私有访问url
+		PrivateUrl(id string) (string,error)
 		//获取预览（缩图）url
 		PreviewUrl(id string, width, height int) (string,error)
 
@@ -166,7 +167,7 @@ func (base *noStorageBase) Close() (error) {
 	return nil
 }
 
-func (base *noStorageBase) Create() (string,error) {
+func (base *noStorageBase) Create(args ...Map) (string,error) {
 	return "",errors.New("无存储")
 }
 func (base *noStorageBase) Remove(id string) (error) {
@@ -202,7 +203,10 @@ func (base *noStorageBase) DownloadBytes(id string, offset int64, limits ...int6
 }
 
 
-func (base *noStorageBase) TargetUrl(id string) (string,error) {
+func (base *noStorageBase) PublicUrl(id string) (string,error) {
+	return "",errors.New("无存储")
+}
+func (base *noStorageBase) PrivateUrl(id string) (string,error) {
 	return "",errors.New("无存储")
 }
 func (base *noStorageBase) PreviewUrl(id string, width, height int) (string,error) {

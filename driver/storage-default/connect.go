@@ -3,7 +3,6 @@ package storage_default
 import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo"
-	"sync"
 )
 
 type (

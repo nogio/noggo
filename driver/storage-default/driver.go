@@ -27,7 +27,7 @@ func (drv *DefaultStorageDriver) Connect(config Map) (noggo.StorageConnect,error
 	}
 	path := ""
 	if vv,ok := config["path"].(string); ok {
-		path == vv
+		path = vv
 	} else {
 		return nil,errors.New("无效的存储[path]配置")
 	}

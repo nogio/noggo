@@ -17,7 +17,7 @@ func (base *DefaultStorageBase) Close() (error) {
 	return nil
 }
 
-func (base *DefaultStorageBase) Create() (string,error) {
+func (base *DefaultStorageBase) Create(args ...Map) (string,error) {
 	return "",errors.New("未实现")
 }
 func (base *DefaultStorageBase) Remove(id string) (error) {
@@ -50,7 +50,10 @@ func (base *DefaultStorageBase) DownloadBytes(id string, offset int64, limits ..
 }
 
 
-func (base *DefaultStorageBase) TargetUrl(id string) (string,error) {
+func (base *DefaultStorageBase) PublicUrl(id string) (string,error) {
+	return "",errors.New("未实现")
+}
+func (base *DefaultStorageBase) PrivateUrl(id string) (string,error) {
 	return "",errors.New("未实现")
 }
 func (base *DefaultStorageBase) PreviewUrl(id string, width int, height int) (string,error) {
