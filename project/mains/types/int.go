@@ -70,8 +70,6 @@ func init() {
 		"name": "整型数组", "text": "整型数组",
 		"valid": func(value Any, config Map) bool {
 
-			noggo.Logger.Debug("[int]", value)
-
 			switch v := value.(type) {
 			case int,int8,int16,int32,int64: {
 				return true
@@ -101,10 +99,15 @@ func init() {
 					arr := strings.Split(v[1:len(v)-1], ",")
 
 					for _,sv := range arr {
-						if _, e := strconv.ParseInt(sv, 10, 64); e != nil {
-							return false
+						if sv != "" {
+							if _, e := strconv.ParseInt(sv, 10, 64); e != nil {
+								return false
+							}
 						}
 					}
+
+					noggo.Logger.Debug("[int]", arr, true)
+
 					return true
 				} else if strings.HasPrefix(v, "[") && strings.HasSuffix(v, "]") {
 					jv := []interface{}{}
@@ -225,13 +228,14 @@ func init() {
 			}
 			case string: {
 
-
 				if strings.HasPrefix(v, "{") && strings.HasSuffix(v, "}") {
 					arr := []int64{}
 					strArr := strings.Split(v[1:len(v)-1], ",")
 					for _,sv := range strArr {
-						if iv, e := strconv.ParseInt(sv, 10, 64); e == nil {
-							arr = append(arr, iv)
+						if sv != "" {
+							if iv, e := strconv.ParseInt(sv, 10, 64); e == nil {
+								arr = append(arr, iv)
+							}
 						}
 					}
 					return arr
