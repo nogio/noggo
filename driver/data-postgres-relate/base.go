@@ -198,33 +198,39 @@ func (base *PostgresBase) Cancel() (error) {
 
 
 
+
+
 //Exec
 func (base *PostgresBase) Exec(query string, args ...interface{}) (sql.Result,error) {
-	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+	_,err := base.begin()
+	if err != nil {
+		return nil,err
 	}
 	return base.tx.Exec(query, args...)
 }
 
 //Prepare
 func (base *PostgresBase) Prepare(query string) (*sql.Stmt, error) {
-	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+	_,err := base.begin()
+	if err != nil {
+		return nil,err
 	}
 	return base.tx.Prepare(query)
 }
 
 //Query
 func (base *PostgresBase) Query(query string, args ...interface{}) (*sql.Rows, error) {
-	if base.tx == nil {
-		return nil,errors.New("数据：tx未开始")
+	_,err := base.begin()
+	if err != nil {
+		return nil,err
 	}
 	return base.tx.Query(query, args...)
 }
 
 //QueryRow
 func (base *PostgresBase) QueryRow(query string, args ...interface{}) (*sql.Row) {
-	if base.tx == nil {
+	_,err := base.begin()
+	if err != nil {
 		return nil
 	}
 	return base.tx.QueryRow(query, args...)
@@ -232,11 +238,14 @@ func (base *PostgresBase) QueryRow(query string, args ...interface{}) (*sql.Row)
 
 //QueryRow
 func (base *PostgresBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
-	if base.tx == nil {
+	_,err := base.begin()
+	if err != nil {
 		return nil
 	}
 	return base.tx.Stmt(stmt)
 }
+
+
 
 
 

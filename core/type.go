@@ -485,9 +485,9 @@ func init() {
 
 
 
+
 	noggo.Mapping.Type("int", Map{
 		"name": "整型", "text": "整型",
-		"type": []string{ "int", "number" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
@@ -543,7 +543,6 @@ func init() {
 
 	noggo.Mapping.Type("[int]", Map{
 		"name": "整型数组", "text": "整型数组",
-		"type": []string{ "[int]", "[number]" },
 		"valid": func(value Any, config Map) bool {
 
 			switch v := value.(type) {
@@ -575,10 +574,15 @@ func init() {
 					arr := strings.Split(v[1:len(v)-1], ",")
 
 					for _,sv := range arr {
-						if _, e := strconv.ParseInt(sv, 10, 64); e != nil {
-							return false
+						if sv != "" {
+							if _, e := strconv.ParseInt(sv, 10, 64); e != nil {
+								return false
+							}
 						}
 					}
+
+					noggo.Logger.Debug("[int]", arr, true)
+
 					return true
 				} else if strings.HasPrefix(v, "[") && strings.HasSuffix(v, "]") {
 					jv := []interface{}{}
@@ -699,19 +703,21 @@ func init() {
 			}
 			case string: {
 
-
 				if strings.HasPrefix(v, "{") && strings.HasSuffix(v, "}") {
 					arr := []int64{}
 					strArr := strings.Split(v[1:len(v)-1], ",")
 					for _,sv := range strArr {
-						if iv, e := strconv.ParseInt(sv, 10, 64); e == nil {
-							arr = append(arr, iv)
+						if sv != "" {
+							if iv, e := strconv.ParseInt(sv, 10, 64); e == nil {
+								arr = append(arr, iv)
+							}
 						}
 					}
 					return arr
 				} else if strings.HasPrefix(v, "[") && strings.HasSuffix(v, "]") {
 					jv := []interface{}{}
 					e := json.Unmarshal([]byte(v), &jv)
+
 					if e == nil {
 
 						arr := []int64{}
@@ -722,6 +728,7 @@ func init() {
 								arr = append(arr, int64(newVal))
 							}
 						}
+
 						return arr
 					}
 				} else {
