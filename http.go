@@ -2597,7 +2597,7 @@ func (ctx *HttpContext) State(state string, args ...interface{}) {
 func (ctx *HttpContext) Result(state string, args ...Any) {
 	e := Const.NewLangStateError(ctx.Lang, state)
 	m := Map{
-		"code": 0,
+		"code": e.Code,
 		"text": e.Text,
 		"time": time.Now().Unix(),
 	}
