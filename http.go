@@ -2597,12 +2597,14 @@ func (ctx *HttpContext) State(state string, args ...interface{}) {
 func (ctx *HttpContext) Result(state string, args ...Any) {
 	e := Const.NewLangStateError(ctx.Lang, state)
 	m := Map{
-		"code": e.Code,
+		"code": e.Code, //这里不强制设为0，可以自己在 mains/consts/state.go 中定义自己的状态
 		"text": e.Text,
 		"time": time.Now().Unix(),
 	}
 	if len(args) > 0 {
 		//这里要对返回的内容对处理
+		//待处理一项：data不一定非要Map类型，也可以是数组，或是其它对象
+		//暂不处理，后续再改
 		data := args[0]
 
 		//如果需要对结果进行处理
@@ -2631,7 +2633,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 				if e != nil {
 					//出错了
-					ctx.Error(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2646,7 +2648,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, c, d, v, false, false)
 				if e != nil {
 					//出错了
-					ctx.Error(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2677,7 +2679,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 				e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 				if e != nil {
 					//出错了
-					ctx.Error(e)
+					ctx.Failed(e)
 					return
 				} else {
 					//处理后的data
@@ -2704,6 +2706,8 @@ func (ctx *HttpContext) Return(data Any) {
 	}
 
 	//如果需要对结果进行处理
+	//待处理一项：data不一定非要Map类型，也可以是数组，或是其它对象
+	//暂不处理，后续再改
 	c,cok := ctx.Config["data"].(Map);
 	d,dok := data.(Map);
 
@@ -2729,7 +2733,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 			if e != nil {
 				//出错了
-				ctx.Error(e)
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2744,7 +2748,7 @@ func (ctx *HttpContext) Return(data Any) {
 			e := Mapping.Parse([]string{}, c, d, v, false, false)
 			if e != nil {
 				//出错了
-				ctx.Error(e)
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data
@@ -2773,8 +2777,8 @@ func (ctx *HttpContext) Return(data Any) {
 
 			e := Mapping.Parse([]string{}, newConfig, newData, v, false, false)
 			if e != nil {
-				//出错了
-				ctx.Error(e)
+				//出错了，用failed方法，因为这和接口有关，好在failedHandler中处理
+				ctx.Failed(e)
 				return
 			} else {
 				//处理后的data
