@@ -557,19 +557,19 @@ func (view *DefaultView) Body(name string, args ...Any) (string,error) {
 	viewpaths := []string{
 		//加入多语言支持
 		fmt.Sprintf("%s/%s/%s/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name),
-		fmt.Sprintf("%s/%s/%s/default/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name),
+		fmt.Sprintf("%s/%s/%s/shared/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name),
 		fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Lang, name),
 		fmt.Sprintf("%s/%s/%s/index.html", view.config.Root, view.parse.Lang, name),
-		fmt.Sprintf("%s/%s/default/%s.html", view.config.Root, view.parse.Lang, name),
-		fmt.Sprintf("%s/%s/default/%s/index.html", view.config.Root, view.parse.Lang, name),
+		fmt.Sprintf("%s/%s/shared/%s.html", view.config.Root, view.parse.Lang, name),
+		fmt.Sprintf("%s/%s/shared/%s/index.html", view.config.Root, view.parse.Lang, name),
 
 		fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Node, name),
-		fmt.Sprintf("%s/%s/default/%s.html", view.config.Root, view.parse.Node, name),
+		fmt.Sprintf("%s/%s/shared/%s.html", view.config.Root, view.parse.Node, name),
 		fmt.Sprintf("%s/%s.html", view.config.Root, name),
 		fmt.Sprintf("%s/%s/index.html", view.config.Root, name),
 		fmt.Sprintf("%s/%s/%s/index.html", view.config.Root, view.parse.Node, name),
-		fmt.Sprintf("%s/default/%s.html", view.config.Root, name),
-		fmt.Sprintf("%s/default/%s/index.html", view.config.Root, name),
+		fmt.Sprintf("%s/shared/%s.html", view.config.Root, name),
+		fmt.Sprintf("%s/shared/%s/index.html", view.config.Root, name),
 	};
 
 
@@ -629,14 +629,14 @@ func (view *DefaultView) Render(name string, args ...Any) (string,error) {
 		viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.path, name))
 	}
 	//加入多语言支持
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/default/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/shared/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, name))
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.config.Root, view.parse.Lang, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/shared/%s.html", view.config.Root, view.parse.Lang, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Lang, name))
 
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.config.Root, view.parse.Node, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/shared/%s.html", view.config.Root, view.parse.Node, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Node, name))
-	viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.config.Root, name))
+	viewpaths = append(viewpaths, fmt.Sprintf("%s/shared/%s.html", view.config.Root, name))
 	viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.config.Root, name))
 
 

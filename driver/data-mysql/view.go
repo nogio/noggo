@@ -390,3 +390,77 @@ func (view *MysqlView) Group(field string, args ...Any) ([]Map,error) {
 		}
 	}
 }
+
+
+
+
+
+
+//查询唯一对象
+func (view *MysqlView) Entity(id Any) (Map,error) {
+
+	//开启事务
+	tx,err := view.base.begin()
+	noggo.Logger.Debug("data", "entity", "begin", err)
+	if err != nil {
+		return nil,err
+	} else {
+
+		//先拿字段列表
+		//不能用*，必须指定字段列表
+		//要不然下拉scan的时候，数据库返回的字段和顺序不一定对
+		keys := []string{}
+		for k,_ := range view.fields {
+			keys = append(keys, k)
+		}
+
+		sql := fmt.Sprintf("SELECT `%s` FROM `%s`.`%s` WHERE `%s`=?", strings.Join(keys, "`,`"), view.schema, view.object, view.key)
+		row := tx.QueryRow(sql, id)
+		if row == nil {
+			return nil,errors.New("数据：查询失败")
+		} else {
+
+			//扫描数据
+			values := make([]interface{}, len(keys))	//真正的值
+			pValues := make([]interface{}, len(keys))	//指针，指向值
+			for i := range values {
+				pValues[i] = &values[i]
+			}
+
+			err := row.Scan(pValues...)
+			noggo.Logger.Debug("data", "entity", err, sql)
+			if err != nil {
+				return nil,errors.New("数据：查询时扫描失败 " + err.Error())
+			} else {
+				m := Map{}
+				for i,n := range keys {
+					switch v := values[i].(type) {
+					case []byte: {
+						m[n] = string(v)
+					}
+					default:
+						m[n] = v
+					}
+				}
+
+				//返回前使用代码生成
+				//有必要的, 按模型拿到数据
+				item := Map{}
+				err := noggo.Mapping.Parse([]string{}, view.fields, m, item, false, true)
+				noggo.Logger.Debug("data", "entity", "mapping", err)
+				if err == nil {
+					return item,nil
+				} else {
+					//如果生成失败,还是返回原始返回值
+					//要不然,存在的也显示为不存在
+					return m,nil
+				}
+			}
+		}
+
+
+	}
+}
+
+
+

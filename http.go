@@ -540,6 +540,7 @@ type (
 		Path	string		//请求的路径，演变自http， 暂时等于http的名称
 		Lang	string		//当前上下文的语言，默认应为default
 		Ajax	bool		//标记当前请求是否ajax
+		Debug   bool        //当前请求是否调试模式
 
 		//配置相关
 		Name string			//解析路由后得到的name
@@ -2798,6 +2799,11 @@ func (ctx *HttpContext) Return(data Any) {
 	ctx.Json(m, 200)
 }
 
+
+//编码中，主要为接口设计，用于自动生成接口测试数据
+func (ctx *HttpContext) Coding() {
+	ctx.State("coding")
+}
 
 
 

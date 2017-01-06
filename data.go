@@ -84,13 +84,12 @@ type (
 		Query(args ...Any) ([]Map,error)
 		Limit(offset, limit Any, args ...Any) (int64,[]Map,error)
 		Group(field string, args ...Any) ([]Map,error)
+		Entity(Any) (Map,error)
 	}
 
 	//数据模型接口
 	DataModel interface {
 		DataView
-
-		Entity(Any) (Map,error)
 
 		Create(Map) (Map,error)
 		Change(Map,Map) (Map,error)
@@ -674,9 +673,6 @@ func (model *noDataModel) Remove(item Map) (error) {
 func (model *noDataModel) Recover(item Map) (error) {
 	return nil
 }
-func (model *noDataModel) Entity(id Any) (Map,error) {
-	return nil,errors.New("无数据")
-}
 func (model *noDataModel) Delete(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
@@ -704,18 +700,21 @@ func (model *noDataModel) Group(field string, args ...Map) ([]Map,error) {
 
 
 
-func (model *noDataView) Count(args ...Any) (int64,error) {
+func (view *noDataView) Count(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataView) Single(args ...Any) (Map,error) {
+func (view *noDataView) Single(args ...Any) (Map,error) {
 	return Map{},errors.New("无数据")
 }
-func (model *noDataView) Query(args ...Any) ([]Map,error) {
+func (view *noDataView) Query(args ...Any) ([]Map,error) {
 	return []Map{},errors.New("无数据")
 }
-func (model *noDataView) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) {
+func (view *noDataView) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) {
 	return int64(0),[]Map{},errors.New("无数据")
 }
-func (model *noDataView) Group(field string, args ...Any) ([]Map,error) {
+func (view *noDataView) Group(field string, args ...Any) ([]Map,error) {
 	return []Map{},errors.New("无数据")
+}
+func (view *noDataView) Entity(id Any) (Map,error) {
+	return nil,errors.New("无数据")
 }

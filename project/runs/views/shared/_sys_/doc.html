@@ -80,7 +80,7 @@
     <div>
         <strong>{%$dk%}：</strong>
         {%range $mk,$mv := $dv%}
-            <a href="#model:{%$dk%}.{%$mk%}">{%$mk%}</a>
+        <a href="#model:{%$dk%}.{%$mk%}">{%$mk%}</a>
         {%end%}
     </div>
     {%end%}
@@ -91,34 +91,34 @@
 <div class="link">
     {% range $name,$config := .data.routes %}
     <div>
-    <strong>{%$config.uri%}：</strong>
-    {%if $config.route%}
-    {%if and $config.route.action%}
-    <a href="#route:{%$name%}">(*){%$config.route.name%}</a>
-    {%else%}
-    {%range $method,$methodConfig := $config.route%}
-    <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
-    {%end%}
-    {%end%}
-    {%end%}
+        <strong>{%$config.uri%}：</strong>
+        {%if $config.route%}
+        {%if and $config.route.action%}
+        <a href="#route:{%$name%}">(*){%$config.route.name%}</a>
+        {%else%}
+        {%range $method,$methodConfig := $config.route%}
+        <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+        {%end%}
+        {%end%}
+        {%end%}
 
 
-    {%if $config.branch%}
-    {%range $branchName,$branchConfig := $config.branch%}
+        {%if $config.branch%}
+        {%range $branchName,$branchConfig := $config.branch%}
 
-    <strong>分支：{%$branchName%}</strong>
+        <strong>分支：{%$branchName%}</strong>
 
-    {%if and $branchConfig.route.action%}
-    <a href="#route:{%$name%}">(*){%$branchConfig.route.name%}</a>
-    {%else%}
-    {%range $method,$methodConfig := $branchConfig.route%}
-    <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
-    {%end%}
-    {%end%}
+        {%if and $branchConfig.route.action%}
+        <a href="#route:{%$name%}">(*){%$branchConfig.route.name%}</a>
+        {%else%}
+        {%range $method,$methodConfig := $branchConfig.route%}
+        <a href="#route:{%$name%}">({%$method%}){%$methodConfig.name%}</a>
+        {%end%}
+        {%end%}
 
 
-    {%end%}
-    {%end%}
+        {%end%}
+        {%end%}
     </div>
     {%end%}
 </div>
@@ -266,16 +266,16 @@
                     <td>{%$dk%}</td>
                     <td>
                         {%if $config.schema%}
-                            {%$config.schema%}
+                        {%$config.schema%}
                         {%else%}
-                            public
+                        public
                         {%end%}
                     </td>
                     <td>
                         {%if $config.table%}
-                            {%$config.table%}
+                        {%$config.table%}
                         {%else%}
-                            {%$name%}
+                        {%$name%}
                         {%end%}
                     </td>
                     <td>{%$config.name%}</td>
@@ -325,7 +325,7 @@
         {%if $config.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $config.route.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -342,10 +342,10 @@
                     <td>{%$config.route.name%}</td>
                     <td>{%$config.route.text%}</td>
                     <td>
-                        {%if $config.route.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $config.route.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -481,7 +481,7 @@
 
         {%range $methodName,$methodConfig := $config.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -498,10 +498,10 @@
                     <td>{%$methodConfig.name%}</td>
                     <td>{%$methodConfig.text%}</td>
                     <td>
-                        {%if $methodConfig.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $methodConfig.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -660,7 +660,7 @@
         {%if $branchConfig.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $config.route.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -677,10 +677,10 @@
                     <td>{%$branchConfig.route.name%}</td>
                     <td>{%$branchConfig.route.text%}</td>
                     <td>
-                        {%if $branchConfig.route.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $branchConfig.route.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -816,7 +816,7 @@
 
         {%range $methodName,$methodConfig := $branchConfig.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -833,10 +833,10 @@
                     <td>{%$methodConfig.name%}</td>
                     <td>{%$methodConfig.text%}</td>
                     <td>
-                        {%if $methodConfig.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $methodConfig.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -1033,7 +1033,7 @@
         {%if $config.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $config.route.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1054,10 +1054,10 @@
                     <td>{%$config.route.name%}</td>
                     <td>{%$config.route.text%}</td>
                     <td>
-                        {%if $config.route.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $config.route.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -1193,7 +1193,7 @@
 
         {%range $methodName,$methodConfig := $config.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1210,10 +1210,10 @@
                     <td>{%$methodConfig.name%}</td>
                     <td>{%$methodConfig.text%}</td>
                     <td>
-                        {%if $methodConfig.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $methodConfig.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -1372,7 +1372,7 @@
         {%if $branchConfig.route.action %}
         <!-- 全方法版 begin -->
 
-        <div style="margin: 50px 0;" class="{%if $config.route.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $config.route.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1389,10 +1389,10 @@
                     <td>{%$branchConfig.route.name%}</td>
                     <td>{%$branchConfig.route.text%}</td>
                     <td>
-                        {%if $branchConfig.route.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $branchConfig.route.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -1528,7 +1528,7 @@
 
         {%range $methodName,$methodConfig := $branchConfig.route%}
         <!-- 循环 methods begin -->
-        <div style="margin: 50px 0;" class="{%if $methodConfig.coded%}coded{%else%}coding{%end%}">
+        <div style="margin: 50px 0;" class="{%if $methodConfig.coding%}coding{%else%}coded{%end%}">
             <table>
                 <tr>
                     <th style="width: 70px;">method</th>
@@ -1545,10 +1545,10 @@
                     <td>{%$methodConfig.name%}</td>
                     <td>{%$methodConfig.text%}</td>
                     <td>
-                        {%if $methodConfig.coded%}
-                        <span style="color: green;">已完成</span>
-                        {%else%}
+                        {%if $methodConfig.coding%}
                         <span style="color: red;">未完成</span>
+                        {%else%}
+                        <span style="color: green;">已完成</span>
                         {%end%}
                     </td>
                 </tr>
@@ -1758,9 +1758,9 @@
                     <td>{%$mk%}</td>
                     <td>
                         {%if .mv.uri%}
-                            {%.mv.uri%}
+                        {%.mv.uri%}
                         {%else%}
-                            {%$mk%}
+                        {%$mk%}
                         {%end%}
                     </td>
                     <td>{%$mv.name%}</td>

@@ -29,7 +29,7 @@ func Middler(paths ...string) (noggo.HttpFunc) {
 
 			//全局静态目录
 			// statics/default
-			file = fmt.Sprintf("%s/default%s", path, ctx.Path)
+			file = fmt.Sprintf("%s/shared%s", path, ctx.Path)
 			fi, _ := os.Stat(file)
 			if fi != nil && !fi.IsDir() {
 				ctx.File(file)
