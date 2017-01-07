@@ -496,12 +496,12 @@ func (view *DefaultView) Layout(name string, model Any) (string,error) {
 			}
 			//加入多语言支持
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/default/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s/shared/%s.html", view.config.Root, view.parse.Node, view.parse.Lang, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Lang, view.layout))
 
-			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/default/%s.html", view.config.Root, view.parse.Node, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/shared/%s.html", view.config.Root, view.parse.Node, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s/%s.html", view.config.Root, view.parse.Node, view.layout))
-			viewpaths = append(viewpaths, fmt.Sprintf("%s/default/%s.html", view.config.Root, view.layout))
+			viewpaths = append(viewpaths, fmt.Sprintf("%s/shared/%s.html", view.config.Root, view.layout))
 			viewpaths = append(viewpaths, fmt.Sprintf("%s/%s.html", view.config.Root, view.layout))
 
 
@@ -516,14 +516,14 @@ func (view *DefaultView) Layout(name string, model Any) (string,error) {
 
 			//如果view不存在
 			if viewname == "" {
-				return "",errors.New(fmt.Sprintf("view %s not exist", name))
+				return "",errors.New(fmt.Sprintf("layout %s not exist", view.layout))
 			} else {
 
 				//不直接使用 view.engine 来new,而是克隆一份
 				engine,_ := view.engine.Clone()
 				t,e := engine.New(filepath.Base(viewname)).ParseFiles(viewname)
 				if e != nil {
-					return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
+					return "",errors.New(fmt.Sprintf("layout %s parse error: %v", viewname, e))
 				} else {
 
 					//缓冲
@@ -534,7 +534,7 @@ func (view *DefaultView) Layout(name string, model Any) (string,error) {
 						"model": view.model,
 					})
 					if e != nil {
-						return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
+						return "",errors.New(fmt.Sprintf("layout %s parse error: %v", viewname, e))
 					} else {
 						return buf.String(),nil
 					}
@@ -571,7 +571,6 @@ func (view *DefaultView) Body(name string, args ...Any) (string,error) {
 		fmt.Sprintf("%s/shared/%s.html", view.config.Root, name),
 		fmt.Sprintf("%s/shared/%s/index.html", view.config.Root, name),
 	};
-
 
 
 
