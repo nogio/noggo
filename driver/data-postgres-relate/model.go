@@ -289,7 +289,7 @@ func (model *PostgresModel) Change(item Map, data Map) (Map,error) {
 				if model.base.manual {
 
 					//这里应该保存触发器
-					model.base.trigger(TriggerChange, Map{ "data": model.base.name, "model": model.name, "before": item, "after": newItem })
+					model.base.trigger(TriggerChange, Map{ "base": model.base.name, "model": model.name, "before": item, "after": newItem })
 
 					//成功了，但是没有提交事务
 					return newItem, nil
@@ -303,7 +303,7 @@ func (model *PostgresModel) Change(item Map, data Map) (Map,error) {
 					} else {
 
 						//这里应该有触发器
-						noggo.Trigger.Touch(TriggerChange, Map{ "data": model.base.name, "model": model.name, "before": item, "after": newItem })
+						noggo.Trigger.Touch(TriggerChange, Map{ "base": model.base.name, "model": model.name, "before": item, "after": newItem })
 
 						//成功了
 						return newItem, nil
@@ -436,7 +436,7 @@ func (model *PostgresModel) Remove(item Map) (error) {
 					if model.base.manual {
 
 						//这里应该保存触发器
-						model.base.trigger(TriggerRemove, Map{ "data": model.base.name, "model": model.name, "entity": item })
+						model.base.trigger(TriggerRemove, Map{ "base": model.base.name, "model": model.name, "entity": item })
 
 						//成功了，但是没有提交事务
 						return nil
@@ -450,7 +450,7 @@ func (model *PostgresModel) Remove(item Map) (error) {
 						} else {
 
 							//这里应该有触发器
-							noggo.Trigger.Touch(TriggerRemove, Map{ "data": model.base.name, "model": model.name, "entity": item })
+							noggo.Trigger.Touch(TriggerRemove, Map{ "base": model.base.name, "model": model.name, "entity": item })
 
 							//成功了
 							return nil
@@ -573,7 +573,7 @@ func (model *PostgresModel) Recover(item Map) (error) {
 					if model.base.manual {
 
 						//这里应该保存触发器
-						model.base.trigger(TriggerRecover, Map{ "data": model.base.name, "model": model.name, "entity": item })
+						model.base.trigger(TriggerRecover, Map{ "base": model.base.name, "model": model.name, "entity": item })
 
 						//成功了，但是没有提交事务
 						return nil
@@ -587,7 +587,7 @@ func (model *PostgresModel) Recover(item Map) (error) {
 						} else {
 
 							//这里应该有触发器
-							noggo.Trigger.Touch(TriggerRecover, Map{ "data": model.base.name, "model": model.name, "entity": item })
+							noggo.Trigger.Touch(TriggerRecover, Map{ "base": model.base.name, "model": model.name, "entity": item })
 
 							//成功了
 							return nil
@@ -744,113 +744,3 @@ func (model *PostgresModel) Update(sets Map, args ...Any) (int64,error) {
 
 
 
-
-
-
-//统计数量
-func (model *PostgresModel) Count(args ...Any) (int64,error) {
-
-	//生成查询条件
-	where,builds,_,err := model.base.parsing(1,args...)
-	if err != nil {
-		return int64(0),err
-	} else {
-
-		//开启事务
-		tx,err := model.base.begin()
-		noggo.Logger.Debug("data", "count", "begin", err)
-		if err != nil {
-			return int64(0),err
-		} else {
-
-			sql := fmt.Sprintf(`SELECT COUNT(*) FROM "%s"."%s" WHERE %s`, model.schema, model.object, where)
-			row := tx.QueryRow(sql, builds...)
-			if row == nil {
-				return int64(0),errors.New("数据：查询失败")
-			} else {
-
-				count := int64(0)
-
-				err := row.Scan(&count)
-				noggo.Logger.Debug("data", "count", err, sql)
-				if err != nil {
-					return count,errors.New("数据：查询时扫描失败")
-				} else {
-					return count,nil
-				}
-			}
-		}
-	}
-}
-
-
-//查询单条
-func (model *PostgresModel) Single(args ...Any) (Map,error) {
-
-	//生成查询条件
-	where,builds,orderby,err := model.base.parsing(1,args...)
-	if err != nil {
-		return nil,err
-	} else {
-
-		//开启事务
-		tx,err := model.base.begin()
-		noggo.Logger.Debug("data", "single", "begin", err)
-		if err != nil {
-			return nil,err
-		} else {
-
-			//先拿字段列表
-			//不能用*，必须指定字段列表
-			//要不然下拉scan的时候，数据库返回的字段和顺序不一定对
-			keys := []string{}
-			for k,_ := range model.fields {
-				keys = append(keys, k)
-			}
-
-			sql := fmt.Sprintf(`SELECT "%s" FROM "%s"."%s" WHERE %s %s`, strings.Join(keys, `","`), model.schema, model.object, where, orderby)
-			row := tx.QueryRow(sql, builds...)
-			if row == nil {
-				return nil,errors.New("数据：查询失败")
-			} else {
-
-				//扫描数据
-				values := make([]interface{}, len(keys))	//真正的值
-				pValues := make([]interface{}, len(keys))	//指针，指向值
-				for i := range values {
-					pValues[i] = &values[i]
-				}
-
-				err := row.Scan(pValues...)
-				noggo.Logger.Debug("data", "single", err, sql)
-				if err != nil {
-					return nil,errors.New("数据：查询时扫描失败")
-				} else {
-					m := Map{}
-					for i,n := range keys {
-						switch v := values[i].(type) {
-						case []byte: {
-							m[n] = string(v)
-						}
-						default:
-							m[n] = v
-						}
-					}
-
-					//返回前使用代码生成
-					//有必要的, 按模型拿到数据
-					item := Map{}
-					err := noggo.Mapping.Parse([]string{}, model.fields, m, item, false, true)
-					noggo.Logger.Debug("data", "single", "mapping", err)
-					if err == nil {
-						return item,nil
-					} else {
-						//如果生成失败,还是返回原始返回值
-						//要不然,存在的也显示为不存在
-						return m,nil
-					}
-				}
-			}
-		}
-	}
-}

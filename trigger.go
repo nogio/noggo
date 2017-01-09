@@ -340,7 +340,6 @@ func (global *triggerGlobal) serveTrigger(name string, value Map) {
 
 //触发器：触发
 func (global *triggerGlobal) Touch(name string, args ...Map) {
-
 	value := Map{}
 	if len(args) > 0 {
 		value = args[0]

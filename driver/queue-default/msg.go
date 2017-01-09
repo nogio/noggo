@@ -3,6 +3,7 @@ package queue_default
 import (
 	. "github.com/nogio/noggo/base"
 	"sync"
+	"github.com/nogio/noggo"
 )
 type (
 	Msg struct {
@@ -33,6 +34,8 @@ func (msg *Msg) Sub(name string) (chan Map) {
 func (msg *Msg) Pub(name string, value Map) error {
 	msg.mutex.Lock()
 	defer msg.mutex.Unlock()
+
+	noggo.Logger.Info("queue.driver.publish", name, msg.subs)
 
 	if cc,ok := msg.subs[name]; ok {
 		cc <- value

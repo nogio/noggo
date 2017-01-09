@@ -212,7 +212,6 @@ func (global *queueGlobal) Route(name string, config Map) {
 		global.routeNames = map[string][]string{}
 	}
 
-
 	//节点
 	nodeName := ConstNodeGlobal
 	if Current != "" {
@@ -235,6 +234,7 @@ func (global *queueGlobal) Route(name string, config Map) {
 	}
 	//可以后注册重写原有路由配置，所以直接保存
 	global.routes[nodeName][name] = config
+
 }
 
 
@@ -459,6 +459,7 @@ func (global *queueGlobal) Publish(name string, args ...Map) (error) {
 		value = args[0]
 	}
 
+	//这里相当于只使用第一个队列服务，其它的用不上，需要修改
 	for _,v := range global.queueConnects {
 		return v.Publish(name, value)
 	}
@@ -537,7 +538,7 @@ type (
 		//路由
 		routes 		map[string]Map			//路由定义
 		routeNames	[]string				//路由名称原始顺序，因为map是无序的
-		routeLines	map[string]int				//路由名称和线程对应
+		routeLines	map[string]int			//路由名称和线程对应
 
 		//拦截器们
 		requestFilters, executeFilters, responseFilters map[string]QueueFunc
@@ -691,13 +692,10 @@ func (module *queueModule) Route(name string, config Map) {
 
 
 	//处理time
-	if v,ok := config[KeyMapLine]; ok {
-		switch ttt := v.(type) {
-		case int:
-			module.routeLines[name] = ttt
-		default:
-			module.routeLines[name] = 1
-		}
+	if v,ok := config[KeyMapLine].(int); ok {
+		module.routeLines[name] = v
+	} else {
+		module.routeLines[name] = 1
 	}
 }
 
@@ -832,6 +830,7 @@ func newQueueModule(node *Noggo) (*queueModule) {
 	//节点路由
 	nodeRoutes, nodeRoutesOK := Queue.routes[node.Name];
 	nodeRouteNames, nodeRouteNamesOK := Queue.routeNames[node.Name];
+
 	if nodeRoutesOK && nodeRouteNamesOK {
 		for _,n := range nodeRouteNames {
 			module.Route(n, nodeRoutes[n])
