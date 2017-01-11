@@ -2615,7 +2615,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 		if cok && dok {
 
 			//处理,需不需要整个data节点全加密
-			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
 
 
 				newConfig := Map{
@@ -2662,7 +2662,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 			//不需要包装值，但是有加密的需求
 
 			//处理,需不需要整个data节点全加密
-			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
 
 
 				newConfig := Map{
@@ -2715,7 +2715,7 @@ func (ctx *HttpContext) Return(data Any) {
 	if cok && dok {
 
 		//处理,需不需要整个data节点全加密
-		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
 
 
 			newConfig := Map{
@@ -2762,7 +2762,7 @@ func (ctx *HttpContext) Return(data Any) {
 		//不需要包装值，但是有加密的需求
 
 		//处理,需不需要整个data节点全加密
-		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil {
+		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
 
 			newConfig := Map{
 				"data": Map{
