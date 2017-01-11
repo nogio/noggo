@@ -20,12 +20,25 @@ import (
 //返回中间件
 func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 
+
+
+
+
 	uploadPath := os.TempDir()
 	if len(uploadPaths) > 0 && uploadPaths[0] != "" {
 		uploadPath = uploadPaths[0]
 	}
 
 	return func(ctx *noggo.HttpContext) {
+
+
+		//判断下是否是ajax请求
+		//X-Requested-With:XMLHttpRequest
+		if ctx.Header("X-Requested-With") == "XMLHttpRequest" {
+			ctx.Ajax = true
+		}
+
+
 
 		//处理表单
 		//if ctx.Method == "post" || ctx.Method == "put" || ctx.Method == "patch" || ctx.Method == "delete" {
