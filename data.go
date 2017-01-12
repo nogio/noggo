@@ -459,10 +459,11 @@ func (global *dataGlobal) Base(name string) (DataBase) {
 
 
 //查询语法解析器
-// 字段包裹成  $$$field$$$ 请自行处理
-// 如mysql为反引号`field`，postgres为引号"field"，
+// 字段包裹成  $field$ 请自行处理
+// 如mysql为反引号`field`，postgres, oracle为引号"field"，
 // 所有参数使问号(?)
 // postgres驱动需要自行处理转成 $1,$2这样的
+// oracle驱动需要自行处理转成 :1 :2这样的
 func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,error) {
 
 	if len(args) > 0 {
@@ -482,8 +483,10 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 			//这里要处理一下，把order提取出来
 			//先拿到 order by 的位置
 			i := strings.Index(strings.ToLower(sql), "order by")
-			orderBy = sql[i:]
-			sql = sql[:i]
+			if i >= 0 {
+				orderBy = sql[i:]
+				sql = sql[:i]
+			}
 
 
 			return sql,params,orderBy,nil
