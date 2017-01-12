@@ -471,6 +471,7 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 		if v,ok := args[0].(string); ok {
 			sql := v
 			params := []interface{}{}
+			orderBy := ""
 
 			for i,arg := range args {
 				if i > 0 {
@@ -478,7 +479,14 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 				}
 			}
 
-			return sql,params,"",nil
+			//这里要处理一下，把order提取出来
+			//先拿到 order by 的位置
+			i := strings.Index(strings.ToLower(sql), "order by")
+			orderBy = sql[i:]
+			sql = sql[:i]
+
+
+			return sql,params,orderBy,nil
 
 		} else {
 
