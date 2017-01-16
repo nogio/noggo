@@ -369,7 +369,7 @@ func (model *OracleModel) Update(sets Map, args ...Any) (int64,error) {
 			}
 			//keys = append(keys, k)
 			vals = append(vals, v)
-			sets = append(sets, fmt.Sprintf(`%s=$%d`, k, i))
+			sets = append(sets, fmt.Sprintf(`%s=:%d`, k, i))
 			i++
 		}
 

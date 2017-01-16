@@ -8,3 +8,19 @@
 20170109
     route.data BUG, type=[json],must=true，不传值，默认得到一个对象。不提示不可为空
     route.item节点，只有http模块放到了action处理，其它模块也要改过去，因为可能主要是使用args当参数
+
+20170113
+    所有数据层驱动，要加一个编码，以便做自动转换，因为golang是utf8，而原有数据库可能是其它编码，所以，在读写的时候，要自动编码一下
+
+20170114
+    Data模块，要改成以下几个： Table, View, Model，表示如下：
+    数据表：对应数据库表，可增删改查， （column, columns）
+    视图：对应数据库视图，只可查询，不可增删改   (field, fields)
+    模型：对应一些临时查询 ，需要包装数据的时候，就很方便。(param, params)
+            对应接口返回结构，接口返回的数据，很多时间与表&视频并无多大关系。。
+         在表无多大关系的情况下， 其实同一功能的接口，返回是一样的， 所以可以做成通用定义好。
+
+20170116
+    route.item的时候， 应该加一个 must 表示是否必须存在
+    上面这个需求，HTTP模块已加，其它的还没
+    Data模块的table,view接口要加一个 Search 方法，做全文搜索 Search(keyword string, args ...Any) //keyword为搜索的字串， args的为前置查询条件

@@ -1707,6 +1707,13 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 		for k,v := range cfg {
 			config := v.(Map)
 
+			//是否必须
+			must := true
+			if vv,ok := config["must"].(bool); ok {
+				must = vv
+			}
+
+
 			name := config["name"].(string)
 			key := k
 			var val Any = nil
@@ -1729,7 +1736,7 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 				val = nil
 			}
 
-			if val == nil {
+			if val == nil && must {
 				//参数不为空啊啊
 				state := "item.empty"
 				//是否有自定义状态
@@ -1750,7 +1757,7 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 					db := Data.Base(dataName);
 					item,err := db.Model(modelName).Entity(val)
 					db.Close()
-					if err != nil {
+					if err != nil && must {
 						state := "item.error"
 						//是否有自定义状态
 						if v,ok := config["error"]; ok {
@@ -2595,10 +2602,19 @@ func (ctx *HttpContext) State(state string, args ...interface{}) {
 //返回操作结果，表示成功
 //比如，登录，修改密码，等操作类的接口， 成功的时候，使用这个，
 //args表示返回给客户端的data
-func (ctx *HttpContext) Result(state string, args ...Any) {
+//data 强制改为json格式，因为data有统一加密的可能
+//所有数组都要加密。
+func (ctx *HttpContext) Result(state string, args ...Map) {
 	e := Const.NewLangStateError(ctx.Lang, state)
+
+	//默认应当给Result表示成功，这样state直接写文本，而不用定义状态
+	//当code有自定义的时候，才是使用自定义的code
+	code := 0
+	if e.Code != -1 {
+		code = e.Code
+	}
 	m := Map{
-		"code": e.Code, //这里不强制设为0，可以自己在 mains/consts/state.go 中定义自己的状态
+		"code": code, //这里不强制设为0，可以自己在 mains/consts/state.go 中定义自己的状态
 		"text": e.Text,
 		"time": time.Now().Unix(),
 	}
@@ -2610,9 +2626,8 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 		//如果需要对结果进行处理
 		c,cok := ctx.Config["data"].(Map);
-		d,dok := data.(Map);
 
-		if cok && dok {
+		if cok {
 
 			//处理,需不需要整个data节点全加密
 			if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
@@ -2625,7 +2640,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 					},
 				}
 				newData := Map{
-					"data": d,
+					"data": data,
 				}
 
 
@@ -2646,7 +2661,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 				v := Map{}
 
-				e := Mapping.Parse([]string{}, c, d, v, false, false)
+				e := Mapping.Parse([]string{}, c, data, v, false, false)
 				if e != nil {
 					//出错了
 					ctx.Failed(e)
@@ -2671,7 +2686,7 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 					},
 				}
 				newData := Map{
-					"data": d,
+					"data": data,
 				}
 
 
@@ -2700,7 +2715,10 @@ func (ctx *HttpContext) Result(state string, args ...Any) {
 
 
 //返回数据，表示成功
-func (ctx *HttpContext) Return(data Any) {
+//data必须为json，因为data节点可能统一加密
+//如果在data同级返回其它数据，如page信息， 会有泄露数据风险
+//所以这里强制data必须为json
+func (ctx *HttpContext) Return(data Map) {
 	m := Map{
 		"code": 0,
 		"time": time.Now().Unix(),
@@ -2710,9 +2728,8 @@ func (ctx *HttpContext) Return(data Any) {
 	//待处理一项：data不一定非要Map类型，也可以是数组，或是其它对象
 	//暂不处理，后续再改
 	c,cok := ctx.Config["data"].(Map);
-	d,dok := data.(Map);
 
-	if cok && dok {
+	if cok {
 
 		//处理,需不需要整个data节点全加密
 		if ctx.Node.Config.Crypto != "" && ctx.Config["nocode"]==nil && ctx.Debug == false {
@@ -2725,7 +2742,7 @@ func (ctx *HttpContext) Return(data Any) {
 				},
 			}
 			newData := Map{
-				"data": d,
+				"data": data,
 			}
 
 
@@ -2746,7 +2763,7 @@ func (ctx *HttpContext) Return(data Any) {
 
 			v := Map{}
 
-			e := Mapping.Parse([]string{}, c, d, v, false, false)
+			e := Mapping.Parse([]string{}, c, data, v, false, false)
 			if e != nil {
 				//出错了
 				ctx.Failed(e)
@@ -2770,7 +2787,7 @@ func (ctx *HttpContext) Return(data Any) {
 				},
 			}
 			newData := Map{
-				"data": d,
+				"data": data,
 			}
 
 
