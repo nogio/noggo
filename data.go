@@ -12,6 +12,8 @@ import (
 //data driver begin
 
 const (
+	/*
+	//已经废弃，改到base包中了，暂时存留for兼容
 	ASC     = "$$$ASC$$$"
 	DESC    = "$$$DESC$$$"
 	COUNT   = "$$$COUNT$$$"
@@ -20,11 +22,22 @@ const (
 	MAX     = "$$$MAX$$$"
 	MIN     = "$$$MIN$$$"
 	DataFieldDelims  = "$"
+	*/
 )
 type (
+	/*
+	//已经废弃，改到base包中，暂时存留for兼容
 	FTS string  //全文搜索类型，解析sql的时候处理
 	Nil struct {}
 	NotNil struct {}
+	*/
+
+
+
+
+
+
+
 	DataDriver interface {
 		//连接驱动的时候
 		//应该做如下工作：
@@ -41,10 +54,12 @@ type (
 		//构建模型和索引
 		Build() error
 
-		//注册模型
-		Model(string,Map)
+		//注册表
+		Table(string,Map)
 		//注册视图
 		View(string,Map)
+		//注册模型
+		Model(string,Map)
 
 		//获取数据库对象
 		Base(string,CacheBase) (DataBase,error)
@@ -56,8 +71,9 @@ type (
 	//数据库接口
 	DataBase interface {
 		Close()
-		Model(name string) (DataModel)
+		Table(name string) (DataTable)
 		View(name string) (DataView)
+		Model(name string) (DataModel)
 
 		//是否使用缓存，默认使用
 		Cache(bool) (DataBase)
@@ -76,6 +92,26 @@ type (
 		Stmt(stmt *sql.Stmt) (*sql.Stmt)
 	}
 
+	//数据表接口
+	DataTable interface {
+		Create(Map) (Map,error)
+		Change(Map,Map) (Map,error)
+		Remove(Map) (error)
+		Recover(Map) (error)
+
+		Update(sets Map,args ...Any) (int64,error)
+		Delete(args ...Any) (int64,error)
+
+		Entity(Any) (Map,error)
+		Count(args ...Any) (int64,error)
+		Single(args ...Any) (Map,error)
+		Query(args ...Any) ([]Map,error)
+		//Querys(keyword string, args ...Any) ([]Map,error)
+		Limit(offset, limit Any, args ...Any) (int64,[]Map,error)
+		//Limits(offset, limit Any, keyword string, args ...Any) (int64,[]Map,error)
+		Group(field string, args ...Any) ([]Map,error)
+
+	}
 
 	//数据视图接口
 	DataView interface {
@@ -89,15 +125,8 @@ type (
 
 	//数据模型接口
 	DataModel interface {
-		DataView
-
-		Create(Map) (Map,error)
-		Change(Map,Map) (Map,error)
-		Remove(Map) (error)
-		Recover(Map) (error)
-
-		Update(sets Map,args ...Any) (int64,error)
-		Delete(args ...Any) (int64,error)
+		Single(args ...Any) (Map,error)
+		Query(args ...Any) ([]Map,error)
 	}
 
 )
@@ -114,8 +143,10 @@ type (
 		//数据连接
 		connects    map[string]DataConnect
 
-		models      map[string]map[string]Map
+		//三大对象：表，视图，模型
+		tables      map[string]map[string]Map
 		views      map[string]map[string]Map
+		models      map[string]map[string]Map
 	}
 )
 
@@ -169,6 +200,27 @@ func (global *dataGlobal) initData() {
 				panic("数据：打开连接失败：" + err.Error())
 			} else {
 
+				//注册表
+				//先全局
+				for k,v := range global.tables[ConstNodeGlobal] {
+					conn.Table(k, v)
+				}
+				//再库
+				for k,v := range global.tables[name] {
+					conn.Table(k, v)
+				}
+
+				//注册视图
+				//先全局
+				for k,v := range global.views[ConstNodeGlobal] {
+					conn.View(k, v)
+				}
+				//再库
+				for k,v := range global.views[name] {
+					conn.View(k, v)
+				}
+
+
 				//注册模型
 				//先全局
 				for k,v := range global.models[ConstNodeGlobal] {
@@ -180,14 +232,9 @@ func (global *dataGlobal) initData() {
 				}
 
 
-				//注册视图
-				//先全局
-				for k,v := range global.views[ConstNodeGlobal] {
-					conn.View(k, v)
-				}
-				//再库
-				for k,v := range global.views[name] {
-					conn.View(k, v)
+				//如果需要构建表和索引
+				if config.Build {
+					conn.Build()
 				}
 
 				//保存连接
@@ -229,6 +276,31 @@ func (global *dataGlobal) exitData() {
 
 
 
+//注册表
+func (global *dataGlobal) Table(name string, config Map) {
+	global.mutex.Lock()
+	defer global.mutex.Unlock()
+
+	if global.tables == nil {
+		global.tables = map[string]map[string]Map{}
+	}
+
+	//节点
+	nodeName := ConstNodeGlobal
+	if Current != "" {
+		nodeName = Current
+	}
+
+	//如果节点配置不存在，创建
+	if global.tables[nodeName] == nil {
+		global.tables[nodeName] = map[string]Map{}
+	}
+
+	//可以后注册重写原有配置，所以直接保存
+	global.tables[nodeName][name] = config
+}
+
+
 
 
 //注册模型
@@ -252,7 +324,7 @@ func (global *dataGlobal) Model(name string, config Map) {
 	}
 
 
-	//可以后注册重写原有路由配置，所以直接保存
+	//可以后注册重写原有配置，所以直接保存
 	global.models[nodeName][name] = config
 }
 
@@ -277,8 +349,68 @@ func (global *dataGlobal) View(name string, config Map) {
 		global.views[nodeName] = map[string]Map{}
 	}
 
-	//可以后注册重写原有路由配置，所以直接保存
+	//可以后注册重写原有配置，所以直接保存
 	global.views[nodeName][name] = config
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+//查询某库所有表
+func (global *dataGlobal) Tables(bases ...string) (Map) {
+
+	if len(bases) > 0 {
+		base := bases[0]
+		if global.tables[base] != nil {
+
+			m := Map{}
+			for k,v := range global.tables[base] {
+				m[k] = v
+			}
+			return m
+		}
+	} else {
+		m := Map{}
+		for k,v := range global.tables {
+			m[k] = v
+		}
+		return m
+	}
+
+	return Map{}
+}
+
+//查询某库所有视图
+func (global *dataGlobal) Views(bases ...string) (Map) {
+
+	if len(bases) > 0 {
+		base := bases[0]
+		if global.views[base] != nil {
+
+			m := Map{}
+			for k,v := range global.views[base] {
+				m[k] = v
+			}
+			return m
+		}
+	} else {
+		m := Map{}
+		for k,v := range global.views {
+			m[k] = v
+		}
+		return m
+	}
+
+	return Map{}
 }
 
 
@@ -309,39 +441,24 @@ func (global *dataGlobal) Models(bases ...string) (Map) {
 
 
 
-//查询某表所有字段
-func (global *dataGlobal) Fields(base, model string, maps ...Map) (Map) {
 
-	m := Map{}
 
-	if dc,ok := global.models[base]; ok {
-		if mc,ok := dc[model]; ok {
-			if fc,ok := mc["field"]; ok {
-				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
-				for k,v := range fc.(Map) {
-					m[k] = v
-				}
-			}
-		}
-	}
 
-	//覆盖的map
-	if len(maps) > 0 {
-		for k,v := range maps[0] {
-			m[k] = v
-		}
-	}
 
-	return m
-}
+
+
+
+
+
+
 
 //查询某表部分字段
-func (global *dataGlobal) Field(base, model string, fields []string, maps ...Map) Map {
+func (global *dataGlobal) TableField(base, name string, fields []string, maps ...Map) Map {
 
 	m := Map{}
 
-	if dc,ok := global.models[base]; ok {
-		if mc,ok := dc[model]; ok {
+	if dc,ok := global.tables[base]; ok {
+		if mc,ok := dc[name]; ok {
 			if fc,ok := mc["field"]; ok {
 
 				// 后续考虑支持多级
@@ -368,27 +485,45 @@ func (global *dataGlobal) Field(base, model string, fields []string, maps ...Map
 
 	return m
 }
+//查询某表所有字段
+func (global *dataGlobal) TableFields(base, name string, maps ...Map) (Map) {
 
+	m := Map{}
 
-//取模型的枚举定义
-func (global *dataGlobal) Enums(data, model, field string) (Map) {
-
-	if Data.models[data] != nil {
-		dataConfig := Data.models[data]
-		if dataConfig[model] != nil {
-			modelConfig := dataConfig[model]
-			if modelConfig["field"] != nil {
-				fields := modelConfig["field"].(Map)
-				if fields[field] != nil {
-					fieldConfig := fields[field].(Map)
-					if fieldConfig["enum"] != nil {
-						return fieldConfig["enum"].(Map)
-					}
+	if dc,ok := global.tables[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
 				}
 			}
 		}
 	}
 
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//取模型的枚举定义
+func (global *dataGlobal) TableEnums(data, name, field string) (Map) {
+
+	if dataConfig,ok := global.tables[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+						return vv
+					}
+				}
+			}
+		}
+	}
 	return Map{}
 }
 
@@ -401,6 +536,373 @@ func (global *dataGlobal) Enums(data, model, field string) (Map) {
 
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//查询某视图部分字段
+func (global *dataGlobal) ViewField(base, name string, fields []string, maps ...Map) Map {
+
+	m := Map{}
+
+	if dc,ok := global.views[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某视图部分字段
+func (global *dataGlobal) ViewFields(base, name string, maps ...Map) (Map) {
+
+	m := Map{}
+
+	if dc,ok := global.views[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某视图部分字段
+func (global *dataGlobal) ViewEnums(data, name, field string) (Map) {
+
+	if dataConfig,ok := global.views[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+						return vv
+					}
+				}
+			}
+		}
+	}
+	return Map{}
+}
+
+
+
+
+
+
+
+
+
+//查询某视图部分字段
+func (global *dataGlobal) ModelField(base, name string, fields []string, maps ...Map) Map {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某视图部分字段
+func (global *dataGlobal) ModelFields(base, name string, maps ...Map) (Map) {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某视图部分字段
+func (global *dataGlobal) ModelEnums(data, name, field string) (Map) {
+
+	if dataConfig,ok := global.models[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+						return vv
+					}
+				}
+			}
+		}
+	}
+	return Map{}
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//查询部分字段，跨三个对象
+func (global *dataGlobal) Field(base, name string, fields []string, maps ...Map) Map {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+	if dc,ok := global.views[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+	if dc,ok := global.tables[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+
+				// 后续考虑支持多级
+				// fields中名称是user.avatar.id 这样的  当是mongodb时，就比较重要了
+				for _,n := range fields {
+
+					//字段是否存在
+					if v,ok := fc.(Map)[n]; ok {
+						m[n] = v
+					}
+
+				}
+
+			}
+		}
+	}
+
+
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某字段，跨三个对象
+func (global *dataGlobal) Fields(base, name string, maps ...Map) (Map) {
+
+	m := Map{}
+
+	if dc,ok := global.models[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+	if dc,ok := global.views[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+	if dc,ok := global.tables[base]; ok {
+		if mc,ok := dc[name]; ok {
+			if fc,ok := mc["field"]; ok {
+				//不可以直接给,要给一个新的,要不么返回了引用,改了后, 原定义也改了
+				for k,v := range fc.(Map) {
+					m[k] = v
+				}
+			}
+		}
+	}
+
+	//覆盖的map
+	if len(maps) > 0 {
+		for k,v := range maps[0] {
+			m[k] = v
+		}
+	}
+
+	return m
+}
+//查询某枚举，跨三个对象
+func (global *dataGlobal) Enums(data, name, field string) (Map) {
+
+	m := Map{}
+
+	if dataConfig,ok := global.models[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+
+						for k,v := range vv {
+							m[k] = v
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+	if dataConfig,ok := global.views[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+
+						for k,v := range vv {
+							m[k] = v
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+	if dataConfig,ok := global.tables[data]; ok {
+		if tableConfig,ok := dataConfig[name]; ok {
+			if fields,ok := tableConfig["field"].(Map); ok {
+				if fieldConfig,ok := fields[field].(Map); ok {
+					if vv,ok := fieldConfig["enum"].(Map); ok {
+
+						for k,v := range vv {
+							m[k] = v
+						}
+
+					}
+				}
+			}
+		}
+	}
+
+	return m
+}
 
 
 
@@ -454,6 +956,13 @@ func (global *dataGlobal) Base(name string) (DataBase) {
 
 
 
+
+
+
+
+
+
+
 //----------------------------------------------------------------------
 
 
@@ -488,7 +997,6 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 				sql = sql[:i]
 			}
 
-
 			return sql,params,orderBy,nil
 
 		} else {
@@ -499,6 +1007,7 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 				if m,ok := v.(Map); ok {
 					maps = append(maps, m)
 				}
+				//如果直接是[]Map，应该算OR处理啊，暂不处理这个
 			}
 
 			querys,values,orders := global.parsing(maps...)
@@ -519,7 +1028,7 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 //注意，这个是实际的解析，支持递归
 func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string) {
 
-	fp := DataFieldDelims
+	fp := DELIMS
 
 	querys := []string{}
 	values := make([]interface{}, 0)
@@ -532,13 +1041,13 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 		for k,v := range m {
 
 			//如果值是ASC,DESC，表示是排序
-			if ov,ok := v.(string); ok && (ov==ASC || ov==DESC) {
-
-				if ov == ASC {
-					orders = append(orders, fmt.Sprintf(`%s%s%s ASC`, fp, k, fp))
-				} else {
-					orders = append(orders, fmt.Sprintf(`%s%s%s DESC`, fp, k, fp))
-				}
+			//if ov,ok := v.(string); ok && (ov==ASC || ov==DESC) {
+			if v==ASC {
+				//正序
+				orders = append(orders, fmt.Sprintf(`%s%s%s ASC`, fp, k, fp))
+			} else if v==DESC {
+				//倒序
+				orders = append(orders, fmt.Sprintf(`%s%s%s DESC`, fp, k, fp))
 
 			} else if ms,ok := v.([]Map); ok {
 				//是[]Map，相当于or
@@ -564,33 +1073,52 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 
 					opAnds := []string{}
 					for opKey,opVal := range opMap {
-						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
-						values = append(values, opVal)
+						//这里要支持LIKE
+						if opKey == FULL {
+							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+						} else if opKey == LEFT {
+							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%s%%'`, fp, k, fp, safeFts))
+						} else if opKey == RIGHT {
+							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
+						} else {
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
+							values = append(values, opVal)
+						}
 					}
+
+
 					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
 
 				} else {
 
 					if v == nil {
 						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
-					} else if _,ok := v.(Nil); ok {
+					} else if v == NIL {
+						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+					} else if v == NOL {
+						//不为空值
+						ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
+						/*
+					}  else if _,ok := v.(Nil); ok {
 						//为空值
 						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
 					} else if _,ok := v.(NotNil); ok {
 						//不为空值
 						ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
 					} else if fts,ok := v.(FTS); ok {
-						//处理模糊搜索
+						//处理模糊搜索，此条后续版本会移除
 						safeFts := strings.Replace(string(fts), "'", "''", -1)
 						ands = append(ands, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+						*/
 					} else {
 						ands = append(ands, fmt.Sprintf(`%s%s%s = ?`, fp, k, fp))
 						values = append(values, v)
 					}
 				}
-
 			}
-
 		}
 
 		if len(ands) > 0 {
@@ -608,18 +1136,20 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 
 type (
 	noDataBase struct {}
-	noDataModel struct {
-		noDataView
-	}
+	noDataTable struct {}
 	noDataView struct {}
+	noDataModel struct {}
 )
 func (base *noDataBase) Close() {
 }
-func (base *noDataBase) Model(name string) (DataModel) {
-	return &noDataModel{}
+func (base *noDataBase) Table(name string) (DataTable) {
+	return &noDataTable{}
 }
 func (base *noDataBase) View(name string) (DataView) {
 	return &noDataView{}
+}
+func (base *noDataBase) Model(name string) (DataModel) {
+	return &noDataModel{}
 }
 func (base *noDataBase) Cache(use bool)(DataBase) {
 	return base
@@ -672,41 +1202,51 @@ func (base *noDataBase) Stmt(stmt *sql.Stmt) (*sql.Stmt) {
 
 
 
-func (model *noDataModel) Create(data Map) (Map,error) {
+func (table *noDataTable) Create(data Map) (Map,error) {
 	return nil,errors.New("无数据")
 }
-func (model *noDataModel) Change(item Map, data Map) (Map,error) {
+func (table *noDataTable) Change(item Map, data Map) (Map,error) {
 	return nil,errors.New("无数据")
 }
-func (model *noDataModel) Remove(item Map) (error) {
+func (table *noDataTable) Remove(item Map) (error) {
 	return nil
 }
-func (model *noDataModel) Recover(item Map) (error) {
+func (table *noDataTable) Recover(item Map) (error) {
 	return nil
 }
-func (model *noDataModel) Delete(args ...Any) (int64,error) {
+func (table *noDataTable) Delete(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataModel) Update(sets Map,args ...Any) (int64,error) {
+func (table *noDataTable) Update(sets Map,args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-/*
-func (model *noDataModel) Count(args ...Map) (int64,error) {
+
+
+func (view *noDataTable) Count(args ...Any) (int64,error) {
 	return int64(0),errors.New("无数据")
 }
-func (model *noDataModel) Single(args ...Map) (Map,error) {
+func (view *noDataTable) Single(args ...Any) (Map,error) {
+	return Map{},errors.New("无数据")
+}
+func (view *noDataTable) Query(args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
+}
+func (view *noDataTable) Querys(keyword string,args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
+}
+func (view *noDataTable) Limit(offset,limit Any, args ...Any) (int64,[]Map,error) {
+	return int64(0),[]Map{},errors.New("无数据")
+}
+func (view *noDataTable) Limits(offset,limit Any, keyword string, args ...Any) (int64,[]Map,error) {
+	return int64(0),[]Map{},errors.New("无数据")
+}
+func (view *noDataTable) Group(field string, args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
+}
+func (view *noDataTable) Entity(id Any) (Map,error) {
 	return nil,errors.New("无数据")
 }
-func (model *noDataModel) Query(args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
-}
-func (model *noDataModel) Limit(offset,limit Any, args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
-}
-func (model *noDataModel) Group(field string, args ...Map) ([]Map,error) {
-	return nil,errors.New("无数据")
-}
-*/
+
 
 
 
@@ -728,4 +1268,18 @@ func (view *noDataView) Group(field string, args ...Any) ([]Map,error) {
 }
 func (view *noDataView) Entity(id Any) (Map,error) {
 	return nil,errors.New("无数据")
+}
+
+
+
+
+
+
+
+
+func (view *noDataModel) Single(args ...Any) (Map,error) {
+	return Map{},errors.New("无数据")
+}
+func (view *noDataModel) Query(args ...Any) ([]Map,error) {
+	return []Map{},errors.New("无数据")
 }

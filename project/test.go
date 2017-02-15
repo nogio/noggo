@@ -7,48 +7,40 @@
 package main
 
 import (
+	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo"
-	_ "github.com/nogio/noggo/core"
-	"github.com/nogio/noggo/middler"
+	"fmt"
+	"strings"
 )
-
 
 func main() {
 
-	//请求日志、静态文件、表单解析、中间件
-	noggo.Use(middler.HttpLogger())
-	noggo.Use(middler.HttpStatic("statics"))
-	noggo.Use(middler.HttpForm("uploads"))
+	/*
+	m := Map{
+		"index":	ASC,
+		"views":	DESC,
 
-	//get 首页
-	noggo.Get("/", func(ctx *noggo.HttpContext) {
-		ctx.Text("hello noggo.")
-	})
-	//post 首页
-	noggo.Post("/", func(ctx *noggo.HttpContext) {
-		ctx.Json(ctx.Form)
-	})
-	//添加一个触发器，noggo.Trigger.Touch("trigger.test") 触发
-	noggo.Add("trigger.test", func(ctx *noggo.TriggerContext) {
-		ctx.Finish()
-	})
-	//添加一个任务，noggo.Task.After("task.test", time.Second*3) 3秒后执行任务
-	noggo.Add("task.test", func(ctx *noggo.TaskContext) {
-		ctx.Finish()
-	})
-	//添加一个每5秒执行的计划，  不需调用，
-	noggo.Add("*/5 * * * * *", func(ctx *noggo.PlanContext) {
-		noggo.Logger.Debug("定时计划开始执行")
-		ctx.Finish()
-	})
-	//添加一个事件，noggo.Event.Publish("event.test")调用
-	noggo.Add("event.test", func(ctx *noggo.EventContext) {
-		ctx.Finish()
-	})
-	//添加一个队列，noggo.Queue.Publish("queue.test")调用
-	noggo.Add("queue.test", func(ctx *noggo.QueueContext) {
-		ctx.Finish()
+		"name": Map{ LIKE: "ASDFASDF" },
+	}
+
+
+	if m["index"] == ASC {
+		fmt.Printf("对的")
+	} else {
+		fmt.Printf("不对")
+	}
+	*/
+
+	sql,args,order,err := noggo.Data.Parsing(Map{
+		"name": NOL, "email": NOTNULL,
+		"text": Map{ FULL: "haha", NE: "abcd" },
+	}, Map{
+		"views": ASC, "id": DESC,
 	})
 
-	noggo.Launch(":8080")
+	sql = strings.Replace(sql, DELIMS, `"`, -1)
+	order = strings.Replace(order, DELIMS, `"`, -1)
+
+	fmt.Println(err, sql, order, args)
+
 }

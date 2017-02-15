@@ -18,15 +18,15 @@
   "node": {
     "ing": {
       "id": "ing-1", "port": ":22700", "url": "http://127.0.0.1:22700", "name": "处理中心", "text": "处理中心",
-      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000, "disable": false
     },
     "sys": {
       "id": "sys-1", "port": ":22750", "url": "http://127.0.0.1:22750", "name": "后台管理", "text": "后台管理",
-      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000, "disable": false
     },
     "www": {
       "id": "www-1", "port": ":22751", "url": "http://127.0.0.1:22751", "name": "主站", "text": "主站",
-      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000
+      "charset": "utf-8", "cookie": "noggo", "domain": "", "crypto": "", "expiry": 360000, "disable": false
     }
   },
 

@@ -1305,27 +1305,71 @@ func (module *queueModule) contextItem(ctx *QueueContext) {
 			} else {
 
 				//判断是否需要查询数据
-				dataName,dok := config["base"].(string); modelName,mok := config["model"].(string);
-				if dok && mok {
+				if baseName,ok := config["base"].(string); ok {
 
-					//要查询库
-					db := Data.Base(dataName);
-					item,err := db.Model(modelName).Entity(ctx.Value[key])
-					db.Close()
-					if err != nil {
-						state := "item.error"
-						//是否有自定义状态
-						if v,ok := config["error"]; ok {
-							state = v.(string)
+					if tableName,ok := config["table"].(string); ok {
+
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.Table(tableName).Entity(ctx.Value[key])
+						db.Close()
+						if err != nil {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeStateError(k, state, name)
+
+							ctx.Error(err)
+							return;
+						} else {
+							saveMap[k] = item
 						}
-						err := Const.NewTypeStateError(k, state, name)
+					} else if viewName,ok := config["view"].(string); ok {
 
-						ctx.Error(err)
-						return;
-					} else {
-						saveMap[k] = item
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.View(viewName).Entity(ctx.Value[key])
+						db.Close()
+						if err != nil {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeStateError(k, state, name)
+
+							ctx.Error(err)
+							return;
+						} else {
+							saveMap[k] = item
+						}
+					} else if modelName,ok := config["model"].(string); ok {
+						//兼容老代码model->table
+
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.Table(modelName).Entity(ctx.Value[key])
+						db.Close()
+						if err != nil {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeStateError(k, state, name)
+
+							ctx.Error(err)
+							return;
+						} else {
+							saveMap[k] = item
+						}
 					}
+
+
 				}
+
 			}
 		}
 

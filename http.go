@@ -1223,7 +1223,7 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 		}
 
 		//正则对象
-		regx := regexp.MustCompile(`\{[\*A-Za-z0-9_]+\}`)
+		regx := regexp.MustCompile(`(\{[\*A-Za-z0-9_]+\})`)
 		//拿到URI中的参数列表
 		//kkkkks := regx.FindAllString(uri, -1)
 
@@ -1246,6 +1246,7 @@ func (module *httpModule) contextRoute(ctx *HttpContext) {
 		if (uri[0:1] != "/") {
 			url = ctx.Host + ctx.Path
 		}
+
 
 		regx = regexp.MustCompile("^"+regs+"$")
 		if regx.MatchString(url) {
@@ -1641,33 +1642,77 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 			if ctx.Sign.Yes(authSign) {
 
 				//判断是否需要查询数据
-				dataName,dok := authConfig["base"].(string); modelName,mok := authConfig["model"].(string);
-				if dok && mok {
+				if baseName,ok := authConfig["base"].(string); ok {
+					if tableName, ok := authConfig["table"].(string); ok {
+						//要查询表
+						//不管must是否,都要查表
+						db := Data.Base(baseName);
+						item,err := db.Table(tableName).Entity(ctx.Sign.Id(authSign))
+						db.Close()
+						if err != nil {
+							if authMust {	//是必要的
+								//是否有自定义状态
+								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								if v,ok := authConfig["error"]; ok {
+									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
+								}
 
-					//要查询库
-					//不管must是否,都要查库
-					db := Data.Base(dataName);
-					item,err := db.Model(modelName).Entity(ctx.Sign.Id(authSign))
-					db.Close()
-					if err != nil {
-						if authMust {	//是必要的
-							//是否有自定义状态
-							err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
-							if v,ok := authConfig["error"]; ok {
-								err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
+								ctx.Denied(err)
+								return;
 							}
-
-							ctx.Denied(err)
-							return;
+						} else {
+							saveMap[authKey] = item
 						}
-					} else {
-						saveMap[authKey] = item
+
+					} else if viewName, ok := authConfig["view"].(string); ok {
+						//要查询表
+						//不管must是否,都要查表
+						db := Data.Base(baseName);
+						item,err := db.View(viewName).Entity(ctx.Sign.Id(authSign))
+						db.Close()
+						if err != nil {
+							if authMust {	//是必要的
+								//是否有自定义状态
+								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								if v,ok := authConfig["error"]; ok {
+									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
+								}
+
+								ctx.Denied(err)
+								return;
+							}
+						} else {
+							saveMap[authKey] = item
+						}
+
+					} else if modelName, ok := authConfig["model"].(string); ok {
+						//兼容老代码使用model->TABLE
+
+						//要查询表
+						//不管must是否,都要查表
+						db := Data.Base(baseName);
+						item,err := db.Table(modelName).Entity(ctx.Sign.Id(authSign))
+						db.Close()
+						if err != nil {
+							if authMust {	//是必要的
+								//是否有自定义状态
+								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								if v,ok := authConfig["error"]; ok {
+									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
+								}
+
+								ctx.Denied(err)
+								return;
+							}
+						} else {
+							saveMap[authKey] = item
+						}
+
 					}
 
 
-				} else {
-					//无需base, model， 不管
 				}
+
 
 			} else {
 				ohNo = true
@@ -1750,27 +1795,74 @@ func (module *httpModule) contextItem(ctx *HttpContext) {
 			} else {
 
 				//判断是否需要查询数据
-				dataName,dok := config["base"].(string); modelName,mok := config["model"].(string);
-				if dok && mok {
+				if baseName,ok := config["base"].(string); ok {
 
-					//要查询库
-					db := Data.Base(dataName);
-					item,err := db.Model(modelName).Entity(val)
-					db.Close()
-					if err != nil && must {
-						state := "item.error"
-						//是否有自定义状态
-						if v,ok := config["error"]; ok {
-							state = v.(string)
+
+
+					if tableName,ok := config["table"].(string); ok {
+
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.Table(tableName).Entity(val)
+						db.Close()
+						if err != nil && must {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
+
+							ctx.Failed(err)
+							return;
+						} else {
+							saveMap[k] = item
 						}
-						err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
+					} else if viewName,ok := config["view"].(string); ok {
 
-						ctx.Failed(err)
-						return;
-					} else {
-						saveMap[k] = item
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.View(viewName).Entity(val)
+						db.Close()
+						if err != nil && must {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
+
+							ctx.Failed(err)
+							return;
+						} else {
+							saveMap[k] = item
+						}
+					} else if modelName,ok := config["model"].(string); ok {
+						//兼容老代码 model->table
+
+						//要查询库
+						db := Data.Base(baseName);
+						item,err := db.Table(modelName).Entity(val)
+						db.Close()
+						if err != nil && must {
+							state := "item.error"
+							//是否有自定义状态
+							if v,ok := config["error"]; ok {
+								state = v.(string)
+							}
+							err := Const.NewTypeLangStateError(k, ctx.Lang, state, name)
+
+							ctx.Failed(err)
+							return;
+						} else {
+							saveMap[k] = item
+						}
 					}
+
+
+
 				}
+
 			}
 		}
 
@@ -2513,6 +2605,22 @@ func (ctx *HttpContext) View(view string, models ...Any) {
 	ctx.Type = "html"
 	ctx.Body = httpBodyView{view, model}
 }
+func (ctx *HttpContext) TypeView(tttt string, view string, models ...Any) {
+	var model Any
+	if len(models) > 0 {
+		model = models[0]
+	}
+
+	if tttt == "" {
+		tttt = "html"
+	}
+
+	ctx.Type = tttt
+	ctx.Body = httpBodyView{view, model}
+}
+/* 上下文响应器 end */
+
+
 /* 上下文响应器 end */
 
 

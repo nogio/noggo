@@ -36,6 +36,9 @@ type (
 		//节点root
 		Root    string	`json:"root"`
 
+
+		Disable    bool	`json:"disable"`
+
 		//节点指定SESSION
 		Session *sessionConfig `json:"session"`
 	}
@@ -48,6 +51,8 @@ type (
 		Config	Map		`json:"config"`
 		//缓存key
 		Cache	string	`json:"cache"`
+		//是否构建
+		Build	bool	`json:"build"`
 	}
 
 	//cache配置
