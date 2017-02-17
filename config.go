@@ -167,11 +167,12 @@ type (
 	configConfig struct {
 		Debug	bool			`json:"debug"`
 
-		Lang	map[string]*langConfig	`json:"lang"`
-		Node	map[string]*nodeConfig	`json:"node"`
-		Cache	map[string]*cacheConfig	`json:"cache"`
-		Data	map[string]*dataConfig	`json:"data"`
-		Queue	map[string]*queueConfig	`json:"queue"`
+		Lang	map[string]*langConfig		`json:"lang"`
+		Node	map[string]*nodeConfig		`json:"node"`
+		Site	map[string][]string			`json:"site"`
+		Cache	map[string]*cacheConfig		`json:"cache"`
+		Data	map[string]*dataConfig		`json:"data"`
+		Queue	map[string]*queueConfig		`json:"queue"`
 		Storage	map[string]*storageConfig	`json:"storage"`
 
 
@@ -184,21 +185,16 @@ type (
 		//任务配置
 		Task *taskConfig		`json:"task"`
 
-
-
 		//计划配置
 		Plan *planConfig		`json:"plan"`
 		//事件配置
 		Event *eventConfig		`json:"event"`
-
-
 
 		//http配置
 		Http *httpConfig		`json:"http"`
 
 		//view
 		View *viewConfig		`json:"view"`
-
 
 		//自定义配置
 		Custom Map		`json:"custom"`

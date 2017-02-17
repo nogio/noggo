@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	. "github.com/nogio/noggo/base"
 	"errors"
+	"os"
 )
 
 var (
@@ -200,7 +201,13 @@ func loadLang() {
 
 func readJsonConfig() (error,*configConfig) {
 
-	bytes, err := ioutil.ReadFile("config.json")
+	configFile := "config.json"
+	if len(os.Args) >= 2 {
+		configFile = os.Args[1]	//第1个参数，0为程序本身
+	}
+
+
+	bytes, err := ioutil.ReadFile(configFile)
 	if err != nil {
 		return err, nil
 	} else {

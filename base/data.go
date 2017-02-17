@@ -35,6 +35,9 @@ const (
 	LE	= "<="	//小于等于
 	LTE	= "<="	//小于等于
 
+	IN	= "$$$IN$$$"	//支持  WHERE id IN (1,2,3)			//这条还没支持
+	ANY = "$$$ANY"		//支持数组字段的   xxx=ANY("field")	//这条还没支持
+
 	FULL = "$$$full$$$"		//like搜索
 	LEFT = "$$$left$$$"		//like left搜索
 	RIGHT = "$$$right$$$"	//like right搜索
