@@ -356,7 +356,7 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 				} else if ttt,ok := args[0].(int64); ok {
 					//时间戳是大于1971年是, 千万级, 2016年就是10亿级了
 
-					if ttt >= int64(31507200) {
+					if ttt >= int64(31507200) && ttt >= int64(31507200000) {
 						sss := time.Unix(ttt, 0).Format(format)
 						//if sss != "%25v" {
 						if strings.HasPrefix(sss, "%")==false || format != sss {
@@ -365,7 +365,58 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 					}
 				}
 			}
+
 			return fmt.Sprintf(format, args...)
+		},
+		// mapping("a1", "v1", "a2", "v2")
+		//{ "a1": "v1", "a2": "v2" }
+		"mapping": func(format string, args ...interface{}) (Map) {
+
+
+			m := Map{}
+
+			kvs := []interface{}{ format }
+			kvs = append(kvs, args...)
+
+			k := ""
+			for i,v := range kvs {
+				if (i+1)%2==1 {
+					k = fmt.Sprintf("%v", v)
+				} else {
+					m[k] = v
+				}
+			}
+
+			return m
+			/*
+
+			m := Map{}
+
+			//支持 (k1,v1,k2,v2,k3,v3) 这样的直接生成map
+			if strings.HasPrefix(format, "{") &&
+				strings.HasSuffix(format, "}") &&
+				strings.Index(format, `%`) >= 0 {
+
+				s := fmt.Sprintf(format, args...)
+				e := json.Unmarshal([]byte(s), &m)
+				noggo.Logger.Info("mapping.json", e, format, s)
+
+			} else {
+				kvs := []interface{}{ format }
+				kvs = append(kvs, args...)
+
+				k := ""
+				for i,v := range kvs {
+					if (i+1)%2==1 {
+						k = fmt.Sprintf("%v", v)
+					} else {
+						m[k] = v
+					}
+				}
+			}
+			return m
+			*/
+
 		},
 		"now": func() time.Time {
 			return time.Now()

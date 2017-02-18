@@ -84,7 +84,6 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 	}
 
 
-
 	if uri != "" {
 		argsConfig := Map{}
 		if c,ok := config["args"].(Map); ok {
@@ -119,27 +118,25 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		}
 
 
-
-
 		queryValues := Map{}
 
+
 		//选项处理
-		if (options["back"] != nil && url.ctx != nil) {
+		if options["back"] != nil && url.ctx != nil {
 			var url = url.Back()
-			queryValues[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url)
 		}
 		//选项处理
-		if (options["last"] != nil && url.ctx != nil) {
+		if options["last"] != nil && url.ctx != nil {
 			var url = url.Last()
-			queryValues[BACKURL] = encode64(url);
+			queryValues[BACKURL] = encode64(url)
 		}
 		//自动携带原有的query信息
-		if (options["query"] != nil && url.ctx != nil) {
+		if options["query"] != nil && url.ctx != nil {
 			for k,v := range url.ctx.Query {
 				queryValues[k] = v
 			}
 		}
-
 
 
 
@@ -180,12 +177,17 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 				}
 			}
 		}
+
+
+
 		//所以这里还得处理一次，如果route不定义args，parse就拿不到值，就直接用values中的值
 		for k,v := range values {
 			if k[0:1] == "{" && dataValues[k] == nil {
 				dataValues[k] = v
 			}
 		}
+
+
 
 
 		//2.params中的值

@@ -280,7 +280,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 
 		//如果不可为空，但是为空了，
-		if (fieldMust && fieldEmpty == false && (fieldValue == nil || strVal == "") && fieldAuto == nil && fieldJson == nil && argn == false) {
+		if fieldMust && fieldEmpty == false && (fieldValue == nil || strVal == "") && fieldAuto == nil && fieldJson == nil && argn == false {
 
 			//是否跳过
 			if pass {
@@ -312,11 +312,11 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		} else {
 
 			//如果值为空的时候，看有没有默认值
-			if (fieldValue == nil || strVal == "") {
+			if fieldValue == nil || strVal == "" {
 
 				//如果有默认值
 				//可为NULL时，不给默认值
-				if (fieldAuto != nil && !argn) {
+				if fieldAuto != nil && !argn {
 
 					//暂时不处理 $id, $date 之类的定义好的默认值，不包装了
 					switch autoValue:=fieldAuto.(type) {
@@ -408,16 +408,16 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 					//但是POST的时候如果有argn, 实际上是不想存在此字段的
 
 					//如果字段可以不存在
-					if (fieldEmpty || argn) {
+					if fieldEmpty || argn {
 
 						//当empty(argn)=true，并且如果传过值中存在字段的KEY，值就要存在，以更新为null
-						if (argn && fieldExist) {
+						if argn && fieldExist {
 							//不操作，自然往下执行
 						} else {	//值可以不存在
 							continue
 						}
 
-					} else if (argn) {
+					} else if argn {
 
 
 					} else {
@@ -439,20 +439,24 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 					//有一个小bug这里，在route的时候， 如果传的是string，本来是想加密的， 结果这里变成了解密
 					//还得想个办法解决这个问题，所以，在传值的时候要注意，另外string型加密就有点蛋疼了
-					//主要是在route的时候，其它的时候还ok
+					//主要是在route的时候，其它的时候还ok，所以要在encode/decode中做类型判断解还是不解
 
 					//而且要值是string类型
 					if sv,ok := fieldValue.(string); ok {
 
 						//得到解密方法
 						decode := global.CryptoDecode(ct.(string))
-						fieldValue = decode(sv)
+						decodeValue := decode(sv)
 
-						//前方解过密了，表示该参数，不再加密
-						//因为加密解密，只有一个2选1的
-						//比如 args 只需要解密 data 只需要加密
-						//route 的时候 args 需要加密，而不用再解，所以是单次的
-						decoded = true
+						//不相等，才是解过密
+						if decodeValue != sv {
+							//前方解过密了，表示该参数，不再加密
+							//因为加密解密，只有一个2选1的
+							//比如 args 只需要解密 data 只需要加密
+							//route 的时候 args 需要加密，而不用再解，所以是单次的
+							fieldValue = decodeValue
+							decoded = true
+						}
 					}
 				}
 
