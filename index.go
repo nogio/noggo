@@ -7,6 +7,7 @@ import (
 	. "github.com/nogio/noggo/base"
 	"errors"
 	"os"
+	"strings"
 )
 
 var (
@@ -203,7 +204,9 @@ func readJsonConfig() (error,*configConfig) {
 
 	configFile := "config.json"
 	if len(os.Args) >= 2 {
-		configFile = os.Args[1]	//第1个参数，0为程序本身
+		if strings.HasSuffix(os.Args[1],".json") {
+			configFile = os.Args[1]	//第1个参数，0为程序本身
+		}
 	}
 
 
