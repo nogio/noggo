@@ -1001,7 +1001,6 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 
 		} else {
 
-
 			maps := []Map{}
 			for _,v := range args {
 				if m,ok := v.(Map); ok {
@@ -1018,6 +1017,10 @@ func (global *dataGlobal) Parsing(args ...Any) (string,[]interface{},string,erro
 			}
 
 			//sql := fmt.Sprintf("%s %s", strings.Join(querys, " OR "), orderStr)
+
+			if len(querys) == 0 {
+				querys = append(querys, "1=1")
+			}
 
 			return strings.Join(querys, " OR "), values, orderStr, nil
 		}
@@ -1089,9 +1092,43 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 						} else if opKey == IN {
 							//IN (?,?,?)
 
-							//safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
-							//opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
+							realArgs := []string{}
+							realVals := []Any{}
+							switch vs := opVal.(type) {
+							case []int:
+								for _,v := range vs {
+									realArgs = append(realArgs, "?")
+									realVals = append(realVals, v)
+								}
+							case []int64:
+								for _,v := range vs {
+									realArgs = append(realArgs, "?")
+									realVals = append(realVals, v)
+								}
+							case []string:
+								for _,v := range vs {
+									realArgs = append(realArgs, "?")
+									realVals = append(realVals, v)
+								}
+							case []interface{}:
+								for _,v := range vs {
+									realArgs = append(realArgs, "?")
+									realVals = append(realVals, v)
+								}
+							case []Any:
+								for _,v := range vs {
+									realArgs = append(realArgs, "?")
+									realVals = append(realVals, v)
+								}
+							default:
+								realArgs = append(realArgs, "?")
+								realVals = append(realVals, vs)
+							}
 
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s IN(%s)`, fp, k, fp, strings.Join(realArgs, ",")))
+							for _,v := range realVals {
+								values = append(values, v)
+							}
 
 						} else {
 							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
