@@ -130,7 +130,8 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 		"body": func() template.HTML {
 			return template.HTML(view.body)
 		},
-		"render": func(name string, vals ...Any) template.HTML {
+		"render": func(name string, args ...Map) template.HTML {
+			/*
 			args := []Any{}
 			for _,v := range vals {
 
@@ -147,6 +148,7 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 					args = append(args, v)
 				}
 			}
+			*/
 
 			s,e := view.Render(name, args...)
 			if e == nil {
@@ -666,9 +668,9 @@ func (view *DefaultView) Body(name string, args ...Any) (string,error) {
 }
 
 /* 返回view */
-func (view *DefaultView) Render(name string, args ...Any) (string,error) {
+func (view *DefaultView) Render(name string, args ...Map) (string,error) {
 
-	var renderModel Any
+	var renderModel Map
 	if len(args) > 0 {
 		renderModel = args[0]
 	}

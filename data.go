@@ -1074,7 +1074,10 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 					opAnds := []string{}
 					for opKey,opVal := range opMap {
 						//这里要支持LIKE
-						if opKey == FULL {
+						if opKey == LIKE {
+							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+						} else if opKey == FULL {
 							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
 							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
 						} else if opKey == LEFT {
@@ -1083,6 +1086,13 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 						} else if opKey == RIGHT {
 							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
 							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
+						} else if opKey == IN {
+							//IN (?,?,?)
+
+							//safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+							//opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
+
+
 						} else {
 							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
 							values = append(values, opVal)
