@@ -12,17 +12,17 @@ import (
 //data driver begin
 
 const (
-	/*
-	//已经废弃，改到base包中了，暂时存留for兼容
-	ASC     = "$$$ASC$$$"
-	DESC    = "$$$DESC$$$"
-	COUNT   = "$$$COUNT$$$"
-	AVG     = "$$$AVG$$$"
-	SUM     = "$$$SUM$$$"
-	MAX     = "$$$MAX$$$"
-	MIN     = "$$$MIN$$$"
-	DataFieldDelims  = "$"
-	*/
+/*
+//已经废弃，改到base包中了，暂时存留for兼容
+ASC     = "$$$ASC$$$"
+DESC    = "$$$DESC$$$"
+COUNT   = "$$$COUNT$$$"
+AVG     = "$$$AVG$$$"
+SUM     = "$$$SUM$$$"
+MAX     = "$$$MAX$$$"
+MIN     = "$$$MIN$$$"
+DataFieldDelims  = "$"
+*/
 )
 type (
 	/*
@@ -1052,6 +1052,25 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 				//倒序
 				orders = append(orders, fmt.Sprintf(`%s%s%s DESC`, fp, k, fp))
 
+			} else if v == nil {
+				ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+			} else if v == NIL {
+				ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+			} else if v == NOL {
+				//不为空值
+				ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
+				/*
+            }  else if _,ok := v.(Nil); ok {
+                //为空值
+                ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
+            } else if _,ok := v.(NotNil); ok {
+                //不为空值
+                ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
+            } else if fts,ok := v.(FTS); ok {
+                //处理模糊搜索，此条后续版本会移除
+                safeFts := strings.Replace(string(fts), "'", "''", -1)
+                ands = append(ands, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+                */
 			} else if ms,ok := v.([]Map); ok {
 				//是[]Map，相当于or
 
@@ -1066,105 +1085,80 @@ func (global *dataGlobal) parsing(args ...Map) ([]string,[]interface{},[]string)
 					orders = append(orders, osVal)
 				}
 
-			} else {
-
+			} else if opMap, opOK := v.(Map); opOK {
 				//v要处理一下如果是map要特别处理
 				//key做为操作符，比如 > < >= 等
 				//而且多个条件是and，比如 views > 1 AND views < 100
 				//自定义操作符的时候，可以用  is not null 吗？
-				if opMap, opOK := v.(Map); opOK {
+				//hai yao chu li INC in change update
 
-					opAnds := []string{}
-					for opKey,opVal := range opMap {
-						//这里要支持LIKE
-						if opKey == LIKE {
-							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
-						} else if opKey == FULL {
-							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
-						} else if opKey == LEFT {
-							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%s%%'`, fp, k, fp, safeFts))
-						} else if opKey == RIGHT {
-							safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
-						} else if opKey == IN {
-							//IN (?,?,?)
+				opAnds := []string{}
+				for opKey,opVal := range opMap {
+					//这里要支持LIKE
+					if opKey == LIKE {
+						safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+					} else if opKey == FULL {
+						safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
+					} else if opKey == LEFT {
+						safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%s%%'`, fp, k, fp, safeFts))
+					} else if opKey == RIGHT {
+						safeFts := strings.Replace(fmt.Sprintf("%v", opVal), "'", "''", -1)
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s LIKE '%%%s'`, fp, k, fp, safeFts))
+					} else if opKey == IN {
+						//IN (?,?,?)
 
-							realArgs := []string{}
-							realVals := []Any{}
-							switch vs := opVal.(type) {
-							case []int:
-								for _,v := range vs {
-									realArgs = append(realArgs, "?")
-									realVals = append(realVals, v)
-								}
-							case []int64:
-								for _,v := range vs {
-									realArgs = append(realArgs, "?")
-									realVals = append(realVals, v)
-								}
-							case []string:
-								for _,v := range vs {
-									realArgs = append(realArgs, "?")
-									realVals = append(realVals, v)
-								}
-							case []interface{}:
-								for _,v := range vs {
-									realArgs = append(realArgs, "?")
-									realVals = append(realVals, v)
-								}
-							case []Any:
-								for _,v := range vs {
-									realArgs = append(realArgs, "?")
-									realVals = append(realVals, v)
-								}
-							default:
+						realArgs := []string{}
+						realVals := []Any{}
+						switch vs := opVal.(type) {
+						case []int:
+							for _,v := range vs {
 								realArgs = append(realArgs, "?")
-								realVals = append(realVals, vs)
+								realVals = append(realVals, v)
 							}
-
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s IN(%s)`, fp, k, fp, strings.Join(realArgs, ",")))
-							for _,v := range realVals {
-								values = append(values, v)
+						case []int64:
+							for _,v := range vs {
+								realArgs = append(realArgs, "?")
+								realVals = append(realVals, v)
 							}
-
-						} else {
-							opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
-							values = append(values, opVal)
+						case []string:
+							for _,v := range vs {
+								realArgs = append(realArgs, "?")
+								realVals = append(realVals, v)
+							}
+						case []interface{}:
+							for _,v := range vs {
+								realArgs = append(realArgs, "?")
+								realVals = append(realVals, v)
+							}
+						case []Any:
+							for _,v := range vs {
+								realArgs = append(realArgs, "?")
+								realVals = append(realVals, v)
+							}
+						default:
+							realArgs = append(realArgs, "?")
+							realVals = append(realVals, vs)
 						}
-					}
 
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s IN(%s)`, fp, k, fp, strings.Join(realArgs, ",")))
+						for _,v := range realVals {
+							values = append(values, v)
+						}
 
-					ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
-
-				} else {
-
-					if v == nil {
-						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
-					} else if v == NIL {
-						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
-					} else if v == NOL {
-						//不为空值
-						ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
-						/*
-					}  else if _,ok := v.(Nil); ok {
-						//为空值
-						ands = append(ands, fmt.Sprintf(`%s%s%s IS NULL`, fp, k, fp))
-					} else if _,ok := v.(NotNil); ok {
-						//不为空值
-						ands = append(ands, fmt.Sprintf(`%s%s%s IS NOT NULL`, fp, k, fp))
-					} else if fts,ok := v.(FTS); ok {
-						//处理模糊搜索，此条后续版本会移除
-						safeFts := strings.Replace(string(fts), "'", "''", -1)
-						ands = append(ands, fmt.Sprintf(`%s%s%s LIKE '%%%s%%'`, fp, k, fp, safeFts))
-						*/
 					} else {
-						ands = append(ands, fmt.Sprintf(`%s%s%s = ?`, fp, k, fp))
-						values = append(values, v)
+						opAnds = append(opAnds, fmt.Sprintf(`%s%s%s %s ?`, fp, k, fp, opKey))
+						values = append(values, opVal)
 					}
 				}
+
+				ands = append(ands, fmt.Sprintf("(%s)", strings.Join(opAnds, " AND ")))
+
+			} else {
+				ands = append(ands, fmt.Sprintf(`%s%s%s = ?`, fp, k, fp))
+				values = append(values, v)
 			}
 		}
 

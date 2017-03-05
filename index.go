@@ -170,6 +170,7 @@ func init() {
 		https: map[string]Map{},
 	}
 
+	Setting = Map{}
 
 
 	loadConfig()
@@ -179,8 +180,17 @@ func init() {
 //读取配置文件
 func loadConfig() {
 	err,cfg := readJsonConfig()
-	if err == nil {
-		Config = cfg
+	if err != nil {
+		panic("加载配置文件出错：" + err.Error())
+	}
+	Config = cfg
+
+	//处理setting
+	for k,v := range Config.Custom {
+		Setting[k] = v
+	}
+	for k,v := range Config.Setting {
+		Setting[k] = v
 	}
 }
 func loadLang() {

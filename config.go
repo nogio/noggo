@@ -196,8 +196,18 @@ type (
 		//view
 		View *viewConfig		`json:"view"`
 
+		//设置，必须
+		Setting Map		`json:"setting"`
+
 		//自定义配置
 		Custom Map		`json:"custom"`
+
 	}
 
+)
+
+
+var (
+	//设置，有几个来源，1，config.custom, 2. config.setting
+	Setting Map
 )

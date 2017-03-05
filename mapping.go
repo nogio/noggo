@@ -213,6 +213,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 
 	//遍历配置	begin
 	for fieldName,fv := range config {
+
 		fieldConfig := Map{}
 
 		//注意，这里存在2种情况
