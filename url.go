@@ -209,14 +209,14 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			}
 		}
 
-		//Logger.Debug(name, "data", dataValues, "param", paramValues, "auto", autoValues)
-
 		//开始替换值
 		regx := regexp.MustCompile(`\{[_\*A-Za-z0-9]+\}`)
 		uri = regx.ReplaceAllStringFunc(uri, func(p string) string {
 			key := strings.Replace(p, "*", "", -1)
 
 			if v,ok := dataValues[key]; ok {
+				//for query string encode/decode
+				delete(dataValues, key)
 				//先从传的值去取
 				return fmt.Sprintf("%v", v)
 			} else if v,ok := paramValues[key]; ok {
@@ -354,7 +354,16 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 		for k,v := range queryValues {
 			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
 			if k[0:1] != "{" {
-				querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+				//当参数加密时，而不在uri中传，比如
+				//asdf?id=xxxxx
+				//{"id": 23234234234}
+				//在这里就不会被处理，所以要处理一下
+
+				if vv,ok := dataValues[k]; ok {
+					querys = append(querys, fmt.Sprintf("%v=%v", k, vv))
+				} else {
+					querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+				}
 			}
 		}
 		if len(querys) > 0 {
@@ -483,6 +492,9 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			}
 		}
 		dataErr := Mapping.Parse([]string{}, argsConfig, dataArgsValues, dataParseValues, false, true)
+
+
+
 		if dataErr == nil {
 			for k,v := range dataParseValues {
 				//注意，这里能拿到的，还有非param，所以不能直接用加{}写入
@@ -495,9 +507,14 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 				}
 			}
 		}
+
+
 		//所以这里还得处理一次，如果route不定义args，parse就拿不到值，就直接用values中的值
 		for k,v := range values {
-			if k[0:1] == "{" && dataValues[k] == nil {
+			if dataValues[k] == nil {
+				dataValues[k] = v
+			} else if k[0:1] == "{" && dataValues[k] == nil {
+				//这样只能处理uri中的参数，直接传参数的自动加密就不行了，处理下
 				dataValues[k] = v
 			}
 		}
@@ -528,6 +545,9 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			key := strings.Replace(p, "*", "", -1)
 
 			if v,ok := dataValues[key]; ok {
+				//删除，这样在query中还使用这个去替换query参数
+				//query也可能要加密
+				delete(dataValues, key)
 				//先从传的值去取
 				return fmt.Sprintf("%v", v)
 			} else if v,ok := paramValues[key]; ok {
@@ -657,15 +677,21 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 		*/
 
 
-
-
-
 		//get参数
 		querys := []string{}
 		for k,v := range queryValues {
 			//这里还要清理{}包裹的参数，因为上面parse的时候，如果路由有默认值的参数，而uri中没有，就会带进来
 			if k[0:1] != "{" {
-				querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+				//当参数加密时，而不在uri中传，比如
+				//asdf?id=xxxxx
+				//{"id": 23234234234}
+				//在这里就不会被处理，所以要处理一下
+
+				if vv,ok := dataValues[k]; ok {
+					querys = append(querys, fmt.Sprintf("%v=%v", k, vv))
+				} else {
+					querys = append(querys, fmt.Sprintf("%v=%v", k, v))
+				}
 			}
 		}
 		if len(querys) > 0 {

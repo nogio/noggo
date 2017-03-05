@@ -34,4 +34,9 @@
 
     view层，需要添加支持直接自定义模板内容，而不一定走views/读文件
 
+20170305
+    mapping.parse有问题，同时有encode/decode的时候， 如果是base64，如果本身类型是string， 就没有效果，加解都无效
+    Data.Model can use query result rows.Columns to make Map object , then mapping data to Model Map object. ignore field sort.
+    And All methods of Query and use rows.Columns to replace field list to *,
+    DataInterface.Single. Need to use "LIMIT 1" to limit result rows.
 

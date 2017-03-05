@@ -542,7 +542,7 @@ func (global *mappingGlobal) Parse(tree []string, config Map, data Map, value Ma
 		//理论上，只要JSON可为空～就不处理下一级json
 		jsonning := true
 		if !fieldMust && fieldValue == nil {
-			jsonning = false;
+			jsonning = false
 		}
 
 		//还有种情况要处理. 当type=json, must=true的时候,有默认值, 但是没有定义json节点.
