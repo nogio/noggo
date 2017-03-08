@@ -130,9 +130,9 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 		"body": func() template.HTML {
 			return template.HTML(view.body)
 		},
-		"render": func(name string, args ...Map) template.HTML {
-			/*
-			args := []Any{}
+		"render": func(name string, vals ...Any) template.HTML {
+
+			args := []Map{}
 			for _,v := range vals {
 
 				if t,ok := v.(string); ok {
@@ -140,15 +140,13 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 					e := json.Unmarshal([]byte(t), &m)
 					if e == nil {
 						args = append(args, m)
-					} else {
-						//要不然直接string
-						args = append(args, t)
 					}
+				} else if t,ok := v.(Map); ok {
+					args = append(args, t)
 				} else {
-					args = append(args, v)
+
 				}
 			}
-			*/
 
 			s,e := view.Render(name, args...)
 			if e == nil {
