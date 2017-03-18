@@ -350,15 +350,14 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 			//支持一下显示时间
 			if len(args) == 1 {
 				if args[0] == nil {
-					return ""
+					return format
 				} else if ttt,ok := args[0].(time.Time); ok {
 					return ttt.Format(format)
 				} else if ttt,ok := args[0].(int64); ok {
 					//时间戳是大于1971年是, 千万级, 2016年就是10亿级了
 
-					if ttt >= int64(31507200) && ttt >= int64(31507200000) {
+					if ttt >= int64(31507200) && ttt <= int64(31507200000) {
 						sss := time.Unix(ttt, 0).Format(format)
-						//if sss != "%25v" {
 						if strings.HasPrefix(sss, "%")==false || format != sss {
 							return sss
 						}

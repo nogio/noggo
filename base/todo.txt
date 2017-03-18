@@ -40,3 +40,6 @@
     And All methods of Query and use rows.Columns to replace field list to *,
     DataInterface.Single. Need to use "LIMIT 1" to limit result rows.
 
+
+    Mobile,Tablet,Monitor
+
