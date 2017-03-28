@@ -157,7 +157,10 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 						hash := ""
 						filename := f.Filename
 						mimetype := f.Header.Get("Content-Type")
-						extension := path.Ext(filename)[1:]
+						extension := path.Ext(filename)
+						if extension != "" {
+							extension = extension[1:]	//去掉.
+						}
 						var tempfile string
 						var length int64
 
