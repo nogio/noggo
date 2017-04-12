@@ -165,6 +165,8 @@ type (
 
 	//配置
 	configConfig struct {
+		Id		string			`json:"id"`
+		Mode	string			`json:"mode"`
 		Debug	bool			`json:"debug"`
 
 		Lang	map[string]*langConfig		`json:"lang"`

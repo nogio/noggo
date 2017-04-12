@@ -23,23 +23,26 @@
 
 
 
-
 20170116
     route.item的时候， 应该加一个 must 表示是否必须存在 （这个需求，HTTP模块已加，其它的还没）
     Data模块的table,view接口要加一个 Search 方法，做全文搜索 Search(keyword string, args ...Any) //keyword为搜索的字串， args的为前置查询条件
 
 20170209
     数据层的查询解析可以驱动自己实现？然后把  ASC,DESC,ANY,IN,NIL,NOL,GT,LT,GTE,LTE 等定义到  .base包中   ok
-    上面这个定义已经完成，SQL解析方法还没完成
+    上面这个定义已经完成，SQL解析方法还没完成  ok
 
     view层，需要添加支持直接自定义模板内容，而不一定走views/读文件
 
 20170305
     mapping.parse有问题，同时有encode/decode的时候， 如果是base64，如果本身类型是string， 就没有效果，加解都无效
     Data.Model can use query result rows.Columns to make Map object , then mapping data to Model Map object. ignore field sort.
-    And All methods of Query and use rows.Columns to replace field list to *,
+    And All methods of Query can also use rows.Columns to replace field list to *,
     DataInterface.Single. Need to use "LIMIT 1" to limit result rows.
 
 
     Mobile,Tablet,Monitor
 
+
+
+20170407
+    mapping [image] 好像有问题，must=false，还是提交不是有效的XX，应该是表单里有值后，拿到空值在value里了

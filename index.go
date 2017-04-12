@@ -10,8 +10,19 @@ import (
 	"strings"
 )
 
+const (
+	Development	= "development"
+	Testing		= "testing"
+	Production	= "production"
+)
+
+
 var (
 	nodes map[string]*Noggo
+
+	Id		string
+	Mode	string
+	Debug	bool
 
 	//当前位置
 	//此变量比较重要，是用来注册对象时，表明当前的位置，如当前节点，当前数据库，等等
@@ -70,13 +81,17 @@ var (
 
 //框架初驱化
 func init() {
+	Id = "noggo"
+	Mode = Development
+	Debug = true
+
 	nodes = map[string]*Noggo{}
 	//当前位置为空
 	Current = ""
 
 	//设置一个默认的配置
 	Config = &configConfig{
-		Debug: true,
+		Id: Id, Mode: Development, Debug: Debug,
 		Lang: map[string]*langConfig{},
 		Node: map[string]*nodeConfig{},
 		Data: map[string]*dataConfig{},
@@ -182,15 +197,22 @@ func loadConfig() {
 	err,cfg := readJsonConfig()
 	if err != nil {
 		panic("加载配置文件出错：" + err.Error())
-	}
-	Config = cfg
+	} else {
+		if cfg != nil {
+			Config = cfg
 
-	//处理setting
-	for k,v := range Config.Custom {
-		Setting[k] = v
-	}
-	for k,v := range Config.Setting {
-		Setting[k] = v
+			Id = cfg.Id
+			Mode = cfg.Mode
+			Debug = cfg.Debug
+
+			//处理setting
+			for k, v := range Config.Custom {
+				Setting[k] = v
+			}
+			for k, v := range Config.Setting {
+				Setting[k] = v
+			}
+		}
 	}
 }
 func loadLang() {
@@ -218,7 +240,6 @@ func readJsonConfig() (error,*configConfig) {
 			configFile = os.Args[1]	//第1个参数，0为程序本身
 		}
 	}
-
 
 	bytes, err := ioutil.ReadFile(configFile)
 	if err != nil {

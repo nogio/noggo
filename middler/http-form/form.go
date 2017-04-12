@@ -123,6 +123,12 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 					//ctx.Form[k] = vv
 					//ctx.Value[k] = vv
 
+
+					//有个问题，当type=file时候，又不选文件的时候，value里会存在一个空字串的value
+					//如果同一个form name 有多条记录，这时候会变成一个[]string，的空串数组
+					//这时候，mapping解析文件的时候[file]就会出问题，会判断文件类型，这时候是[]string就出问题了
+
+
 					//一个存字串,多个存数组
 					if len(v) > 1 {
 						ctx.Form[k] = v
@@ -146,7 +152,6 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 
 				//FILE可能要弄成JSON，文件保存后，MIME相关的东西，都要自己处理一下
 				for k,v := range ctx.Req.MultipartForm.File {
-
 
 					//这里应该保存为数组
 					files := []Map{}
