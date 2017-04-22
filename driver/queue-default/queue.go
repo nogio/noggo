@@ -171,13 +171,13 @@ func (con *DefaultQueueConnect) StartProducer() error {
 }
 //生产者发布消息
 func (con *DefaultQueueConnect) Publish(name string, value Map) error {
-	msg.Pub(name, value)
+	go msg.Pub(name, value)
 	return nil
 }
 //生产者发布延时消息
 func (con *DefaultQueueConnect) DeferredPublish(name string, delay time.Duration, value Map) error {
 	time.AfterFunc(delay, func() {
-		msg.Pub(name, value)
+		go msg.Pub(name, value)
 	})
 	return nil
 }
@@ -211,7 +211,7 @@ func (con *DefaultQueueConnect) requeue(id string, delay time.Duration) error {
 		})
 	}
 
-	return errors.New("计划不存在")
+	return errors.New("队列不存在")
 }
 
 

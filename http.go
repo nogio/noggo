@@ -2586,6 +2586,16 @@ func (ctx *HttpContext) File(file string, names ...string) {
 	ctx.Type = "file"
 	ctx.Body = httpBodyFile{file,name}
 }
+func (ctx *HttpContext) TypeFile(file string, mimeType string, names ...string) {
+	name := ""
+	if len(names) > 0 {
+		name = names[0]
+	}
+
+	ctx.Code = 200
+	ctx.Type = mimeType
+	ctx.Body = httpBodyFile{file,name}
+}
 func (ctx *HttpContext) Down(body []byte, mimeType string, names ...string) {
 	name := ""
 	if len(names) > 0 {
