@@ -284,6 +284,12 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 			}
 			return template.HTML("")
 		},
+		"attr": func(text Any) (template.HTMLAttr) {
+			if text != nil {
+				return template.HTMLAttr(fmt.Sprintf("%v", text))
+			}
+			return template.HTMLAttr("")
+		},
 		"join": func(a Any, s string) template.HTML {
 			strs := []string{}
 
