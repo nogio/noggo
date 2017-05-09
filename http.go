@@ -2336,6 +2336,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 		Helpers: Map{
 			"backurl": func() string{ return ctx.Url.Back() },
 			"lasturl": func() string{ return ctx.Url.Last() },
+			"siteurl": func(name string, args ...string) string{ return ctx.Url.Site(name, args...) },
 			"nodeurl": func(name string, args ...string) string{ return ctx.Url.Node(name, args...) },
 			"rooturl": func(args ...string) string{ return ctx.Url.Root(args...) },
 			"route": func(name string, vals ...Any) string{
@@ -2586,7 +2587,7 @@ func (ctx *HttpContext) File(file string, names ...string) {
 	ctx.Type = "file"
 	ctx.Body = httpBodyFile{file,name}
 }
-func (ctx *HttpContext) TypeFile(file string, mimeType string, names ...string) {
+func (ctx *HttpContext) TypeFile(mimeType string, file string, names ...string) {
 	name := ""
 	if len(names) > 0 {
 		name = names[0]

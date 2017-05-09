@@ -21,6 +21,29 @@ type (
 
 
 
+func (url *httpUrl) Site(name string, args ...string) string {
+	uuu := ""
+
+	//逻辑有小调整，先从config.site中获取，如果没有，再从config.node获取，再没有，就显示127.0.0.1+port
+	if vv,ok := Config.Site[name]; ok && vv!=nil && len(vv)>0 {
+		//如果是多个，可以随机选一个
+		uuu = vv[0]
+	} else if vv,ok := Config.Node[name]; ok {
+		if vv.Url != "" {
+			uuu = vv.Url
+		} else {
+			uuu = "http://127.0.0.1" + vv.Port
+		}
+	} else {
+		uuu = ""
+	}
+
+	if len(args) > 0 {
+		return fmt.Sprintf("%s%s", uuu, args[0])
+	} else {
+		return uuu
+	}
+}
 func (url *httpUrl) Node(name string, args ...string) string {
 	uuu := ""
 
