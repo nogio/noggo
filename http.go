@@ -2259,6 +2259,11 @@ func (module *httpModule) xmlResponder(ctx *HttpContext) {
 func (module *httpModule) fileResponder(ctx *HttpContext) {
 	body := ctx.Body.(httpBodyFile)
 
+
+	if ctx.Type != "file" {
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+	}
+
 	//加入自定义文件名
 	if body.Name != "" {
 		ctx.Res.Header().Set("Content-Disposition", fmt.Sprintf("attachment;filename=%v;", body.Name))
