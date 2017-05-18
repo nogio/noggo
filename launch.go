@@ -30,6 +30,7 @@ func Init() {
 
 		Cache.init()
 		Data.init()
+		Storage.init()
 
 		Logger.Info("noggo is initiating...")
 
@@ -47,6 +48,7 @@ func Exit() {
 		node.End()
 	}
 
+	Storage.exit()
 	Data.exit()
 	Cache.exit()
 
