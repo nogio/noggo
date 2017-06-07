@@ -592,8 +592,8 @@ func (view *DefaultView) Layout(name string, model Any) (string,error) {
 					buf := bytes.NewBuffer(make([]byte, 0))
 
 					e := t.Execute(buf, Map{
-						"data":	view.parse.Data,
-						"model": view.model,
+						"args": view.parse.Args, "auth": view.parse.Auth,
+						"data":	view.parse.Data, "model": view.model,
 					})
 					if e != nil {
 						return "",errors.New(fmt.Sprintf("layout %s parse error: %v", viewname, e))
@@ -663,8 +663,8 @@ func (view *DefaultView) Body(name string, args ...Any) (string,error) {
 			buf := bytes.NewBuffer(make([]byte, 0))
 
 			e := t.Execute(buf, Map{
-				"data":	view.parse.Data,
-				"model": bodyModel,
+				"args": view.parse.Args, "auth": view.parse.Auth,
+				"data":	view.parse.Data, "model": bodyModel,
 			})
 			if e != nil {
 				return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))
@@ -743,8 +743,8 @@ func (view *DefaultView) Render(name string, args ...Map) (string,error) {
 
 
 		e := t.Execute(buf, Map{
-			"data":	view.parse.Data,
-			"model": renderModel,
+			"args": view.parse.Args, "auth": view.parse.Auth,
+			"data":	view.parse.Data, "model": renderModel,
 		})
 		if e != nil {
 			return "",errors.New(fmt.Sprintf("view %s parse error: %v", viewname, e))

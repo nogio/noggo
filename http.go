@@ -2338,6 +2338,7 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 	parse := &ViewParse{
 		Node: ctx.Node.Name, Lang: ctx.Lang,
 		Data: ctx.Data, View: body.View, Model: body.Model,
+		Args: ctx.Args, Auth: ctx.Auth,
 		Helpers: Map{
 			"backurl": func() string{ return ctx.Url.Back() },
 			"lasturl": func() string{ return ctx.Url.Last() },

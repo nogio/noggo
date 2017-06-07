@@ -29,6 +29,8 @@ type (
 		Data    Map     //ctx.Data
 		View    string  //视图文件
 		Model   Any     //视图模型
+		Args    Map     //参数
+		Auth    Map     //登录对象信息
 		Helpers Map     //工具方法
 	}
 
