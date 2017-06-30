@@ -438,6 +438,16 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 			strArr := []string{}
 
 			switch vv := arr.(type) {
+			case []interface{}: {
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			}
+			case []Any: {
+				for _,v := range vv {
+					strArr = append(strArr, fmt.Sprintf("%v", v))
+				}
+			}
 			case []string:
 				for _,v := range vv {
 					strArr = append(strArr, v)
