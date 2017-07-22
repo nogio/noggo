@@ -1652,13 +1652,13 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 						if err != nil {
 							if authMust {	//是必要的
 								//是否有自定义状态
-								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								err := Const.NewTypeLangStateError(authKey, ctx.Lang, "auth.error", authName)
 								if v,ok := authConfig["error"]; ok {
 									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 								}
 
 								ctx.Denied(err)
-								return;
+								return
 							}
 						} else {
 							saveMap[authKey] = item
@@ -1673,13 +1673,13 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 						if err != nil {
 							if authMust {	//是必要的
 								//是否有自定义状态
-								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								err := Const.NewTypeLangStateError(authKey, ctx.Lang, "auth.error", authName)
 								if v,ok := authConfig["error"]; ok {
 									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 								}
 
 								ctx.Denied(err)
-								return;
+								return
 							}
 						} else {
 							saveMap[authKey] = item
@@ -1696,7 +1696,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 						if err != nil {
 							if authMust {	//是必要的
 								//是否有自定义状态
-								err := Const.NewLangStateError(ctx.Lang, "auth.error", authName)
+								err := Const.NewTypeLangStateError(authKey, ctx.Lang, "auth.error", authName)
 								if v,ok := authConfig["error"]; ok {
 									err = Const.NewTypeLangStateError(authKey, ctx.Lang, v.(string))
 								}
@@ -1729,7 +1729,7 @@ func (module *httpModule) contextAuth(ctx *HttpContext) {
 				}
 
 				ctx.Denied(err)
-				return;
+				return
 
 			}
 		}

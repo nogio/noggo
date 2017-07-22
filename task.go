@@ -235,7 +235,7 @@ func (global *taskGlobal) initTask() {
 		}
 
 		//开始任务
-		con.Accept(global.serveTask);
+		con.Accept(global.serveTask)
 
 
 		//保存连接
@@ -524,6 +524,10 @@ func (global *taskGlobal) contextRequest(ctx *TaskContext) {
 
 	//请求处理
 	//Id已经有了
+	//参数好像没有处理
+	for k,v := range ctx.req.Value {
+		ctx.Value[k] = v
+	}
 
 
 	//会话处理
