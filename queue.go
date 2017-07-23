@@ -459,9 +459,23 @@ func (global *queueGlobal) Publish(name string, args ...Map) (error) {
 		value = args[0]
 	}
 
-	//这里相当于只使用第一个队列服务，其它的用不上，需要修改
+	//发给任何一个队列，天然随机
 	for _,v := range global.queueConnects {
 		return v.Publish(name, value)
+	}
+
+	return errors.New("队列未连接")
+}
+func (global *queueGlobal) DeferredPublish(name string, delay time.Duration, args ...Map) error {
+
+	value := Map{}
+	if len(args) > 0 {
+		value = args[0]
+	}
+
+	//发给任何一个队列，天然随机
+	for _,v := range global.queueConnects {
+		return v.DeferredPublish(name, delay, value)
 	}
 
 	return errors.New("队列未连接")
@@ -480,6 +494,21 @@ func (global *queueGlobal) PublishTo(key string, name string, args ...Map) (erro
 	}
 
 	return errors.New("队列连接不存在")
+}
+
+func (global *queueGlobal) DeferredPublishTo(key, name string, delay time.Duration, args ...Map) error {
+
+	value := Map{}
+	if len(args) > 0 {
+		value = args[0]
+	}
+
+	//发给任何一个队列，天然随机
+	if cc,ok := global.queueConnects[key]; ok {
+		return cc.DeferredPublish(name, delay, value)
+	}
+
+	return errors.New("队列未连接")
 }
 
 /*
