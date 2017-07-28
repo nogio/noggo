@@ -595,6 +595,11 @@ type (
 		//响应的Json对象
 		Json Any
 	}
+	httpBodyJsonp struct {
+		//响应的Json对象
+		Json Any
+		Callback string
+	}
 	httpBodyXml struct {
 		//响应的Xml对象
 		Xml Any
@@ -1914,6 +1919,8 @@ func (module *httpModule) contextResponder(ctx *HttpContext) {
 		module.scriptResponder(ctx)
 	case httpBodyJson:
 		module.jsonResponder(ctx)
+	case httpBodyJsonp:
+		module.jsonpResponder(ctx)
 	case httpBodyXml:
 		module.xmlResponder(ctx)
 	case httpBodyFile:
@@ -2234,6 +2241,34 @@ func (module *httpModule) jsonResponder(ctx *HttpContext) {
 		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
 		ctx.Res.WriteHeader(ctx.Code)
 		fmt.Fprint(ctx.Res, string(bytes))
+	}
+}
+
+func (module *httpModule) jsonpResponder(ctx *HttpContext) {
+	body := ctx.Body.(httpBodyJsonp)
+
+	bytes, err := json.Marshal(body.Json)
+	if err != nil {
+		//出错啊
+		//但是这里已经走完response了。再ctx.Error好像没用了
+		//这是一个死循环， 因为走了ctx.Error， 还有可能再返回json
+		//又会走到这里，在response中。 继续把response加入调用列表吧。这样保险
+		//这里应该转到error上下文处理
+		//待修改
+		http.Error(ctx.Res, err.Error(), 500)
+
+
+	} else {
+
+		if ctx.Type == "" {
+			ctx.Type = "script"
+		}
+
+		resp := fmt.Sprintf("%v(%v)", body.Callback, string(bytes))
+
+		ctx.Res.Header().Set("Content-Type", fmt.Sprintf("%v; charset=%v", Const.MimeType(ctx.Type), ctx.Charset))
+		ctx.Res.WriteHeader(ctx.Code)
+		fmt.Fprint(ctx.Res, resp)
 	}
 }
 func (module *httpModule) xmlResponder(ctx *HttpContext) {
@@ -2575,6 +2610,17 @@ func (ctx *HttpContext) Json(json Any, codes ...int) {
 	}
 	ctx.Type = "json"
 	ctx.Body = httpBodyJson{json}
+}
+func (ctx *HttpContext) Jsonp(json Any, cbs ...string) {
+	cb := "callback"
+	if vv,ok := ctx.Query["callback"].(string); ok && vv != "" {
+		cb = vv
+	}
+	if len(cbs) > 0 && cbs[0] != "" {
+		cb = cbs[0]
+	}
+	ctx.Type = "script"
+	ctx.Body = httpBodyJsonp{json, cb}
 }
 func (ctx *HttpContext) Xml(xml Any, codes ...int) {
 	if len(codes) > 0 {

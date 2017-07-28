@@ -104,16 +104,9 @@ func (view *PostgresView) Single(args ...Any) (Map,error) {
 				if err != nil {
 					return nil,errors.New("数据：查询时扫描失败 ")
 				} else {
-					m := Map{}
-					for i,n := range keys {
-						switch v := values[i].(type) {
-						case []byte: {
-							m[n] = string(v)
-						}
-						default:
-							m[n] = v
-						}
-					}
+
+					//这里应该有个打包
+					m := view.base.unpacking(keys, values)
 
 					//返回前使用代码生成
 					//有必要的, 按模型拿到数据
@@ -137,14 +130,14 @@ func (view *PostgresView) Query(args ...Any) ([]Map,error) {
 	//生成查询条件
 	where,builds,orderby,err := view.base.parsing(1,args...)
 	if err != nil {
-		return nil,err
+		return []Map{},err
 	} else {
 
 		//开启事务
 		tx,err := view.base.begin()
 		noggo.Logger.Debug("data", "query", "begin", err)
 		if err != nil {
-			return nil,err
+			return []Map{},err
 		} else {
 
 			//先拿字段列表
@@ -159,7 +152,7 @@ func (view *PostgresView) Query(args ...Any) ([]Map,error) {
 			rows,err := tx.Query(sql, builds...)
 			noggo.Logger.Debug("data", "query", err, sql)
 			if err != nil {
-				return nil,err
+				return []Map{},err
 			} else {
 				defer rows.Close()
 
@@ -179,16 +172,9 @@ func (view *PostgresView) Query(args ...Any) ([]Map,error) {
 					if err != nil {
 						return nil, errors.New("数据：查询时扫描失败")
 					} else {
-						m := Map{}
-						for i, n := range keys {
-							switch v := values[i].(type) {
-							case []byte: {
-								m[n] = string(v)
-							}
-							default:
-								m[n] = v
-							}
-						}
+
+						//这里应该有个打包
+						m := view.base.unpacking(keys, values)
 
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
@@ -276,16 +262,9 @@ func (view *PostgresView) Limit(offset,limit Any, args ...Any) (int64,[]Map,erro
 							if err != nil {
 								return int64(0),[]Map{}, errors.New("数据：查询时扫描失败 ")
 							} else {
-								m := Map{}
-								for i, n := range keys {
-									switch v := values[i].(type) {
-									case []byte: {
-										m[n] = string(v)
-									}
-									default:
-										m[n] = v
-									}
-								}
+
+								//这里应该有个打包
+								m := view.base.unpacking(keys, values)
 
 								//返回前使用代码生成
 								//有必要的, 按模型拿到数据
@@ -359,16 +338,9 @@ func (view *PostgresView) Group(field string, args ...Any) ([]Map,error) {
 					if err != nil {
 						return []Map{}, errors.New("数据：查询时扫描失败")
 					} else {
-						m := Map{}
-						for i, n := range keys {
-							switch v := values[i].(type) {
-							case []byte: {
-								m[n] = string(v)
-							}
-							default:
-								m[n] = v
-							}
-						}
+
+						//这里应该有个打包
+						m := view.base.unpacking(keys, values)
 
 						//返回前使用代码生成
 						//有必要的, 按模型拿到数据
@@ -389,6 +361,9 @@ func (view *PostgresView) Group(field string, args ...Any) ([]Map,error) {
 		}
 	}
 }
+
+
+
 
 
 
@@ -429,16 +404,9 @@ func (view *PostgresView) Entity(id Any) (Map,error) {
 			if err != nil {
 				return nil,errors.New("数据：查询时扫描失败 ")
 			} else {
-				m := Map{}
-				for i,n := range keys {
-					switch v := values[i].(type) {
-					case []byte: {
-						m[n] = string(v)
-					}
-					default:
-						m[n] = v
-					}
-				}
+
+				//这里应该有个打包
+				m := view.base.unpacking(keys, values)
 
 				//返回前使用代码生成
 				//有必要的, 按模型拿到数据
@@ -458,5 +426,11 @@ func (view *PostgresView) Entity(id Any) (Map,error) {
 
 	}
 }
+
+
+
+
+
+
 
 
