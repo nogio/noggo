@@ -94,11 +94,16 @@ func (con *DefaultPlanConnect) Register(name, time string) error {
 func (con *DefaultPlanConnect) Start() error {
 
 	for name,time := range con.plans {
+		//这里不能直接用name,time，这样会只执行最后一个计划
+		realName := name
+		realTime := time
+
 		con.cron.AddFunc(time, func() {
+
 			//新建计划
 			id := NewMd5Id()
 			plan := PlanData{
-				Name: name, Time: time, Value: Map{},
+				Name: realName, Time: realTime, Value: Map{},
 			}
 			//保存计划
 			con.mutex.Lock()
