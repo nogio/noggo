@@ -103,19 +103,17 @@ type (
 		Delete(args ...Any) (int64,error)
 
 		Entity(Any) (Map,error)
-		Count(args ...Any) (int64,error)
+		Count(args ...Any) (float64,error)
 		Single(args ...Any) (Map,error)
 		Query(args ...Any) ([]Map,error)
-		//Querys(keyword string, args ...Any) ([]Map,error)
 		Limit(offset, limit Any, args ...Any) (int64,[]Map,error)
-		//Limits(offset, limit Any, keyword string, args ...Any) (int64,[]Map,error)
 		Group(field string, args ...Any) ([]Map,error)
 
 	}
 
 	//数据视图接口
 	DataView interface {
-		Count(args ...Any) (int64,error)
+		Count(args ...Any) (float64,error)
 		Single(args ...Any) (Map,error)
 		Query(args ...Any) ([]Map,error)
 		Limit(offset, limit Any, args ...Any) (int64,[]Map,error)
@@ -1263,8 +1261,8 @@ func (table *noDataTable) Update(sets Map,args ...Any) (int64,error) {
 }
 
 
-func (view *noDataTable) Count(args ...Any) (int64,error) {
-	return int64(0),errors.New("无数据")
+func (view *noDataTable) Count(args ...Any) (float64,error) {
+	return float64(0),errors.New("无数据")
 }
 func (view *noDataTable) Single(args ...Any) (Map,error) {
 	return Map{},errors.New("无数据")
@@ -1292,8 +1290,8 @@ func (view *noDataTable) Entity(id Any) (Map,error) {
 
 
 
-func (view *noDataView) Count(args ...Any) (int64,error) {
-	return int64(0),errors.New("无数据")
+func (view *noDataView) Count(args ...Any) (float64,error) {
+	return float64(0),errors.New("无数据")
 }
 func (view *noDataView) Single(args ...Any) (Map,error) {
 	return Map{},errors.New("无数据")

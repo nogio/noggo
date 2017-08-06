@@ -454,6 +454,10 @@ func (global *queueGlobal) ErrorHandler(name string, call QueueFunc) {
 //这个以后再处理
 func (global *queueGlobal) Publish(name string, args ...Map) (error) {
 
+	//这里可以读取队列的路由，拿到参数，把args处理一遍
+	//这样可以保证数据的有效性
+
+
 	value := Map{}
 	if len(args) > 0 {
 		value = args[0]
@@ -467,6 +471,9 @@ func (global *queueGlobal) Publish(name string, args ...Map) (error) {
 	return errors.New("队列未连接")
 }
 func (global *queueGlobal) DeferredPublish(name string, delay time.Duration, args ...Map) error {
+
+	//这里可以读取队列的路由，拿到参数，把args处理一遍
+	//这样可以保证数据的有效性
 
 	value := Map{}
 	if len(args) > 0 {

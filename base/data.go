@@ -22,6 +22,14 @@ package base
 const (
 	DELIMS	= `"`	//字段以及表名边界符，自己实现数据驱动才需要处理这个，必须能启标识作用
 
+	COUNT   = "COUNT"
+	SUM     = "SUM"
+	MAX     = "MAX"
+	MIN     = "MIN"
+	AVG     = "AVG"
+
+
+
 	IS		= "="	//等于
 	NOT 	= "!="	//不等于
 	EQ		= "="	//等于
