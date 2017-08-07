@@ -27,6 +27,7 @@ type (
 		Lang    string  //当前语言
 		Charset string  //当前字符集
 		Data    Map     //ctx.Data
+		Setting Map
 		View    string  //视图文件
 		Model   Any     //视图模型
 		Args    Map     //参数
