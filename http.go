@@ -556,12 +556,12 @@ type (
 
 
 		//数据相关
+		Raw     []byte
 		Value	Map			//所有请求过来的原始参数汇总
 		Local	Map			//在ctx中传递数据用的
 		Item	Map			//单条记录查询对象
 		Auth	Map			//签名认证对象
 		Args	Map			//经过args处理后的参数
-
 
 		//响应相关
 		Charset	string
