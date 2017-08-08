@@ -51,7 +51,7 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 			if contentType == "text/json" || contentType == "application/json" {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
-					ctx.Raw = body
+					ctx.Raw = string(body)
 
 					m := Map{}
 					err := json.Unmarshal(body, &m)
@@ -66,7 +66,7 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 			} else if contentType == "text/xml" || contentType == "application/xml" {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
-					ctx.Raw = body
+					ctx.Raw = string(body)
 
 					m := Map{}
 					err := xml.Unmarshal(body, &m)

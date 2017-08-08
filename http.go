@@ -556,7 +556,7 @@ type (
 
 
 		//数据相关
-		Raw     []byte
+		Raw     string
 		Value	Map			//所有请求过来的原始参数汇总
 		Local	Map			//在ctx中传递数据用的
 		Item	Map			//单条记录查询对象
