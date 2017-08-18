@@ -432,45 +432,55 @@ func newDefaultView(config *DefaultViewConfig, parse *noggo.ViewParse) (*Default
 		"now": func() time.Time {
 			return time.Now()
 		},
-		"in": func(val Any, arr Any) (bool) {
+		"in": func(val Any, arrs ...Any) (bool) {
 
 			strVal := fmt.Sprintf("%v", val)
 			strArr := []string{}
 
-			switch vv := arr.(type) {
-			case []interface{}: {
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
+			if len(arrs) > 1 {
+				for _,vv := range arrs {
+					strArr = append(strArr, fmt.Sprintf("%v", vv))
 				}
-			}
-			case []Any: {
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
-				}
-			}
-			case []string:
-				for _,v := range vv {
-					strArr = append(strArr, v)
-				}
-			case []int:
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
-				}
-			case []int8:
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
-				}
-			case []int16:
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
-				}
-			case []int32:
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
-				}
-			case []int64:
-				for _,v := range vv {
-					strArr = append(strArr, fmt.Sprintf("%v", v))
+			} else {
+				switch vv := arrs[0].(type) {
+				case []interface{}:
+					{
+						for _, v := range vv {
+							strArr = append(strArr, fmt.Sprintf("%v", v))
+						}
+					}
+				case []Any:
+					{
+						for _, v := range vv {
+							strArr = append(strArr, fmt.Sprintf("%v", v))
+						}
+					}
+				case []string:
+					for _, v := range vv {
+						strArr = append(strArr, v)
+					}
+				case []int:
+					for _, v := range vv {
+						strArr = append(strArr, fmt.Sprintf("%v", v))
+					}
+				case []int8:
+					for _, v := range vv {
+						strArr = append(strArr, fmt.Sprintf("%v", v))
+					}
+				case []int16:
+					for _, v := range vv {
+						strArr = append(strArr, fmt.Sprintf("%v", v))
+					}
+				case []int32:
+					for _, v := range vv {
+						strArr = append(strArr, fmt.Sprintf("%v", v))
+					}
+				case []int64:
+					for _, v := range vv {
+						strArr = append(strArr, fmt.Sprintf("%v", v))
+					}
+				default:
+					strArr = append(strArr, fmt.Sprintf("%v", vv))
 				}
 			}
 

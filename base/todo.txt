@@ -46,3 +46,5 @@
 
 20170407
     mapping [image] 好像有问题，must=false，还是提交不是有效的XX，应该是表单里有值后，拿到空值在value里了
+
+    mapping的auto值没有做值包装。
