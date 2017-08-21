@@ -101,11 +101,14 @@ func (global *constGlobal) Mimes(args ...Map) (map[string]string) {
 	return global.mimes
 }
 //获取mimetype
-func (global *constGlobal) MimeType(name string) string {
+func (global *constGlobal) MimeType(name string, defs ...string) string {
 	if v,ok := global.mimes[name]; ok {
 		return v
 	} else {
-		return name
+		if len(defs) > 0 {
+			return defs[0]
+		}
+		return "application/octet-stream"
 	}
 }
 
