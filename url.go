@@ -154,6 +154,11 @@ func (url *httpUrl) Route(name string, args ...Map) string {
 			var url = url.Last()
 			queryValues[BACKURL] = encode64(url)
 		}
+		//选项处理
+		if (options["current"] != nil && url.ctx != nil) {
+			var url = url.Current()
+			queryValues[BACKURL] = encode64(url);
+		}
 		//自动携带原有的query信息
 		if options["query"] != nil && url.ctx != nil {
 			for k,v := range url.ctx.Query {
@@ -481,6 +486,11 @@ func (url *httpUrl) Routo(site,name string, args ...Map) string {
 			var url = url.Last()
 			queryValues[BACKURL] = encode64(url);
 		}
+		//选项处理
+		if (options["current"] != nil && url.ctx != nil) {
+			var url = url.Current()
+			queryValues[BACKURL] = encode64(url);
+		}
 		//自动携带原有的query信息
 		if (options["query"] != nil && url.ctx != nil) {
 			for k,v := range url.ctx.Query {
@@ -744,6 +754,13 @@ func (url *httpUrl) Back() string {
 		//都没有，就是当前URL
 		return url.Current()
 	}
+}
+
+func (url *httpUrl) Backing() bool {
+	if s,ok := url.ctx.Query[BACKURL]; ok && s != "" {
+		return true
+	}
+	return false
 }
 
 
