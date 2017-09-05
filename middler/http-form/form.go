@@ -45,11 +45,9 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 		if ctx.Method != "get" {
 
 			//根据不同的类型来处理
-			contentType := ctx.Req.Header.Get("Content-Type")
+			contentType := ctx.Req.Header.Get("content-type")
 
-
-			//if contentType == "text/json" || contentType == "application/json" {
-			if strings.Index(contentType, "json") >= 0 {
+			if contentType == "text/json" || contentType == "application/json" || strings.Index(contentType, "json") >= 0 {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
 					ctx.Raw = string(body)
@@ -64,8 +62,7 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 						}
 					}
 				}
-				//} else if contentType == "text/xml" || contentType == "application/xml" {
-			} else if strings.Index(contentType, "xml") >= 0 {
+			} else if contentType == "text/xml" || contentType == "application/xml" || strings.Index(contentType, "xml") >= 0 {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
 					ctx.Raw = string(body)
