@@ -54,6 +54,7 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 
 					m := Map{}
 					err := json.Unmarshal(body, &m)
+					noggo.Logger.Info("body.json.parsing", err)
 					if err != nil {
 						//遍历JSON对象
 						for k, v := range m {
