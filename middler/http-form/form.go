@@ -48,7 +48,8 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 			contentType := ctx.Req.Header.Get("Content-Type")
 
 
-			if contentType == "text/json" || contentType == "application/json" {
+			//if contentType == "text/json" || contentType == "application/json" {
+			if strings.Index(contentType, "json") >= 0 {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
 					ctx.Raw = string(body)
@@ -57,13 +58,14 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 					err := json.Unmarshal(body, &m)
 					if err != nil {
 						//遍历JSON对象
-						for k,v := range m {
+						for k, v := range m {
 							ctx.Form[k] = v
 							ctx.Value[k] = v
 						}
 					}
 				}
-			} else if contentType == "text/xml" || contentType == "application/xml" {
+				//} else if contentType == "text/xml" || contentType == "application/xml" {
+			} else if strings.Index(contentType, "xml") >= 0 {
 				body, err := ioutil.ReadAll(ctx.Req.Body)
 				if err == nil {
 					ctx.Raw = string(body)
