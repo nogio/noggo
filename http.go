@@ -2374,7 +2374,8 @@ func (module *httpModule) viewResponder(ctx *HttpContext) {
 		Node: ctx.Node.Name, Lang: ctx.Lang,
 		Data: ctx.Data, View: body.View, Model: body.Model,
 		Args: ctx.Args, Auth: ctx.Auth,
-		Setting: Setting, Helpers: Map{
+		Setting: Setting, Session: ctx.Session,
+		Helpers: Map{
 			"backurl": func() string{ return ctx.Url.Back() },
 			"lasturl": func() string{ return ctx.Url.Last() },
 			"siteurl": func(name string, args ...string) string{ return ctx.Url.Site(name, args...) },
