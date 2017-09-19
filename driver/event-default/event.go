@@ -9,7 +9,6 @@ package event_default
 import (
 	. "github.com/nogio/noggo/base"
 	"github.com/nogio/noggo"
-	"errors"
 	"time"
 	"sync"
 )
@@ -124,6 +123,7 @@ func (con *DefaultEventConnect) StartSubscriber() error {
 
 			//新建计划
 			id := NewMd5Id()
+			/*
 			event := EventData{
 				Name: eventName, Value: value,
 			}
@@ -132,9 +132,10 @@ func (con *DefaultEventConnect) StartSubscriber() error {
 			con.mutex.Lock()
 			con.datas[id] = event
 			con.mutex.Unlock()
+			*/
 
 			//调用事件
-			con.execute(id, event.Name, event.Value)
+			con.execute(id, eventName, value)
 		})
 	}
 	return nil
@@ -200,21 +201,22 @@ func (con *DefaultEventConnect) DeferredPublish(name string, delay time.Duration
 
 //完成事件，从列表中清理
 func (con *DefaultEventConnect) finish(id string) error {
-	con.mutex.Lock()
-	defer con.mutex.Unlock()
+	//con.mutex.Lock()
+	//defer con.mutex.Unlock()
 
-	delete(con.datas, id)
+	//delete(con.datas, id)
 	return nil
 }
 //重开事件
-func (con *DefaultEventConnect) reevent(id string, delay time.Duration) error {
-	if event,ok := con.datas[id]; ok {
+func (con *DefaultEventConnect) reevent(id string, name string, value Map, delay time.Duration) error {
+	//if event,ok := con.datas[id]; ok {
 		time.AfterFunc(delay, func() {
-			con.execute(id, event.Name, event.Value)
+			con.execute(id, name, value)
 		})
-	}
+	//}
 
-	return errors.New("计划不存在")
+	//return errors.New("计划不存在")
+	return nil
 }
 
 
@@ -236,6 +238,6 @@ func (res *DefaultEventResponse) Finish(id string) error {
 	return res.con.finish(id)
 }
 //重开事件
-func (res *DefaultEventResponse) Reevent(id string, delay time.Duration) error {
-	return res.con.reevent(id, delay)
+func (res *DefaultEventResponse) Reevent(id string, name string, value Map, delay time.Duration) error {
+	return res.con.reevent(id, name, value, delay)
 }

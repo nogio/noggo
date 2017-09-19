@@ -62,7 +62,7 @@ type (
 		//完成
 		Finish(id string) error
 		//重新开始
-		Reevent(id string, delay time.Duration) error
+		Reevent(id string, name string, value Map, delay time.Duration) error
 	}
 )
 //event driver end
@@ -1509,7 +1509,7 @@ func (module *eventModule) finishResponder(ctx *EventContext) {
 }
 func (module *eventModule) reeventResponder(ctx *EventContext) {
 	body := ctx.Body.(eventBodyReevent)
-	ctx.res.Reevent(ctx.Id, body.Delay)
+	ctx.res.Reevent(ctx.Id, ctx.Name, ctx.Value, body.Delay)
 }
 func (module *eventModule) defaultResponder(ctx *EventContext) {
 	ctx.res.Finish(ctx.Id)
