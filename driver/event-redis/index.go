@@ -245,7 +245,8 @@ func (bonder *redisEventConnect) subscribing() {
 		names = append(names, bonder.config.Prefix+name)
 	}
 
-	noggo.Logger.Info("event", names)
+
+	//多个同时调用会串事件。。。待处理
 
 	conn,err := bonder.connect.Dial()
 	if err == nil {
