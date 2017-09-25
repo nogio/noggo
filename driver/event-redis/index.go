@@ -9,6 +9,7 @@ import (
 	"sync"
 	"github.com/nogio/noggo/depend/redigo/redis"
 	"encoding/json"
+	"strings"
 )
 
 
@@ -213,6 +214,7 @@ func (bonder *redisEventConnect) Register(name string) error {
 func (bonder *redisEventConnect) StartSubscriber() error {
 
 	//订阅消息
+	/*
 	for _,name := range bonder.names {
 		//一定要用一个局部变量
 		//因为name循环的， 在加调的时候name已经改变
@@ -226,6 +228,10 @@ func (bonder *redisEventConnect) StartSubscriber() error {
 
 		go bonder.subscribing(conn, eventName)
 	}
+	*/
+
+	//改成一个连接监听所有
+	go bonder.subscribing()
 	return nil
 }
 
@@ -233,35 +239,46 @@ func (bonder *redisEventConnect) StartSubscriber() error {
 
 
 //这里是调用的，要一直循环啊，连接一直不关的样子
-func (bonder *redisEventConnect) subscribing(conn redis.Conn, name string) {
-	psc := redis.PubSubConn{Conn: conn}
-	psc.Subscribe(bonder.config.Prefix+name)
-	for {
-		switch v := psc.Receive().(type) {
-		case redis.Message:
-			id := NewMd5Id()
-			value := Map{}
-			json.Unmarshal(v.Data, &value)
+func (bonder *redisEventConnect) subscribing() {
+	names := []interface{}{}
+	for _,name := range bonder.names {
+		names = append(names, bonder.config.Prefix+name)
+	}
 
-			bonder.execute(id, name, value)
-			//fmt.Printf("%s: message: %s\n", v.Channel, v.Data)
-		case redis.Subscription:
-			//fmt.Printf("%s: %s %d\n", v.Channel, v.Kind, v.Count)
-		case error:
+	noggo.Logger.Info("event", names)
 
+	conn,err := bonder.connect.Dial()
+	if err == nil {
+		defer conn.Close()
+
+		psc := redis.PubSubConn{Conn: conn}
+		psc.Subscribe(names...) //一次订阅多个
+
+		for {
+			switch msg := psc.Receive().(type) {
+			case redis.Message:
+				//fmt.Printf("%s: message: %s\n", v.Channel, v.Data)
+				go bonder.gotmsg(msg)
+			case redis.Subscription:
+				//fmt.Printf("%s: %s %d\n", v.Channel, v.Kind, v.Count)
+			case error:
+				//3秒后重新连接
+				//time.Sleep(time.Second * 3)
+				//goto reconnection
+			}
 		}
 	}
+}
 
-	//新建计划
-	/*
-	event := EventData{
-		Name: eventName, Value: value,
-	}
-	*/
 
-	//调用事件
-	//id := NewMd5Id()
-	//con.execute(id, event.Name, event.Value)
+
+//执行统一到这里
+func (bonder *redisEventConnect) gotmsg(msg redis.Message) {
+	id := NewMd5Id()
+	name := strings.TrimLeft(msg.Channel, bonder.config.Prefix)
+	value := Map{}
+	json.Unmarshal(msg.Data, &value)
+	bonder.execute(id, name, value)
 }
 
 
