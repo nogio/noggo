@@ -276,7 +276,8 @@ func (bonder *redisEventConnect) subscribing() {
 //执行统一到这里
 func (bonder *redisEventConnect) gotmsg(msg redis.Message) {
 	id := NewMd5Id()
-	name := strings.TrimLeft(msg.Channel, bonder.config.Prefix)
+	//name := strings.TrimLeft(msg.Channel, bonder.config.Prefix)
+	name := strings.Replace(msg.Channel, bonder.config.Prefix, "", 1)
 	value := Map{}
 	json.Unmarshal(msg.Data, &value)
 	bonder.execute(id, name, value)
