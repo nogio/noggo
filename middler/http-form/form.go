@@ -79,7 +79,13 @@ func Middler(uploadPaths ...string) (noggo.HttpFunc) {
 					}
 				}
 			} else {
-				ctx.Req.ParseMultipartForm(32 << 20)
+				err := ctx.Req.ParseMultipartForm(32 << 20)
+				if err != nil {
+					body, err := ioutil.ReadAll(ctx.Req.Body)
+					if err == nil {
+						ctx.Raw = string(body)
+					}
+				}
 			}
 
 
